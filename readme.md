@@ -13,5 +13,7 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   application types; the pipeline DAG; what belongs in a `.lira` file.
 - [`design/compatibility.md`](design/compatibility.md) — per-language compatibility
   (discipline) designs.
+- [`design/distribution.md`](design/distribution.md) — the index service: DNS-verified
+  namespaces, transparency log, single-packet UDP resolution, GitHub Releases hosting.
 
 Status: design phase. No implementation yet.
