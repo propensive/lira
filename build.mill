@@ -1,0 +1,49 @@
+//| mill-version: 1.1.5
+//| mill-jvm-version: temurin:25
+
+package build
+
+import mill.*
+import scalalib.*
+
+object settings:
+  // The propensive Scala fork, resolved from the soundness worktree's toolchain repository
+  // view (regenerate with `./mill show toolchain.repo` there), overridable for other machines.
+  val scalaVersion = "3.9.0-RC4-p8"
+
+  val toolchainRepo: String = sys.env.getOrElse(
+    "LIRA_TOOLCHAIN_REPO",
+    "file:///Users/propensive/work/worktrees/soundness/gondor/soundness/out/toolchain/repo.dest")
+
+  // Locally-published soundness (from the soundness worktree):
+  //   SOUNDNESS_RELEASE_VERSION=0.0.0-lira ./mill <closure>.publishLocal
+  val soundnessVersion = sys.env.getOrElse("LIRA_SOUNDNESS_VERSION", "0.0.0-lira")
+
+  val scalaOptions = Seq(
+    "-experimental",
+    "-new-syntax",
+    "-feature",
+    "-preview",
+    "-deprecation",
+    "-language:experimental.modularity",
+    "-language:experimental.into",
+    "-language:experimental.erasedDefinitions",
+    "-language:implicitConversions",
+    "-language:experimental.saferExceptions",
+    "-language:experimental.genericNumberLiterals",
+    "-Yno-predef", "-Yimports:java.lang,scala,proscenium")
+
+object lira extends ScalaModule:
+  def scalaVersion = settings.scalaVersion
+  def scalacOptions = settings.scalaOptions
+  def sources = Task.Sources(moduleDir / os.up / "src" / "cli")
+  def mainClass = Some("lira.LiraTool")
+
+  override def repositories = Task:
+    super.repositories() :+ settings.toolchainRepo
+
+  def mvnDeps = Seq(
+    mvn"dev.soundness:reliquary-core:${settings.soundnessVersion}",
+    mvn"dev.soundness:reliquary-derive:${settings.soundnessVersion}",
+    mvn"dev.soundness:exoskeleton-core:${settings.soundnessVersion}",
+    mvn"dev.soundness:exoskeleton-args:${settings.soundnessVersion}")
