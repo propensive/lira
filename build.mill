@@ -31,13 +31,13 @@ object settings:
     "-language:implicitConversions",
     "-language:experimental.saferExceptions",
     "-language:experimental.genericNumberLiterals",
-    "-Yno-predef", "-Yimports:java.lang,scala,proscenium")
+    "-Yno-predef", "-Yimports:java.lang,proscenium")
 
 object lira extends ScalaModule:
   def scalaVersion = settings.scalaVersion
   def scalacOptions = settings.scalaOptions
   def sources = Task.Sources(moduleDir / os.up / "src" / "cli")
-  def mainClass = Some("lira.LiraTool")
+  def mainClass = Some("lira.main")
 
   override def repositories = Task:
     super.repositories() :+ settings.toolchainRepo
@@ -45,5 +45,11 @@ object lira extends ScalaModule:
   def mvnDeps = Seq(
     mvn"dev.soundness:reliquary-core:${settings.soundnessVersion}",
     mvn"dev.soundness:reliquary-derive:${settings.soundnessVersion}",
+    mvn"dev.soundness:ethereal-core:${settings.soundnessVersion}",
     mvn"dev.soundness:exoskeleton-core:${settings.soundnessVersion}",
-    mvn"dev.soundness:exoskeleton-args:${settings.soundnessVersion}")
+    mvn"dev.soundness:exoskeleton-args:${settings.soundnessVersion}",
+    mvn"dev.soundness:exoskeleton-completions:${settings.soundnessVersion}")
+
+  // A clean JAR (no shell preamble): the Ethereal launcher script is prepended by the
+  // `java -Dbuild.executable=lira -jar` step instead.
+  def prependShellScript = ""
