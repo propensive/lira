@@ -1,0 +1,5 @@
+out/
+.bloop/
+.metals/
+lira.jar
+/lira

@@ -198,14 +198,15 @@ so that step 4 is data-driven and new universes/egresses are registry entries, n
 changes. Steps 1–3 extend the buildpath validity rules of spec §13.3; the current spec's
 "select the section for that universe" (§13.5) is the special case of a single-universe path.
 
-## 5. Spec impact (proposed amendments, not yet applied)
+## 5. Spec impact
 
-1. §14/§9.4: rename the universe select's variants from `jvm | js | native` to
-   `jvm | sjsir | nir`, freeing `js` for the JS universe proper (TS/JS libraries). The current
-   names conflate "Scala's view of a target" with the universe itself.
-2. §9.1: the root section is per-file, not fixed to `jvm`: a TypeScript lira's root is its
-   `js` section. Add a `root` marker or define root = first section.
-3. New host-requirements field on sections (`requires`, versioned capability constraints:
+Applied to the spec: the universe select's variants are `jvm | sjsir | nir` (§9.4), freeing
+`js` for the JS universe proper; and the root section is per-file, defined as the first
+section (§9.1).
+
+Still proposed:
+
+1. New host-requirements field on sections (`requires`, versioned capability constraints:
    JDK, Android API, WASI world, Node/DOM) — as a schema layer.
-4. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
-5. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).
+2. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
+3. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).
