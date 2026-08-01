@@ -180,3 +180,4 @@ keeps them as per-section constraint declarations checked at buildpath resolutio
 | Java       | `java-classfile`   | jvm                | linkage + recomp| `static final` constants | MiMa, JLS 13                  |
 | JavaScript | `js-exports`       | js                 | export presence | —                        | —                             |
 | (WIT)      | `wit`              | component          | recomp + compose| —                        | WASI world versioning         |
+| (any)      | `resource`         | all                | name presence   | tracked resource content | —                             |

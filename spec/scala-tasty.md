@@ -37,7 +37,8 @@ The discipline claims:
   implementation churn in derived binaries never registers as API change — and they never fall
   through to `opaque/1`, where every rebuild would be a major event.
 
-All other content falls to whatever discipline claims it, or to `opaque/1`.
+All other content falls to whatever discipline claims it — declared resources to `resource/1`
+(LIRA §11.4) — or to `opaque/1`.
 
 ## 4. Extraction
 

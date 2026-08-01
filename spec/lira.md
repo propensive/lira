@@ -297,7 +297,8 @@ materialized tree. (A library whose API genuinely differs by platform is two mod
 
 The invariant is scoped per discipline to the content that discipline claims. Content that a
 discipline claims **atomless** (§11.2) — derived binaries such as classfiles, whose interface
-the discipline already carries through other files — contributes nothing to any universe's
+the discipline already carries through other files, or scanned resource directories (§11.4),
+whose contents are deliberately non-contractual — contributes nothing to any universe's
 atom set, which is what permits universes to diverge in implementation without violating the
 invariant. Content claimed by no discipline falls to `opaque/1` and must therefore be
 byte-identical across the universes that carry it.
@@ -373,10 +374,11 @@ A discipline defines, deterministically:
 
 1. **Claiming**: which content items of a materialized tree the discipline atomizes. A
    discipline MAY claim content **atomless** — covered by the discipline but contributing no
-   atoms — for derived representations whose interface it already carries through other claimed
-   content (a Scala discipline claims `.class`, `.sjsir` and `.nir` files atomless, since the
-   TASTy it atomizes is their interface). Content claimed by no discipline falls to `opaque/1`
-   (§11.3).
+   atoms — for content that carries no independent contract: derived representations whose
+   interface it already carries through other claimed content (a Scala discipline claims
+   `.class`, `.sjsir` and `.nir` files atomless, since the TASTy it atomizes is their
+   interface), or content deliberately outside the API surface (scanned resource directories,
+   §11.4). Content claimed by no discipline falls to `opaque/1` (§11.3).
 2. **Atomization**: claimed content → a set of atoms, each with key, class, value hash, obeying
    the folding principle (§10.3). Atomization MUST be a pure function of the content's semantic
    model: independent of file ordering, compilation timestamps, tool version strings, fresh-name
@@ -393,13 +395,15 @@ A discipline defines, deterministically:
 
 ### 11.3 Registered Disciplines
 
-This specification registers two disciplines:
+This specification registers three disciplines:
 
 - **`opaque/1`** (normative): the entire content item is a single **rigid** atom whose key is
   its path and whose canonical encoding is its bytes. Any change is therefore a removal plus an
   addition — a major event. `opaque/1` is the REQUIRED default for content no other discipline
   claims: nothing in a LIRA file is ever outside the compatibility algebra; unknown content is
   merely maximally conservative.
+- **`resource/1`** (normative; §11.4): resources declared in the manifest — presence-guaranteed
+  exports, content-tracked resources, and scanned directories claimed atomless.
 - **`scala-tasty/1`** (informative here; normative specification in a companion document): the
   Scala discipline sketched in Appendix A.
 
@@ -407,6 +411,53 @@ Anticipated future disciplines include declaration-surface disciplines for TypeS
 Java classfile signatures, and Kotlin metadata. Foreign content — JavaScript modules resolved at
 link time, C sources compiled by a downstream linker, and so on — is admissible in any section
 today under `opaque/1`.
+
+### 11.4 The `resource/1` Discipline
+
+Code does not only link against declarations; it also loads **resources** — non-code content
+addressed by classpath-style name. A resource's name may be part of a module's contract even
+though its bytes are not. `resource/1` expresses this inside the atom algebra, parameterized by
+the manifest's `resource` records (§14) — an authorial claim, like `owns`. It is the one
+registered discipline whose claiming takes input beyond the tree itself, which is unproblematic
+because atomization runs only where the manifest is in hand (§16, step 4).
+
+Each `resource` record declares one path in one of three modes:
+
+- **`export`** — the named tree item is claimed and yields one **rigid** atom whose key is the
+  path and whose canonical encoding is the path's UTF-8 bytes. The value hash is therefore a
+  function of the name alone: the atom asserts *presence*, not content. Within a lineage,
+  adding an export is a minor event and removing one is major (§12.3); editing the content is
+  invisible to the algebra — a patch — because resource content is behavior, and no discipline
+  certifies behavior (§18). Because the atom is content-independent, the cross-universe
+  invariant (**L108**) permits an exported resource's bytes to differ per universe while
+  automatically requiring the *path* to be present in every universe: a universe lacking it
+  atomizes to a smaller set and fails L108.
+- **`track`** — as `export`, but the item yields one **replaceable** atom whose canonical
+  encoding is the item's bytes, with an empty reference list (resources create no linkage, so
+  replaceability soundness is trivial). Tracking is for resources consumers read at *their*
+  compile time — a schema a macro bakes into generated code, say — where a content change is
+  exactly replaceable churn: a minor event that marks consumers whose used-sets contain the
+  atom as stale (§13.4). L108 consequently requires tracked content to be byte-identical
+  across universes.
+- **`scan`** — every tree item whose path has the declared path plus `/` as a prefix is claimed
+  **atomless**. Scanned directories hold content that consumers *enumerate* rather than name —
+  plugin registrations, discovered templates — so no individual name is contractual: additions,
+  removals and edits under a scanned directory are patch-grade, and content may diverge freely
+  per universe (§9.6). A scanned directory may be empty, in any or all universes.
+
+Declarations MUST be well-formed (**L124**): no path may be declared twice, and an `export` or
+`track` path MUST NOT lie under a declared `scan` directory, so the partition of §11.2 has a
+single claimant by construction. In the claiming order, `resource/1` follows every language
+discipline and precedes the `opaque/1` fallback: an item under a `scan` directory that a
+language discipline claims goes to that discipline, and the remainder are atomless. An
+`export` or `track` declaration, by contrast, MUST be effective (**L125**): a declared path
+that another discipline claims, or that resolves to no item in any universe's materialized
+tree, is an assembly-time error — a presence guarantee over nothing, or over content whose
+contract another discipline already carries, is never what the author meant.
+
+Resource atoms are ordinary atoms: they appear in an Atoms blob under `resource/1`, enter the
+snapshot (§12.1), and may appear in consumers' used-sets — so "this resource is available on
+the buildpath" is checkable, and spans majors, exactly like a symbol reference (§13.4).
 
 ## 12. Snapshots, Lineage, and Versioning
 
@@ -526,18 +577,23 @@ graph comes from re-validating the buildpath (§13.3), never from the grade.
 
 A buildpath is valid **for a universe** iff all of the following hold, and each is decidable
 from manifests alone. Closure and compatibility quantify over the dependency records
-*applicable to that universe* (§13.2); uniqueness and namespace disjointness are global.
+*applicable to that universe* (§13.2); uniqueness, namespace disjointness and resource
+disjointness are global.
 
 1. **Uniqueness**: at most one release per module name (**L111**).
 2. **Namespace disjointness**: the `owns` claims (namespaces such as packages, per-ecosystem
    interpretation) of distinct modules are pairwise disjoint — a namespace and any dotted
    extension of it clash (**L112**).
-3. **Closure**: every module named by an applicable `dependency` record is present (**L113**).
-4. **Compatibility**: every applicable dependency requirement is satisfied per §13.2,
+3. **Resource disjointness**: the `export` and `track` resource paths (§11.4) of distinct
+   modules are pairwise disjoint (**L126**), so a classpath-style resource reference resolves
+   to exactly one module. `scan` directories are exempt — cross-module aggregation under a
+   shared directory is their purpose.
+4. **Closure**: every module named by an applicable `dependency` record is present (**L113**).
+5. **Compatibility**: every applicable dependency requirement is satisfied per §13.2,
    including any build pin (**L114**). Diamond dependencies resolve by construction:
    requirements on two snapshots of one module are jointly satisfiable iff some published
    lineage contains both — the incompatible-major case is exactly the case where none does.
-5. **Toolchain coherence**: ecosystem profiles MAY impose additional predicates over the
+6. **Toolchain coherence**: ecosystem profiles MAY impose additional predicates over the
    `toolchain` records (for example, mutual readability of metadata format versions). The base
    specification imposes none.
 
@@ -625,6 +681,10 @@ scalar DisciplineId
   description  A discipline identifier, e.g. scala-tasty/1.
   validate     discipline-id
 
+scalar TreePath
+  description  A relative tree path (§9.2).
+  validate     tree-path
+
 record Tool
   description  One tool that produced content in this release.
 
@@ -637,6 +697,12 @@ record Api
 
   field discipline DisciplineId
   field atoms Hash                      # Atoms metadata blob
+
+record Resource
+  description  One resource claim for the resource/1 discipline (§11.4).
+
+  select  ResourceMode
+  field   path  TreePath
 
 record Dependency
   field module ModuleName
@@ -670,12 +736,18 @@ select Universe
   variant  sjsir  Flag
   variant  nir    Flag
 
+select ResourceMode
+  variant  export  Flag
+  variant  track   Flag
+  variant  scan    Flag
+
 document
   field module ModuleName
   field version Semver optional         # absent on development releases (§12.4)
   field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
   field owns Namespace optional repeatable
+  field resource Resource optional repeatable  # resource/1 claims (§11.4)
   field api Api repeatable
   field dependency Dependency optional repeatable
   field delta Hash optional             # Delta metadata blob for this lineage step
@@ -811,7 +883,8 @@ file (and, where noted, additional artifacts):
 3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3), and recomputes
    every declared derivative hash from the materialized section (§13.6);
 4. re-atomizes content under each declared discipline and compares against the Atoms blobs, and
-   checks the cross-universe invariant (§9.6) — requires an implementation of each discipline;
+   checks the cross-universe invariant (§9.6) — requires an implementation of each discipline
+   (though `opaque/1` and `resource/1` are language-blind and implementable by every verifier);
 5. recomputes the snapshot and checks it equals the last lineage entry (§12.1, **L109**);
 6. given the predecessor release, checks the lineage step's grade and delta (§12.3);
 7. recomputes the signing domain and verifies each signature (§15): a signature that does not
@@ -911,9 +984,17 @@ toolchain
 
 owns gossamer
 
+# mode     # path
+resource export     gossamer/text-tables.conf
+resource scan       gossamer/templates
+
 api
   discipline scala-tasty/1
   atoms Vw12…
+
+api
+  discipline resource/1
+  atoms Wz34…
 
 # module              # api     # version
 dependency anticipation-core      Ab12…     0.64.0
@@ -946,9 +1027,10 @@ signature
 
 Reading this manifest alone, a tool can determine: the module's API history (three snapshots,
 two minor steps); that it satisfies any dependent requiring `Kx3f…`, `Lm81…` or `Pq44…`; which
-universes it supports; that the `nir` view omits one root file; the hash of the classpath JAR
-its `jvm` section derives; and everything needed to verify the file's integrity and authorship
-— all without decompressing a byte of the payload.
+universes it supports; that the `nir` view omits one root file; that the resource
+`gossamer/text-tables.conf` is contractually present on every universe's classpath; the hash of
+the classpath JAR its `jvm` section derives; and everything needed to verify the file's
+integrity and authorship — all without decompressing a byte of the payload.
 
 ## Appendix C (Normative): The Canonical Derivative Profile
 
