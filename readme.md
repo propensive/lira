@@ -9,6 +9,7 @@ API-derived versioning, and quantum-safe signatures. Executing a `.lira` file in
 Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and JavaScript.
 
 - [`spec/lira.md`](spec/lira.md) — the format specification (working draft).
+- [`spec/scala-tasty.md`](spec/scala-tasty.md) — the normative Scala discipline.
 - [`design/universes.md`](design/universes.md) — the taxonomy of formats, universes, hosts and
   application types; the pipeline DAG; what belongs in a `.lira` file.
 - [`design/compatibility.md`](design/compatibility.md) — per-language compatibility
@@ -18,6 +19,6 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 
 Status: specification and implementation in progress. The language-blind core — container,
 compatibility algebra, buildpath validation, signing, and canonical derivative artifacts — is
-implemented as the [`reliquary`](https://github.com/propensive/soundness) module of Soundness;
-the Scala discipline (`degustation`) and the `lira` command-line tool (in this repository,
-built on Soundness) are next.
+implemented as the [`reliquary`](https://github.com/propensive/soundness) module of Soundness,
+and the Scala discipline (`scala-tasty/1`) as its `degustation` module; the `lira`
+command-line tool (in this repository, built on Soundness) is next.

@@ -30,7 +30,8 @@ appendices.
 ## 1. Status
 
 This document is a working draft. Numbered requirements and the schema in §14 are expected to
-change. The Scala discipline (Appendix A) will be specified normatively in a companion document.
+change. The Scala discipline is specified normatively in the companion document
+[`scala-tasty.md`](scala-tasty.md).
 
 ## 2. Conformance Language
 
@@ -868,10 +869,12 @@ to reproduce and attest a release.
 
 ## Appendix A (Informative): The Scala Discipline `scala-tasty/1`
 
-Atomization is performed over TASTy — never over raw TASTy bytes, which embed tool version
-strings, but over a canonical re-encoding of the semantic model (fully-qualified references,
-erased-signature overload disambiguators, alpha-normalized local names, API-relevant flags and
-annotations only, members sorted). Illustrative decomposition, applying the folding principle:
+The Scala discipline is specified normatively in the companion document
+[`scala-tasty.md`](scala-tasty.md); this appendix is an orientation. Atomization is performed
+over TASTy — never over raw TASTy bytes, which embed tool version strings, but over the
+semantic model as the compiler unpickles it (fully-qualified references, erased-signature
+overload disambiguators, alpha-normalized local names, API-relevant flags and annotations only,
+members sorted). Illustrative decomposition, applying the folding principle:
 
 - Standalone **rigid** atoms: concrete methods and fields; each overload (key includes erased
   signature); each default-argument's _existence_ (its body is excluded — defaults resolve at
