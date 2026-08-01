@@ -16,4 +16,8 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`design/distribution.md`](design/distribution.md) — the index service: DNS-verified
   namespaces, transparency log, single-packet UDP resolution, GitHub Releases hosting.
 
-Status: design phase. No implementation yet.
+Status: specification and implementation in progress. The language-blind core — container,
+compatibility algebra, buildpath validation, signing, and canonical derivative artifacts — is
+implemented as the [`reliquary`](https://github.com/propensive/soundness) module of Soundness;
+the Scala discipline (`degustation`) and the `lira` command-line tool (in this repository,
+built on Soundness) are next.
