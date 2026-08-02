@@ -106,8 +106,11 @@ The type-constructor vocabulary covers: named type and term references; applied 
 types; by-name types; annotated types (denylisted annotations transparent, §10); constant
 types; type lambdas, method types and poly types (parameters de Bruijn-indexed); parameter,
 `this`, super and recursive references; refinements; type bounds; match types and cases;
-flexible types (transparent). **A construct outside this vocabulary is a hard atomization
-error**: toolchain vocabulary drift is detected, never silently absorbed.
+flexible types (transparent). The compiler's lazy placeholders for cyclically-referenced
+types (`LazyRef`) are dereferenced before encoding: the underlying type is what consumers
+observe, and the placeholder is an artifact of completion order, not of the API. **A
+construct outside this vocabulary is a hard atomization error**: toolchain vocabulary drift
+is detected, never silently absorbed.
 
 Modifier flags fold as a fixed-order bit set: abstract, case, deferred, enum, erased, exported,
 final, given, implicit, infix, inline, lazy, macro, module, mutable, opaque, open, protected,
@@ -178,7 +181,10 @@ blocks, conditionals, matches (including inline matches and `summonFrom`), patte
 try/finally, assignments, local definitions, named and repeated arguments, quoted and spliced
 trees (as ordinary applications of the quotation runtime) — with local symbols alpha-normalized
 to traversal-order indices and every outward reference spelled as its fully-qualified name and
-erased signature. As with types, an unknown tree form is a hard error.
+erased signature. Import and export statements among a body's statements are transparent
+(folding into nothing, like positions): every reference the encoding emits is already
+fully-qualified, so lexical scoping conveniences carry no semantic content. As with types, an
+unknown tree form is a hard error.
 
 ## 12. Reference Lists
 
