@@ -1,8 +1,8 @@
-# The Scala Discipline `scala-tasty/1` — Specification Draft
+# The Scala Discipline `tasty/1` — Specification Draft
 
 ## Abstract
 
-`scala-tasty/1` is the LIRA discipline for Scala libraries. It atomizes a module's public API
+`tasty/1` is the LIRA discipline for Scala libraries. It atomizes a module's public API
 from TASTy — the interface carrier shared by the `jvm`, `sjsir` and `nir` universes — applying
 the folding principle of the LIRA specification (§10.3) so that Scala's compatibility rules are
 encoded in the decomposition itself: adding anything consumers can safely gain is a standalone
@@ -16,7 +16,7 @@ normative transcription of its rules.
 
 This document is a working draft, versioned in lockstep with the discipline identifier: any
 change to the canonicalization defined here — however small — is a new discipline
-(`scala-tasty/2`), never a revision of this one (LIRA §11.1).
+(`tasty/2`), never a revision of this one (LIRA §11.1).
 
 ## 2. Scope and Guarantee
 
@@ -67,7 +67,7 @@ Included:
 - qualified-private (`private[scope]`) members, conservatively. (A refinement is anticipated:
   where `scope` lies within the module's own `owns` namespaces, namespace disjointness — LIRA
   L112 — guarantees no consumer can ever be inside the scope, so such members could be
-  excluded. `scala-tasty/1` includes them; a future discipline version may tighten this.)
+  excluded. `tasty/1` includes them; a future discipline version may tighten this.)
 - synthetic members that are real API: case-class and enum companions' generated members
   (`apply`, `copy`, `unapply`, `fromProduct`, ordinals and friends) are atomized as ordinary
   members, which makes constructor-parameter changes ripple into member removals-plus-additions
@@ -165,7 +165,7 @@ denylist direction only ever produces spurious majors. Denylisted (never folded)
   `scala.annotation.unchecked.*`);
 - cross-universe interop namespaces (`scala.scalajs.js.annotation.*`,
   `scala.scalanative.unsafe.*`) — these are API to *foreign* callers, not to Scala consumers,
-  and folding them would spuriously break the cross-universe invariant (§14).
+  and folding them would spuriously break the cross-section invariant (§13).
 
 ## 11. Replaceable Atoms
 
@@ -199,10 +199,10 @@ After atomization, references whose keys belong to this module's own atom set ar
 listings by exact key match — exact, because both sides spell keys with the same
 erased-signature disambiguators.
 
-## 13. Cross-Universe Policy
+## 13. Cross-Section Policy
 
-The atomization of each universe's materialized `.tasty` set (with that universe's classpath)
-MUST be identical as (key, class, value hash) — LIRA's L108. Universes MAY differ in:
+The atomization of each section's materialized `.tasty` set (with that section's classpath) MUST
+be identical as (key, class, value hash) — LIRA's L108. Sections MAY differ in:
 
 - implementation, including byte-divergent `.tasty` files (a fresh compiler run pickles fresh
   UUIDs and tool strings, none of which enter the model);
@@ -210,6 +210,15 @@ MUST be identical as (key, class, value hash) — LIRA's L108. Universes MAY dif
 - denylisted interop annotations (§10).
 
 In nothing else. A library whose API genuinely differs by platform is two modules.
+
+Sections differ along two axes (LIRA §9.5): universe, and **integration** — the dependency
+vector the section was built against. The rule is the same for both, but integrations make one
+consequence sharp. A section built against a different release of a dependency compiles with a
+different classpath, so any replaceable atom whose body splices content from that dependency
+will differ in value hash between integrations and fail L108. Rigid atoms are typically
+unaffected, since a signature naming a dependency's type names it identically whichever release
+supplied it (§6, §7). A module whose public `inline` or macro bodies reach into a swappable
+dependency therefore cannot offer integrations, and must be published as separate modules.
 
 ## 14. Determinism
 
@@ -220,7 +229,7 @@ strict vocabularies of §7 and §11 turn compiler-evolution surprises into error
 producer, where they are curable, rather than silent hash drift at consumers.
 
 Across compiler releases, the discipline's promise is that any two toolchains implementing
-`scala-tasty/1` produce identical atoms for the same semantic model. A compiler change that
+`tasty/1` produce identical atoms for the same semantic model. A compiler change that
 would alter canonical output for any input requires a new discipline version; a change that is
 canonically invisible does not. The manifest's `toolchain` records which compiler produced a
 release; ecosystem profiles may impose coherence over it (LIRA §13.3).

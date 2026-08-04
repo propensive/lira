@@ -198,7 +198,105 @@ so that step 4 is data-driven and new universes/egresses are registry entries, n
 changes. Steps 1–3 extend the buildpath validity rules of spec §13.3; the current spec's
 "select the section for that universe" (§13.5) is the special case of a single-universe path.
 
-## 5. Spec impact
+## 5. Hosts as modules: the `requires` axis
+
+§4.1 step 3 checks host-contract satisfiability as a side condition, and compatibility.md §9
+reserves a unification as "a possible later elegance": *a host contract is a module whose atoms
+are capabilities, and a section's `requires` is a dependency edge against it.* This section takes
+that seriously, because it costs nothing and it answers a class of question the format otherwise
+cannot — the motivating one being **shell commands a library invokes at runtime**.
+
+### 5.1 Why this is not a discipline
+
+The tempting move is a `shell` discipline that atomizes a library's shell-command requirements.
+It does not work, in three independent ways:
+
+- **Nothing to atomize.** A discipline is `content → atoms` (spec §11.2), claiming blobs by path
+  and bytes. Command availability is a property of the environment, not of any blob. Spec
+  **L117** now invalidates a release declaring a discipline whose domain is disjoint from the
+  sections it carries, which is exactly this case.
+- **Inverted polarity.** Atoms describe what a module *provides*, and rigid atoms are monotonic
+  because *addition is safe* (spec §10.2–§10.3). A requirement is what a module *needs*, and
+  adding one breaks consumers whose environment lacks it. Encoding requirements as the module's
+  own atoms would force a synthetic singleton atom over the whole requirement set, making even
+  the removal of a requirement a major event.
+- **Not derivable.** Spec §16 verifies by recomputation from the payload. No atomizer can decide
+  which commands a jar shells out to; command strings are assembled at runtime from config and
+  input. The declaration is irreducibly an assertion about the code, not a fact recovered from it.
+
+### 5.2 The unification
+
+Invert the direction and everything falls into place. **The host is the module.** A host contract
+is published as an ordinary lira whose atoms are the capabilities it offers — one rigid atom per
+capability — and a library's `requires` is a dependency edge against it, satisfied by the same
+lineage-membership rule as any other dependency (spec §13.2).
+
+The polarity is now correct at every point, and no new algebra is needed:
+
+- **Monotonicity means the right thing.** A host that gains a command is a minor step; one that
+  loses a command is major and starts a new lineage. That is the actual compatibility behaviour
+  of a runtime environment, expressed by the rule that was already there.
+- **Used-sets do the interesting work.** A library's Uses blob against the host names only the
+  capabilities it actually invokes (spec §13.4), so spanning yields "runs on any host providing
+  `sh` and `git`" by set inclusion — computed, not asserted, and usable across host majors.
+- **The atomizing discipline is trivial.** One rigid atom per capability, keyed by name, its
+  value hash over the name plus any version predicate. It is a discipline over the *host's*
+  content, where there genuinely is content to atomize, so §11.2 is satisfied honestly.
+
+Requirements sit on **sections**, not on the release: a library may shell out only in its `jvm`
+implementation. This does not collide with the cross-section API invariant (spec §9.6), because
+requirements are not API — L108 constrains what a release *presents*, and two sections presenting
+one interface while needing different things of their hosts is ordinary, not a violation.
+
+### 5.3 Shell commands as the worked example
+
+```text
+section jvm
+  tree Ef56…
+  requires posix/1  Kx3f…     # host contract snapshot
+```
+
+with the library's Uses blob against `posix/1` naming `sh`, `git`, `tar`. Two granularity
+decisions, both with the same answer as the triple problem:
+
+- **Version predicates.** A capability is a name plus an OPTIONAL version predicate
+  (`git >= 2.30`). The predicate folds into the capability's atom value, so a host tightening a
+  minimum is correctly a new atom and hence major.
+- **Implementation variants.** `sed`, `awk` and `find` differ materially between GNU and BSD, and
+  a library depending on GNU extensions depends on a different capability than one that does not.
+  Treat the bare name as **POSIX-conformant behaviour only** — `requires sh` means a POSIX `sh` —
+  and give variants their own capability names (`sed:gnu`), exactly as `native/<triple>`
+  parameterizes a universe rather than pretending one native target is another. Coarse, honest,
+  and it makes the common portable case the short one.
+
+### 5.4 A third verification moment
+
+Everything else in LIRA is verified at publish time by recomputation from the payload, or at
+buildpath resolution from manifests. This is neither. A `requires` claim is checked by **probing
+the environment at install or launch time** — `command -v git` is decidable in a way that "does
+this bytecode shell out to git" is not.
+
+That is a genuinely new verification moment and it must be labelled as such wherever it lands in
+the spec, because the failure mode is a reader assuming `requires` was checked against the code.
+It was not, and cannot be. What the format buys is not verification of the claim but *precision
+and timing*: the requirement is machine-readable, checked before the code runs rather than at the
+moment it shells out, and reported against the host the user actually has.
+
+A profile (spec §11.6) may add a best-effort publish-time predicate — a linter over process-exec
+call sites, flagging commands invoked but not declared. Sound in one direction only: it can catch
+an omission, never prove the list complete.
+
+### 5.5 Open questions
+
+- Who publishes host contracts? A registry-blessed `posix/1`, `nodejs/22`, `jdk/21` set is the
+  obvious start, but the namespace is a governance question, not a technical one.
+- Does a capability atom carry anything beyond name and version — an execution-semantics note, a
+  probe command? A probe (`git --version`) would make §5.4's check data-driven rather than
+  convention-driven, at the cost of putting executable strings in a manifest.
+- Are transitive requirements aggregated at resolution? Almost certainly yes, and by the same
+  closure used for used-sets — but it wants stating.
+
+## 6. Spec impact
 
 Applied to the spec: the universe select's variants are `jvm | sjsir | nir` (§9.4), freeing
 `js` for the JS universe proper; and the root section is per-file, defined as the first
@@ -207,6 +305,9 @@ section (§9.1).
 Still proposed:
 
 1. New host-requirements field on sections (`requires`, versioned capability constraints:
-   JDK, Android API, WASI world, Node/DOM) — as a schema layer.
+   JDK, Android API, WASI world, Node/DOM, shell commands) — as a schema layer, taking the
+   host-as-module form of §5 so that satisfaction is lineage membership and not a bespoke
+   predicate. Needs the install-time verification moment of §5.4 named explicitly, alongside
+   §16's publish-time and §13.3's resolution-time checks.
 2. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
 3. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).
