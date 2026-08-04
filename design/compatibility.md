@@ -27,13 +27,29 @@ It is worth naming the three guarantee levels once:
 Each discipline below states which guarantee its rigid atoms certify. The algebra is
 indifferent — but publishers and consumers must know what a "minor" promises in each world.
 
-## 2. Scala — `scala-tasty` (spec Appendix A; companion spec to come)
+These three levels are now normative in the spec (§11.4), as is the mechanism for a guarantee a
+discipline cannot itself certify: an **ecosystem profile** (§11.5), a versioned predicate set
+checked outside the atom algebra, whose shortfalls a release records as `breaks <level>`
+(§12.4). The rule of thumb for which mechanism to use: a claim belongs in atoms if it should
+change the release's API identity, and in a profile if it should not. Bytecode-level checks
+belong in a profile, because a bridge moving should not change what a recompiling consumer
+depends on.
+
+## 2. Scala — `tasty` (spec Appendix A; companion spec to come)
 
 - **Interface carrier**: TASTy (shared across `jvm`, `sjsir`, `nir` universes — hence one
   discipline and the cross-universe invariant, spec §9.6).
-- **Guarantee**: recompilation + linkage at the TASTy level; classfile-level linkage
-  additionally constrained (bridges/forwarders) via the JVM ecosystem profile with
-  bytecode-level checks (MiMa's model).
+- **Guarantee**: recompilation. Linkage at the TASTy level only; classfile-level linkage is the
+  `jvm/1` profile's business, not the discipline's (spec §11.3, Appendix C), and the two diverge
+  in both directions — a trait gaining a concrete method is a clean minor that still perturbs
+  every subclass's mixin forwarders, and an erasure-invisible bound change is a major that no
+  classfile would notice.
+- **Keying**: by membership, not declaration (spec §11.2, A.3) — an inherited member is atomized
+  under every type that presents it, because a JVM call site names the type it invoked on.
+- **Hierarchies**: parents/variance/bounds fold into the type's own atom, so losing a parent is a
+  removal and therefore major, with no subtyping reasoning anywhere in the checker (A.1);
+  hierarchies spanning modules are kept consistent by used-sets and buildpath validity, not by
+  the discipline (A.2).
 - **Rigid atoms**: concrete members; each overload (erased-signature key); default-argument
   *existence*; `inline$` accessors.
 - **Folded** (addition = major): abstract members of open templates; sealed/enum child lists;
@@ -42,7 +58,7 @@ indifferent — but publishers and consumers must know what a "minor" promises i
   used-set closure.
 - **Prior art**: TASTy-MiMa's problem taxonomy; tasty-query as extraction substrate.
 
-## 3. Kotlin — `kotlin-metadata`
+## 3. Kotlin — `kotlin`
 
 - **Interface carrier**: the `@Metadata` annotation on classfiles (read via kotlinx-metadata)
   for the `jvm` universe; klib metadata for `klib`. One discipline, two carriers — like Scala,
@@ -64,7 +80,7 @@ indifferent — but publishers and consumers must know what a "minor" promises i
 - **Prior art**: JetBrains' binary-compatibility-validator — its `.api` dump files are
   precisely an atom listing in textual form; its rules are the folding table.
 
-## 4. TypeScript — `ts-declarations`
+## 4. TypeScript — `dts`
 
 - **Interface carrier**: `.d.ts` declarations for the `js` universe.
 - **Guarantee**: **recompilation only.** There is no linkage to protect — JS resolves
@@ -93,7 +109,7 @@ indifferent — but publishers and consumers must know what a "minor" promises i
 - **Prior art**: Microsoft's api-extractor (API report files ≈ atom listings);
   `typescript-eslint`'s and semver-ts's breaking-change catalogues.
 
-## 5. Rust — `rust-api`
+## 5. Rust — `rmeta`
 
 - **Interface carrier**: rmeta / source (the `crate` universe is source-distributing today);
   for the `native/<triple>` and `wasm-object` universes Rust participates via the C ABI, where
@@ -119,7 +135,7 @@ indifferent — but publishers and consumers must know what a "minor" promises i
   most complete breaking-change table in any ecosystem; the discipline is largely a
   transcription of it into atomization decisions.
 
-## 6. Java — `java-classfile`
+## 6. Java — `classfile`
 
 - **Interface carrier**: classfile signatures (incl. generic `Signature` attributes) in the
   `jvm` universe.
@@ -134,7 +150,7 @@ indifferent — but publishers and consumers must know what a "minor" promises i
 - **Prior art**: MiMa; the JLS binary-compatibility chapter (JLS 13) is effectively the
   normative folding table.
 
-## 7. JavaScript — `js-exports`, else `opaque`
+## 7. JavaScript — `esm`, else `opaque`
 
 Untyped JS has no declared interface, but ES modules have *statically analyzable export
 lists*. A lightweight discipline: each named export is a rigid atom keyed by export name with
@@ -173,10 +189,10 @@ keeps them as per-section constraint declarations checked at buildpath resolutio
 
 | Language   | Discipline         | Universe(s)        | Guarantee       | Replaceable atoms        | Rule-table prior art          |
 | ---------- | ------------------ | ------------------ | --------------- | ------------------------ | ----------------------------- |
-| Scala      | `scala-tasty`      | jvm, sjsir, nir    | recomp + linkage| inline/macro bodies      | TASTy-MiMa, MiMa              |
-| Kotlin     | `kotlin-metadata`  | jvm, klib          | recomp + linkage| inline fun bodies        | binary-compatibility-validator|
-| TypeScript | `ts-declarations`  | js                 | recompilation   | —                        | api-extractor, semver-ts      |
-| Rust       | `rust-api`         | crate              | recompilation   | generic/inline bodies    | cargo-semver-checks           |
-| Java       | `java-classfile`   | jvm                | linkage + recomp| `static final` constants | MiMa, JLS 13                  |
-| JavaScript | `js-exports`       | js                 | export presence | —                        | —                             |
+| Scala      | `tasty`            | jvm, sjsir, nir    | recomp + linkage| inline/macro bodies      | TASTy-MiMa, MiMa              |
+| Kotlin     | `kotlin`           | jvm, klib          | recomp + linkage| inline fun bodies        | binary-compatibility-validator|
+| TypeScript | `dts`              | js                 | recompilation   | —                        | api-extractor, semver-ts      |
+| Rust       | `rmeta`            | crate              | recompilation   | generic/inline bodies    | cargo-semver-checks           |
+| Java       | `classfile`        | jvm                | linkage + recomp| `static final` constants | MiMa, JLS 13                  |
+| JavaScript | `esm`              | js                 | export presence | —                        | —                             |
 | (WIT)      | `wit`              | component          | recomp + compose| —                        | WASI world versioning         |
