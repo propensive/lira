@@ -181,9 +181,14 @@ Orthogonal to all of the above: every application type carries a **host capabili
 (universes.md §1) — JDK version, Android API level, browser/DOM baseline, Node version, WASI
 preview + world, libc/triple. These are ordinary versioned interfaces and could, in the limit,
 be treated with the same machinery (a host contract is a "module" whose atoms are
-capabilities; a section's `requires` is a dependency edge against it). For now the design
-keeps them as per-section constraint declarations checked at buildpath resolution
-(universes.md §4.1, step 3), reserving the unification as a possible later elegance.
+capabilities; a section's `requires` is a dependency edge against it). That unification is now
+worked out in universes.md §5, prompted by the case that forces it — shell commands a library
+invokes at runtime, which have no home on the discipline axis at all: they are not content, and
+a requirement's polarity is the opposite of an atom's. Inverting the direction so that the
+*host* is the module, and `requires` an ordinary dependency edge, needs no new algebra and makes
+"runs on any host providing `sh` and `git`" a used-set computation. Until it is applied, the
+design keeps host contracts as per-section constraint declarations checked at buildpath
+resolution (universes.md §4.1, step 3).
 
 ## 10. Summary table
 
