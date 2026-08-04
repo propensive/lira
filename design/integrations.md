@@ -105,7 +105,8 @@ Nothing else in §13.3 changes, and that is the best argument for this design. T
 decide between integrations are the ones already there. Walk the version case: a buildpath
 carries `foo` and `bar:7`, and `foo` offers `bar8` and `bar7` integrations. Under the `bar8`
 assignment, `foo` requires a snapshot of `bar` that the present `bar:7` does not carry in its
-lineage — rule 5 rejects it. Under the `bar7` assignment every rule holds. The search selects it.
+lineage — rule 5 rejects it. Under the `bar7` assignment every rule holds, so that is the one
+selected.
 Uniqueness (rule 1) does the same work from the other direction, when an assignment would need a
 second release of a module already fixed, and closure (rule 4) when an integration names a module
 the buildpath does not carry at all.
@@ -118,25 +119,41 @@ needed only where the buildpath carries both and the choice is genuinely free.
 **Determinism.** Two conforming resolvers must choose the same assignment or reproducibility is
 lost. Among valid assignments the canonical one is lexicographically least on the sequence, over
 releases in ascending module-name order, of each assigned integration's (`rank`, `id`). A
-consumer MAY pin integrations explicitly, and the search then runs over the releases left free.
+consumer MAY pin integrations explicitly, the remaining releases still taking their canonical
+choices.
 Pinning is how the preference-driven backend choice is expressed; `rank` is what makes the
 unpinned case reproducible.
 
-**The cost, stated plainly.** This turns §13.3 from a linear audit into a search, and in general
-it is NP-hard — it is ordinary dependency resolution, which LIRA had until now avoided by
-requiring exact snapshots and deciding satisfaction by lineage membership. Four things bound it
-in practice:
+**The cost, stated plainly — and it is smaller than it looks.** The obvious reading is that this
+turns §13.3 from a linear audit into an NP-hard search, and that was the assumption when the
+mechanism was first drafted. Implementing it showed otherwise, and the reason is worth keeping.
 
-- the search is over integrations only, never over versions;
-- the branching factor is small — two or three integrations, not a version range;
-- closure and uniqueness prune almost immediately, since a wrong choice usually contradicts a
-  module already fixed;
-- and **spanning often removes the need entirely**: §13.4 lets a publisher prove that one
-  compilation is valid against several majors of a dependency when its used-set is contained in
-  all of them. §9.5 already instructs producers to prefer that proof over emitting alternatives.
-  That instruction should be read as the governing principle, not an aside — an integration is
-  the fallback for genuine incompatibility, and a publisher who reaches for one first has
-  usually skipped a cheaper answer.
+A buildpath is a *fixed* set of releases: which release provides a module is settled before any
+integration is chosen. Every rule an assignment can affect — closure and compatibility — then
+turns on one release together with its own choice, and no rule relates one release's integration
+to another's. The choices are independent. So the canonical assignment is a per-release first
+fit: for each release in isolation, take the first of its integrations in (`rank`, `id`) order
+whose own dependencies hold. Linear in the total number of integrations, no backtracking, and
+canonical by construction rather than by minimizing over candidates.
+
+That also sharpens the diagnosis. A buildpath admits no valid assignment exactly when some single
+release has no viable integration, so a tool can always name the release and, for each of its
+integrations, the rule that rejected it. "No valid assignment" as a bare verdict is never the
+best a tool can do.
+
+The intractable problem this resembles arises only for a resolver that also decides *which
+releases to include*, since an integration can then pull a module onto the buildpath and change
+what everything else resolves against. That is dependency resolution proper, and §13.3 does not
+do it — it audits a buildpath it is handed, and §13.2's exact snapshots keep the two apart. A
+build tool that constructs buildpaths inherits the harder problem from its own design, not from
+this mechanism.
+
+None of which displaces the cheaper answer: **spanning often removes the need entirely**. §13.4
+lets a publisher prove that one compilation is valid against several majors of a dependency when
+its used-set is contained in all of them, and §9.5 instructs producers to prefer that proof over
+emitting alternatives. That instruction should be read as the governing principle, not an aside —
+an integration is the fallback for genuine incompatibility, and a publisher who reaches for one
+first has usually skipped a cheaper answer.
 
 ## 6. Storage: the overlay base stays flat
 
