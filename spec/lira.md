@@ -840,9 +840,9 @@ canonical assignment by construction rather than by minimizing over candidates.
 
 A buildpath admits no valid assignment (**L132**) exactly when some single release has no viable
 integration — never through some irreducible interaction between releases. A specific diagnosis
-is therefore always available, and tools SHOULD name that release and, for each of its
-integrations, the rule that rejected it. "No valid assignment" as a bare verdict is never the
-best a tool can do.
+is therefore always available, and tools reporting L132 MUST name that release, and SHOULD give,
+for each of its integrations, the rule that rejected it. "No valid assignment" as a bare verdict
+is never warranted.
 
 The general problem this resembles — where choices genuinely interact, and search is
 intractable — arises only for a resolver that also decides *which releases to include*, since an
