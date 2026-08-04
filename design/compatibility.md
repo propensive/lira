@@ -186,7 +186,15 @@ be treated with the same machinery (a host contract is a "module" whose atoms ar
 capabilities; a section's `requires` is a dependency edge against it). That unification is now
 worked out in universes.md §5, prompted by the case that forces it — shell commands a library
 invokes at runtime, which have no home on the discipline axis at all: they are not content, and
-a requirement's polarity is the opposite of an atom's. Inverting the direction so that the
+a requirement's polarity is the opposite of an atom's.
+
+The last row of §10 belongs to that axis rather than this one. **Web IDL** describes what a
+*browser* provides, not what a library publishes — a browser is a host (universes.md §1), and a
+`js`-universe library's carrier is `.d.ts`, which is itself generated from Web IDL. So `webidl`
+is a host-contract discipline, designed in universes.md §5.4, and it is the interesting case
+there: unlike a shell contract it has a formal grammar, and its `partial interface` and mixin
+syntax *declares* the usage direction that §4 records TypeScript as unable to see — so it can
+keep interface members additive where `dts` must fold them. Inverting the direction so that the
 *host* is the module, and `requires` an ordinary dependency edge, needs no new algebra and makes
 "runs on any host providing `sh` and `git`" a used-set computation. Until it is applied, the
 design keeps host contracts as per-section constraint declarations checked at buildpath
@@ -204,3 +212,4 @@ resolution (universes.md §4.1, step 3).
 | JavaScript | `esm`              | js                 | export presence | —                        | —                             |
 | (WIT)      | `wit`              | component          | recomp + compose| —                        | WASI world versioning         |
 | (any)      | `resource`         | all                | name presence   | tracked resource content | —                             |
+| (host)     | `webidl`           | — (host axis)      | recompilation   | —                        | webref IDL, compat-data       |

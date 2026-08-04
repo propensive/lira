@@ -206,9 +206,10 @@ are capabilities, and a section's `requires` is a dependency edge against it.* T
 that seriously, because it costs nothing and it answers a class of question the format otherwise
 cannot — the motivating one being **shell commands a library invokes at runtime**.
 
-### 5.1 Why this is not a discipline
+### 5.1 Why this is not a library discipline
 
-The tempting move is a `shell` discipline that atomizes a library's shell-command requirements.
+The tempting move is a `shell` discipline, sitting beside the language disciplines, that
+atomizes a library's shell-command requirements.
 It does not work, in three independent ways:
 
 - **Nothing to atomize.** A discipline is `content → atoms` (spec §11.2), claiming blobs by path
@@ -239,16 +240,18 @@ The polarity is now correct at every point, and no new algebra is needed:
 - **Used-sets do the interesting work.** A library's Uses blob against the host names only the
   capabilities it actually invokes (spec §13.4), so spanning yields "runs on any host providing
   `sh` and `git`" by set inclusion — computed, not asserted, and usable across host majors.
-- **The atomizing discipline is trivial.** One rigid atom per capability, keyed by name, its
-  value hash over the name plus any version predicate. It is a discipline over the *host's*
-  content, where there genuinely is content to atomize, so §11.2 is satisfied honestly.
+- **The atomizing discipline can be as simple or as rich as the contract.** For a shell contract
+  it is one rigid atom per capability, keyed by name, its value hash over the name plus any
+  version predicate. For a contract with a formal grammar it is a real discipline with real
+  folding decisions — §5.4 works Web IDL through. Either way it is a discipline over the
+  *host's* content, where there genuinely is content to atomize, so §11.2 is satisfied honestly.
 
 Requirements sit on **sections**, not on the release: a library may shell out only in its `jvm`
 implementation. This does not collide with the cross-section API invariant (spec §9.6), because
 requirements are not API — L108 constrains what a release *presents*, and two sections presenting
 one interface while needing different things of their hosts is ordinary, not a violation.
 
-### 5.3 Shell commands as the worked example
+### 5.3 Shell commands: the informal case
 
 ```text
 section jvm
@@ -269,12 +272,68 @@ decisions, both with the same answer as the triple problem:
   parameterizes a universe rather than pretending one native target is another. Coarse, honest,
   and it makes the common portable case the short one.
 
-### 5.4 A third verification moment
+### 5.4 Web IDL: the formal case, and `webidl/1`
+
+Shell commands are the case where a host contract has no grammar at all. **Web IDL** is the
+opposite, and it is the better example: the DOM and the Web APIs are already specified in a
+formal, versioned, machine-readable IDL, which is where `lib.dom.d.ts` is generated from.
+
+The first thing to settle is that Web IDL is *not* a JS library discipline. A browser is a host
+(§1), not a universe; a library in the `js` universe publishes ES modules and `.d.ts`, and its
+carrier is `.d.ts`. Web IDL describes what the *platform* provides. Placing a `webidl` discipline
+beside `dts` in compatibility.md would atomize, in a representation nobody compiles against, a
+surface `dts` already covers. Placed on the host axis it describes something nothing else does.
+
+**Atomization.** One rigid atom per exposed construct, keyed by its IDL path:
+
+- `interface` templates, and each `attribute` and `operation` as a **standalone** atom;
+- `dictionary` members, with the required/optional distinction load-bearing (below);
+- `enum` values, `typedef`s, `namespace` members, and `[Exposed=...]` as part of the key, since
+  `Window` and `WorkerGlobalScope` genuinely offer different surfaces.
+
+**The folding decisions, and why they differ from `dts`.** compatibility.md §4 records
+TypeScript's hard problem: adding a member to an exported `interface` is safe for consumers who
+*call* it and breaking for consumers who *implement* it, and "TypeScript cannot see usage
+direction from the declaration alone", so `dts` must fold member lists by default and lose
+additivity to soundness.
+
+Web IDL answers exactly that question, in its syntax. `partial interface` and `includes` mixins
+exist *because* the platform adds members to existing interfaces continuously, and nothing
+outside the browser implements `Element`. The direction is declared, so:
+
+- interface members are **standalone** atoms — adding one is a minor, which is the actual
+  compatibility behaviour of every browser release;
+- `dictionary` members **fold when required and stand alone when optional** — adding a required
+  member breaks every caller constructing that dictionary, adding an optional one breaks nobody,
+  and unlike TypeScript the IDL says which it is;
+- `enum` values are standalone: an enum is a parameter type, so a new value widens what the
+  platform accepts;
+- removing or renaming anything, narrowing an argument type, or making an optional dictionary
+  member required is a removal, hence major.
+
+That contrast is the point worth keeping: `dts` and `webidl/1` describe overlapping surfaces and
+fold them differently, and neither is wrong. The folding principle turns on what the carrier can
+*express*, not on the language it describes.
+
+**Guarantee.** Recompilation, for the TypeScript consumers who type-check against the generated
+declarations — and nothing else. There is no linkage in a browser to protect, and whether a
+present API *behaves* is out of scope as always (spec §18).
+
+**Prior art.** The `@webref/idl` curated IDL extracts, MDN's browser-compat-data, and the
+"Baseline" interoperability definitions are all, in effect, published host contracts already;
+`webidl/1` is a proposal to give them an identity and an algebra rather than to invent them.
+
+### 5.5 A third verification moment
 
 Everything else in LIRA is verified at publish time by recomputation from the payload, or at
 buildpath resolution from manifests. This is neither. A `requires` claim is checked by **probing
 the environment at install or launch time** — `command -v git` is decidable in a way that "does
 this bytecode shell out to git" is not.
+
+For a Web IDL contract the check is not merely decidable but idiomatic: feature detection —
+`'IntersectionObserver' in window` — is how the web platform has always been consumed, so a
+`requires` set over `webidl/1` atoms is a machine-readable form of what careful web code already
+does by hand, and can be checked once at startup rather than at each first use.
 
 That is a genuinely new verification moment and it must be labelled as such wherever it lands in
 the spec, because the failure mode is a reader assuming `requires` was checked against the code.
@@ -286,12 +345,19 @@ A profile (spec §11.6) may add a best-effort publish-time predicate — a linte
 call sites, flagging commands invoked but not declared. Sound in one direction only: it can catch
 an omission, never prove the list complete.
 
-### 5.5 Open questions
+### 5.6 Open questions
 
 - Who publishes host contracts? A registry-blessed `posix/1`, `nodejs/22`, `jdk/21` set is the
   obvious start, but the namespace is a governance question, not a technical one.
+- **What universe does a host contract's section carry?** This one blocks implementation. A
+  release needs at least one `section` (spec §9.1) and sections are keyed by universe, but a host
+  contract is not a library composing in any universe — that is the whole point of the host axis.
+  Either contract-only releases carry no section, which means relaxing §9.1 and deciding what
+  §13.5 materializes for them, or a `host` pseudo-universe is introduced, which puts something on
+  the universe axis that fails the §1 litmus test. Neither is obviously right, and `requires`
+  cannot become normative until one is chosen.
 - Does a capability atom carry anything beyond name and version — an execution-semantics note, a
-  probe command? A probe (`git --version`) would make §5.4's check data-driven rather than
+  probe command? A probe (`git --version`) would make §5.5's check data-driven rather than
   convention-driven, at the cost of putting executable strings in a manifest.
 - Are transitive requirements aggregated at resolution? Almost certainly yes, and by the same
   closure used for used-sets — but it wants stating.
@@ -307,7 +373,7 @@ Still proposed:
 1. New host-requirements field on sections (`requires`, versioned capability constraints:
    JDK, Android API, WASI world, Node/DOM, shell commands) — as a schema layer, taking the
    host-as-module form of §5 so that satisfaction is lineage membership and not a bespoke
-   predicate. Needs the install-time verification moment of §5.4 named explicitly, alongside
+   predicate. Needs the install-time verification moment of §5.5 named explicitly, alongside
    §16's publish-time and §13.3's resolution-time checks.
 2. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
 3. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).
