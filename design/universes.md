@@ -282,7 +282,7 @@ It was not, and cannot be. What the format buys is not verification of the claim
 and timing*: the requirement is machine-readable, checked before the code runs rather than at the
 moment it shells out, and reported against the host the user actually has.
 
-A profile (spec §11.5) may add a best-effort publish-time predicate — a linter over process-exec
+A profile (spec §11.6) may add a best-effort publish-time predicate — a linter over process-exec
 call sites, flagging commands invoked but not declared. Sound in one direction only: it can catch
 an omission, never prove the list complete.
 
@@ -296,17 +296,18 @@ an omission, never prove the list complete.
 - Are transitive requirements aggregated at resolution? Almost certainly yes, and by the same
   closure used for used-sets — but it wants stating.
 
-## 6. Spec impact (proposed amendments, not yet applied)
+## 6. Spec impact
 
-1. §14/§9.4: rename the universe select's variants from `jvm | js | native` to
-   `jvm | sjsir | nir`, freeing `js` for the JS universe proper (TS/JS libraries). The current
-   names conflate "Scala's view of a target" with the universe itself.
-2. §9.1: the root section is per-file, not fixed to `jvm`: a TypeScript lira's root is its
-   `js` section. Add a `root` marker or define root = first section.
-3. New host-requirements field on sections (`requires`, versioned capability constraints:
+Applied to the spec: the universe select's variants are `jvm | sjsir | nir` (§9.4), freeing
+`js` for the JS universe proper; and the root section is per-file, defined as the first
+section (§9.1).
+
+Still proposed:
+
+1. New host-requirements field on sections (`requires`, versioned capability constraints:
    JDK, Android API, WASI world, Node/DOM, shell commands) — as a schema layer, taking the
    host-as-module form of §5 so that satisfaction is lineage membership and not a bespoke
    predicate. Needs the install-time verification moment of §5.4 named explicitly, alongside
    §16's publish-time and §13.3's resolution-time checks.
-4. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
-5. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).
+2. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
+3. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).

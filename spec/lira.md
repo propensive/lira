@@ -32,8 +32,8 @@ appendices.
 ## 1. Status
 
 This document is a working draft. Numbered requirements and the schema in §14 are expected to
-change. The Scala discipline (Appendix A) and the JVM ecosystem profile (Appendix C) will each be
-specified normatively in a companion document.
+change. The Scala discipline is specified normatively in the companion document
+[`tasty.md`](tasty.md); the JVM ecosystem profile (Appendix D) awaits one.
 
 ## 2. Conformance Language
 
@@ -54,8 +54,8 @@ described in RFC 2119 and RFC 8174 when, and only when, they appear in all capit
 
 - **Module**: a named library. A module has one API lineage and many releases.
 - **Release**: one published `.lira` file for a module.
-- **Universe**: a compilation target family identifying the kind of executable representation a
-  section holds (e.g. `jvm`, `js`, `native`). The universe vocabulary is open (§9.4).
+- **Universe**: a library-composition world identifying the kind of representation a section
+  holds (e.g. `jvm`, `sjsir`, `nir`). The universe vocabulary is open (§9.4).
 - **Section**: one compiled view of the release, keyed by universe and optionally by a
   dependency vector (§9.5), stored as a tree of blobs.
 - **Blob**: a byte string in the payload, identified by its hash (§7).
@@ -64,9 +64,9 @@ described in RFC 2119 and RFC 8174 when, and only when, they appear in all capit
 - **Discipline**: a named, versioned canonicalization procedure that converts content into atoms
   (§11).
 - **Guarantee level**: what a compatibility claim certifies — linkage, recompilation, or
-  behavior (§11.4).
+  behavior (§11.5).
 - **Profile**: a named, versioned set of predicates an ecosystem imposes over releases and
-  buildpaths in addition to those of this specification (§11.5).
+  buildpaths in addition to those of this specification (§11.6).
 - **Snapshot**: the hash identifying a release's complete API — the hash of its sorted atom set
   (§12.1).
 - **Lineage**: the ordered list of snapshots of a module's releases within one major series
@@ -165,6 +165,7 @@ The domain strings of this specification are:
 | `lira/1:snapshot`          | the concatenated sorted atom hashes of a release (§12.1) |
 | `lira/1:manifest`          | the canonical manifest encoding for signing (§15.2)      |
 | `lira/1:key`               | the encoded public key, for fingerprints (§15.3)         |
+| `lira/1:derivative`        | the bytes of a canonical derivative artifact (§13.6)     |
 
 `<discipline>` is the full discipline identifier including its version (§11.1), e.g.
 `tasty/1`. Because the discipline identifier participates in the domain, atoms produced by
@@ -178,10 +179,16 @@ but guaranteeing that old and new hashes never mix silently.
 
 ### 8.1 Compression Envelope
 
-The payload is a single Brotli stream. Producers MUST use quality 11, window size lgwin 24, and
-generic mode, so that payload bytes are a deterministic function of the blob stream (§17).
-Readers MUST enforce `payload.length` (the declared decompressed size, §14) as a hard limit
-during decompression and MUST reject a payload that exceeds it (**L102**) — this bounds
+The payload is a single Brotli stream. The compressed bytes participate in **no identity**:
+`payload.hash` (§8.4), the snapshot (§12.1) and every signature (§15.2) cover the
+*decompressed* blob stream, directly or transitively, so two files differing only in
+compressor output are the same release. A producer MUST be **self-deterministic** — the same
+toolchain over the same blob stream MUST emit the same compressed bytes, with the toolchain
+recorded in the manifest (§14) — but no particular encoder's output is normative across
+producers: cross-implementation bit-reproduction of a `.lira` file requires the same producer
+toolchain (§17). Readers MUST enforce `payload.length` (the declared decompressed size, §14)
+as a hard limit during decompression and MUST reject a payload whose decompressed length is
+not exactly the declared value (**L102**) — the upper bound is what bounds
 decompression-bomb exposure.
 
 ### 8.2 Blob Stream
@@ -224,10 +231,11 @@ entire decompressed blob stream. A reader MUST verify it after decompression (**
 
 ### 9.1 Model
 
-A section is one compiled view of the release: a mapping from paths to blobs. Exactly one
-section per universe is designated the **root section** implicitly by the overlay rules below;
-for the motivating ecosystem the `jvm` section is the root, holding the representation that is
-also valid as a conventional artifact of its ecosystem.
+A section is one compiled view of the release: a mapping from paths to blobs. The **root
+section** is the *first* `section` record of the manifest; the root is per-file, not fixed by
+this specification to any universe. For the motivating ecosystem the `jvm` section is
+conventionally first, holding the representation that is also valid as a conventional artifact
+of its ecosystem; a TypeScript release's root would be its `js` section.
 
 ### 9.2 Trees
 
@@ -258,17 +266,22 @@ materialize(overlay) = (root − overlay.delete) ⊕ overlay.tree
 where `delete` is the section's list of removed root paths and `⊕` replaces or adds entries by
 path. An overlay's tree therefore contains only content that is absent from, or differs from,
 the root — platform-specific IR and divergent files. Content identical to the root is carried
-once, by the root. A `delete` path not present in the root, or an overlay entry whose path and
-blob both equal a root entry, is invalid (**L107**): overlays are minimal by construction, which
-makes divergence between platforms _visible_ in the manifest rather than buried in the payload.
+once, by the root. A `delete` path not present in the root; an overlay entry whose path and
+blob both equal a root entry; or a path appearing in both `delete` and the overlay's tree (a
+replacement spelled redundantly) — each is invalid (**L107**): overlays are minimal by
+construction, which makes divergence between platforms _visible_ in the manifest rather than
+buried in the payload.
 
 ### 9.4 Universes
 
-The base schema (§14) defines universe variants `jvm`, `js`, and `native`. The vocabulary is
-open: new universes are introduced by TEL schema layers, which may append variants to a select
-but never remove them. A consumer knowing only the base schema can still parse a layered
-manifest (TEL §8.2); it MUST treat sections of unknown universes as opaque and MUST NOT attempt
-to materialize them.
+The base schema (§14) defines universe variants `jvm`, `sjsir`, and `nir` — the three
+library-composition worlds of the motivating ecosystem. (The names `js`, `klib`, `component`
+and their kin are reserved for the universes proper of other ecosystems, arriving as schema
+layers; a universe names the world in which independently-published libraries compose, not a
+language's view of a target.) The vocabulary is open: new universes are introduced by TEL
+schema layers, which may append variants to a select but never remove them. A consumer knowing
+only the base schema can still parse a layered manifest (TEL §8.2); it MUST treat sections of
+unknown universes as opaque and MUST NOT attempt to materialize them.
 
 ### 9.5 Variant Sections
 
@@ -281,22 +294,34 @@ variant sections; variants are the fallback for genuine incompatibility.
 
 ### 9.6 Cross-Universe API Invariant
 
-For each discipline, the atom set MUST be identical across every universe in that discipline's
-domain (§11.2) for which the release carries a section (**L108**): a release presents one API on
-every universe it supports. Implementations may differ per universe; interfaces may not.
-Producers MUST verify this at assembly time by atomizing each such universe's content
-independently and comparing. (A library whose API genuinely differs by platform is two modules.)
+For each discipline, atomizing each universe's **claimed** content (§11.2) MUST yield an
+identical atom set (**L108**): a release presents one API on every universe it supports.
+Implementations may differ per universe; interfaces may not. Producers MUST verify this at
+assembly time by atomizing each universe's materialized tree independently and comparing; the
+`api` records (§14) list this universe-invariant atomization, computed from the root section's
+materialized tree. (A library whose API genuinely differs by platform is two modules.)
 
-The qualification to the discipline's domain is load-bearing. A discipline may be **universal** —
-`tasty/1` atomizes a representation carried in every Scala universe, so the invariant binds all of
-them, and enforcing it is the whole point — or **universe-specific**, atomizing a representation
-that exists in one universe only. A bytecode-level discipline over classfiles has no counterpart
-in `js` or `native`; for it the invariant is vacuous, not violated. Without this qualification a
-universe-specific discipline could never be declared, since atomizing the universes outside its
-domain yields the empty set and no release could satisfy an unqualified L108.
+The invariant is scoped per discipline to the content that discipline claims. Content that a
+discipline claims **atomless** (§11.2) — derived binaries such as classfiles, whose interface
+the discipline already carries through other files, or scanned resource directories (§11.4),
+whose contents are deliberately non-contractual — contributes nothing to any universe's
+atom set, which is what permits universes to diverge in implementation without violating the
+invariant. Content claimed by no discipline falls to `opaque/1` and must therefore be
+byte-identical across the universes that carry it.
+
+The invariant is also scoped to the discipline's **domain** (§11.2) — the universes it atomizes
+at all. A discipline may be **universal**, atomizing a representation carried in every universe
+the release supports (`tasty/1` is the motivating case, and enforcing L108 across its whole
+domain is the point of it), or **universe-specific**, atomizing a representation that exists in
+one universe only. A bytecode-level discipline over classfiles has no counterpart in `sjsir` or
+`nir`; for it the invariant is vacuous, not violated. Claiming nothing and claiming atomless are
+distinct: the latter is a discipline's decision about content it covers, the former means the
+universe is outside its domain entirely. Without this scoping a universe-specific discipline
+could never be declared at all, since it would atomize to the empty set everywhere outside its
+domain and no release could satisfy an unqualified L108.
 
 A release MUST NOT declare an `api` record whose discipline's domain is disjoint from the
-universes it carries sections for (**L117**): an atomization of nothing is not a claim about
+universes it carries sections for (**L127**): an atomization of nothing is not a claim about
 anything, and admitting one would let a release appear to be checked under a discipline that
 never examined it.
 
@@ -377,34 +402,47 @@ A discipline defines, deterministically:
    the discipline, fixed when the discipline is specified, not a property of any release. A
    discipline whose domain holds more than one universe is bound by the cross-universe invariant
    (§9.6) across the whole domain; one whose domain is a single universe is not bound by it at
-   all.
-2. **Atomization**: content → a set of atoms, each with key, class, value hash, obeying the
-   folding principle (§10.3). Atomization MUST be a pure function of the content's semantic
+   all. Domain is distinct from claiming: a discipline claims nothing in a universe outside its
+   domain, and claiming nothing there is not the same as claiming content atomless.
+2. **Claiming**: which content items of a materialized tree the discipline atomizes. A
+   discipline MAY claim content **atomless** — covered by the discipline but contributing no
+   atoms — for content that carries no independent contract: derived representations whose
+   interface it already carries through other claimed content (a Scala discipline claims
+   `.class`, `.sjsir` and `.nir` files atomless, since the TASTy it atomizes is their
+   interface), or content deliberately outside the API surface (scanned resource directories,
+   §11.4). Content claimed by no discipline falls to `opaque/1` (§11.3).
+3. **Atomization**: claimed content → a set of atoms, each with key, class, value hash, obeying
+   the folding principle (§10.3). Atomization MUST be a pure function of the content's semantic
    model: independent of file ordering, compilation timestamps, tool version strings, fresh-name
    generation, and any other artifact of a particular compilation run. Producers MUST be able to
    reproduce identical atom sets from identical sources (§17).
-3. **Keying**: whether atom keys denote **declarations** — each member atomized once, under the
+4. **Keying**: whether atom keys denote **declarations** — each member atomized once, under the
    type that declares it — or **memberships** — each member atomized under every type that
-   presents it, after inheritance and linearization. The choice is constrained: if consumers of a
-   type can, in any universe of the domain, depend on a member that type _inherits_ rather than
-   declares, that member MUST be atomized under the inheriting type's key. Declaration keying is
-   sound only where every reference to an inherited member resolves through the declaring type in
-   every universe of the domain. The choice determines whether a change to a supertype in another
-   module registers in this module's own atom set or only in its used-set (§13.4), and disciplines
-   MUST state it.
-4. **Replaceability soundness**: for every replaceable atom, everything its content refers to
+   presents it, after inheritance and linearization. The choice is constrained by the guarantee
+   levels the discipline certifies (§11.5): declaration keying is sound exactly where every
+   reference a certified consumer can make resolves through the declaring type. It holds for a
+   discipline certifying recompilation over a metadata format whose references name the declaring
+   owner — `tasty/1` is such a case, and keys by declaration ([`tasty.md`](tasty.md) §6). It fails
+   for a discipline certifying linkage in a universe whose call sites name the receiver, since a
+   type's linkage surface then includes members it does not declare. Disciplines MUST state their
+   choice, because it determines whether a change to a supertype in another module registers in
+   this module's own atom set or only in its used-set (§13.4).
+5. **Replaceability soundness**: for every replaceable atom, everything its content refers to
    that consumers will need at _their_ compile time must itself be rigid-atomized, so that
    replacing the atom within a lineage can never produce a linkage failure.
-5. **References**: for each replaceable atom, the set of atoms (own-module or cross-module) that
-   its content depends on — the input to used-set closure (§13.4).
-6. **Certified guarantees**: which of the guarantee levels of §11.4 its rigid atoms certify, for
+6. **References**: for each replaceable atom, the atoms (own-module or cross-module) that its
+   content depends on — the input to used-set closure (§13.4). References are emitted
+   **symbolically, by atom key**: a cross-module value hash is not computable from one module's
+   content alone, so disciplines name what they reference, and assembly-time tooling resolves
+   names to value hashes against the dependencies' Atoms listings (§10.4) by exact key match.
+7. **Certified guarantees**: which of the guarantee levels of §11.5 its rigid atoms certify, for
    each universe in its domain. A discipline MUST NOT claim a level it does not enforce. Where an
    ecosystem's linkage model imposes obligations the discipline's canonical encoding does not
-   cover, those obligations belong to a profile (§11.5) and MUST NOT be claimed here.
+   cover, those obligations belong to an ecosystem profile (§11.6) and MUST NOT be claimed here.
 
 ### 11.3 Registered Disciplines
 
-This specification registers two disciplines:
+This specification registers three disciplines:
 
 - **`opaque/1`** (normative): the entire content item is a single **rigid** atom whose key is
   its path and whose canonical encoding is its bytes. Any change is therefore a removal plus an
@@ -412,21 +450,73 @@ This specification registers two disciplines:
   claims: nothing in a LIRA file is ever outside the compatibility algebra; unknown content is
   merely maximally conservative. Its domain is every universe; its keying is by declaration
   (paths); it certifies linkage and recompilation trivially, since it admits no change at all
+  merely maximally conservative. Its domain is every universe; its keying is by declaration
+  (paths); it certifies linkage and recompilation trivially, since it admits no change at all
   below the major grade.
-- **`tasty/1`** (informative here; normative specification in a companion document): the
-  Scala discipline sketched in Appendix A. Its domain is every universe whose section carries
-  TASTy — `jvm`, `js` and `native` in the motivating ecosystem — and the cross-universe invariant
-  over that domain is what makes "one API on every platform" checkable. Its keying is by
-  membership, for the reason given in Appendix A. It certifies **recompilation** on its whole
-  domain, and linkage only at the TASTy level; the classfile-level linkage obligations of the
-  `jvm` universe are not its and belong to the JVM profile (Appendix C).
+- **`resource/1`** (normative; §11.4): resources declared in the manifest — presence-guaranteed
+  exports, content-tracked resources, and scanned directories claimed atomless. Its domain is
+  every universe; it certifies presence, which is the recompilation level for content addressed
+  by name.
+- **`tasty/1`** (informative here; normative specification in [`tasty.md`](tasty.md)): the Scala
+  discipline sketched in Appendix A. Its domain is every universe whose section carries TASTy —
+  `jvm`, `sjsir` and `nir` — and the cross-universe invariant over that domain is what makes "one
+  API on every platform" checkable. Its keying is by declaration ([`tasty.md`](tasty.md) §6). It
+  certifies **recompilation** and TASTy-level linkage on its whole domain; the classfile-level
+  linkage obligations of the `jvm` universe are not its and belong to the JVM ecosystem profile
+  (Appendix D).
 
 Anticipated future disciplines include declaration-surface disciplines for TypeScript (`dts`),
 Java classfile signatures, and Kotlin metadata. Foreign content — JavaScript modules resolved at
 link time, C sources compiled by a downstream linker, and so on — is admissible in any section
 today under `opaque/1`.
 
-### 11.4 Guarantee Levels
+### 11.4 The `resource/1` Discipline
+
+Code does not only link against declarations; it also loads **resources** — non-code content
+addressed by classpath-style name. A resource's name may be part of a module's contract even
+though its bytes are not. `resource/1` expresses this inside the atom algebra, parameterized by
+the manifest's `resource` records (§14) — an authorial claim, like `owns`. It is the one
+registered discipline whose claiming takes input beyond the tree itself, which is unproblematic
+because atomization runs only where the manifest is in hand (§16, step 4).
+
+Each `resource` record declares one path in one of three modes:
+
+- **`export`** — the named tree item is claimed and yields one **rigid** atom whose key is the
+  path and whose canonical encoding is the path's UTF-8 bytes. The value hash is therefore a
+  function of the name alone: the atom asserts *presence*, not content. Within a lineage,
+  adding an export is a minor event and removing one is major (§12.3); editing the content is
+  invisible to the algebra — a patch — because resource content is behavior, and no discipline
+  certifies behavior (§18). Because the atom is content-independent, the cross-universe
+  invariant (**L108**) permits an exported resource's bytes to differ per universe while
+  automatically requiring the *path* to be present in every universe: a universe lacking it
+  atomizes to a smaller set and fails L108.
+- **`track`** — as `export`, but the item yields one **replaceable** atom whose canonical
+  encoding is the item's bytes, with an empty reference list (resources create no linkage, so
+  replaceability soundness is trivial). Tracking is for resources consumers read at *their*
+  compile time — a schema a macro bakes into generated code, say — where a content change is
+  exactly replaceable churn: a minor event that marks consumers whose used-sets contain the
+  atom as stale (§13.4). L108 consequently requires tracked content to be byte-identical
+  across universes.
+- **`scan`** — every tree item whose path has the declared path plus `/` as a prefix is claimed
+  **atomless**. Scanned directories hold content that consumers *enumerate* rather than name —
+  plugin registrations, discovered templates — so no individual name is contractual: additions,
+  removals and edits under a scanned directory are patch-grade, and content may diverge freely
+  per universe (§9.6). A scanned directory may be empty, in any or all universes.
+
+Declarations MUST be well-formed (**L124**): no path may be declared twice, and an `export` or
+`track` path MUST NOT lie under a declared `scan` directory, so the partition of §11.2 has a
+single claimant by construction. In the claiming order, `resource/1` follows every language
+discipline and precedes the `opaque/1` fallback: an item under a `scan` directory that a
+language discipline claims goes to that discipline, and the remainder are atomless. An
+`export` or `track` declaration, by contrast, MUST be effective (**L125**): a declared path
+that another discipline claims, or that resolves to no item in any universe's materialized
+tree, is an assembly-time error — a presence guarantee over nothing, or over content whose
+contract another discipline already carries, is never what the author meant.
+
+Resource atoms are ordinary atoms: they appear in an Atoms blob under `resource/1`, enter the
+snapshot (§12.1), and may appear in consumers' used-sets — so "this resource is available on
+the buildpath" is checkable, and spans majors, exactly like a symbol reference (§13.4).
+### 11.5 Guarantee Levels
 
 A compatibility claim is worthless without saying what it certifies. Three levels are
 distinguished, and every discipline states which of them its rigid atoms carry (§11.2):
@@ -455,7 +545,7 @@ that most disciplines over source-level metadata cannot make, because the linkag
 property of a _lower_ representation than the one they atomize. What such a discipline does not
 cover is the business of a profile.
 
-### 11.5 Ecosystem Profiles
+### 11.6 Ecosystem Profiles
 
 An **ecosystem profile** is a named, versioned set of predicates that an ecosystem imposes over
 releases and buildpaths in addition to those of this specification. It is identified as
@@ -467,15 +557,15 @@ version on any change to a predicate. A profile may:
 2. impose structural invariants over a universe's content that are not expressible as atoms,
    checked by tooling that reads the representation directly — the bytecode-level checks a JVM
    ecosystem needs are the motivating case;
-3. certify a guarantee level (§11.4) that the release's disciplines do not.
+3. certify a guarantee level (§11.5) that the release's disciplines do not.
 
-Profiles MUST NOT weaken any requirement of this specification (**L119**). They add predicates
+Profiles MUST NOT weaken any requirement of this specification (**L129**). They add predicates
 and they add guarantees; they never subtract. A file rejected by the core is rejected under every
 profile, and a grade forbidden by §12.3 is forbidden under every profile.
 
 A release declares the profiles it claims to satisfy in its `profile` records (§14). The claim is
 verifiable, not decorative: a release that declares a profile whose predicates it violates is
-invalid (**L118**), and a registry MUST check declared profiles before accepting a release
+invalid (**L128**), and a registry MUST check declared profiles before accepting a release
 (§16), exactly as it checks disciplines. A release declaring no profile makes no
 ecosystem-specific claim and is graded by the core algebra alone.
 
@@ -501,14 +591,18 @@ disciplines because atom hashes are domain-separated). Its **snapshot** is
 snapshot = hash("lira/1:snapshot", concat(sorted atom value hashes))
 ```
 
-with hashes sorted ascending bytewise and concatenated as raw 32-byte values.
+with the **distinct** value hashes sorted ascending bytewise and concatenated as raw 32-byte
+values: the input is a set, so two atoms sharing a value hash (for example, identical opaque
+content at two paths) contribute one 32-byte term.
 
 ### 12.2 Lineage
 
-The manifest's `lineage` field lists the snapshots of the module's releases in one major series,
-oldest first; the final entry MUST equal the release's own snapshot (**L109**). The lineage is
-the module's verifiable version history: every compatibility question in this specification
-reduces to membership in, or relations between, lineages.
+The manifest's `lineage` field lists the **distinct** snapshots of the module's releases in one
+major series, oldest first; the final entry MUST equal the release's own snapshot (**L109**). A
+patch release (below) shares its predecessor's snapshot and therefore appends nothing: the
+lineage is the sequence of the series' *API states*, not of its releases. The lineage is the
+module's verifiable version history: every compatibility question in this specification reduces
+to membership in, or relations between, lineages.
 
 A new major series begins a fresh lineage with no shared prefix. There are no compatibility
 guarantees across majors except those separately provable via used-sets (§13.4).
@@ -525,18 +619,22 @@ Between a release `A` and its immediate successor `B` in a lineage:
   lineage. Publishing tools MUST refuse to extend a lineage with a non-conforming successor
   (**L110**) unless the operator explicitly requests a major.
 
+Each lineage step SHOULD be accompanied by a **Delta metadata blob** recording the added atoms
+and the replaced replaceable atoms of that step. Deltas make staleness computable (§13.4) and
+allow a verifier holding consecutive releases to check a lineage step exactly.
+
 ### 12.4 Grades and Guarantee Levels
 
 The grades above are computed from atom sets and are therefore claims at the guarantee levels the
-release's disciplines certify (§11.2, §11.4) — for a discipline over source-level metadata, the
-recompilation level. A profile (§11.5) may certify a further level, and a step may satisfy the
+release's disciplines certify (§11.2, §11.5) — for a discipline over source-level metadata, the
+recompilation level. A profile (§11.6) may certify a further level, and a step may satisfy the
 algebra at one level while failing a profile predicate at another. Such a step is **not**
 promoted to major by the core: rigid monotonicity is a statement about atoms, and the atoms are
 intact.
 
 Instead the release records the shortfall. A release whose lineage step satisfies §12.3 but whose
 predecessor's guarantees are not preserved at some level a declared profile certifies MUST list
-that level in the profile record's `breaks` field (**L120**). The reading of
+that level in the profile record's `breaks` field (**L130**). The reading of
 
 ```text
 profile
@@ -555,17 +653,48 @@ consumer can observe; ignoring it would promise linkage the release does not del
 what `breaks` cannot do: it never licenses a rigid atom removal, and it never permits a step the
 core forbids. It records a weaker claim about a step the core already allows.
 
-Each lineage step SHOULD be accompanied by a **Delta metadata blob** recording the added atoms
-and the replaced replaceable atoms of that step. Deltas make staleness computable (§13.4) and
-allow a verifier holding consecutive releases to check a lineage step exactly.
+### 12.5 The Derived Version
 
-### 12.5 The Decorative Version
+The manifest's `version` field is OPTIONAL, and strictly numeric: exactly `x.y.z` with each
+component a decimal natural. Prerelease and build suffixes are forbidden by the schema —
+development state is expressed by the version's *absence*, never by a suffix.
 
-The manifest's `version` field (`x.y.z`) is a human-readable projection: `x` names the lineage
-(major series), `y` SHOULD equal the number of minor steps in the lineage, `z` counts patches
-since the last snapshot change. The projection carries no authority; every consumer decision is
-made on hashes. A mismatch between `version` and the lineage structure is a warning, not an
-error.
+**Development releases.** A release without a `version` is a **development release**,
+identified purely by its hashes: the snapshot is its API identity and `payload.hash` its
+implementation identity. Development releases are complete, verifiable `.lira` files; what they
+lack is only the assignment below. Other modules may depend on them during development,
+optionally pinning the exact build (§13.2); such dependents are themselves unpublishable until
+the pin is lifted (**L118**).
+
+**Version assignment.** Publishing a release is the act of assigning it the next version
+number the algebra dictates, and signing the result:
+
+1. compute the grade (§12.3) of the release against the module's previous published release
+   (a first release is assigned `0.1.0` with a fresh single-entry lineage);
+2. derive the version — patch increments `z`, minor increments `y` and zeroes `z`, and an
+   explicitly-requested major increments `x` and zeroes both (in the `0` series, where the
+   minor conventionally carries breaking steps, a major increments `y`);
+3. extend the lineage per §12.2 and §12.3 (**L110**);
+4. re-sign the manifest (§15).
+
+The payload is untouched, so assignment never rebuilds and the implementation identity is
+unchanged. The signed manifest — binding module, version, lineage, snapshot and payload hash
+under one signature — **is** the assignment record; a distribution index's release record is a
+projection of it.
+
+**Publication rules.** A publishing tool MUST refuse to publish a manifest that:
+
+- carries no version, or a non-numeric one (**L117**);
+- pins any dependency to a `build` (**L118**);
+- requires a snapshot that appears in no *published* release's lineage for that module
+  (**L119**);
+- for a stable series (`x ≥ 1`), carries a minor number that is not the count of minor steps
+  in its lineage (**L120**; the `0` series is exempt, since there the minor also carries
+  breaking steps and is not a projection of lineage length).
+
+Consumers still make every decision on hashes: to a consumer the version remains a
+human-readable projection, and any disagreement it observes (for example, a dependency's
+`version` hint against the resolved release) is a warning, never an error.
 
 ## 13. The Buildpath
 
@@ -580,23 +709,46 @@ Each `dependency` record in a manifest names a module and a **required snapshot*
 identity the depending module was compiled against. A candidate release **satisfies** the
 requirement iff the required snapshot appears in the candidate's `lineage`.
 
+A dependency record MAY additionally carry:
+
+- **`universe`** entries, scoping the dependency to the named universes: sections of a release
+  may have genuinely different implementations per universe, and correspondingly different
+  dependencies (a DOM facade needed only by the `sjsir` implementation; a C-binding wrapper
+  only by `nir`). A dependency without `universe` entries applies to every universe.
+- **`build`**, a development-time pin to an exact implementation identity (§6): the candidate
+  must additionally have exactly that `payload.hash`. Build pins express "this exact unpublished
+  build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.4).
+
+Dependency requirements are per-release facts: a module's dependency graph — which modules it
+names, at which snapshots, in which universes — may change freely between releases at any
+grade. Grades (§12.3) constrain only the module's own atom set; consumer safety under a changed
+graph comes from re-validating the buildpath (§13.3), never from the grade.
+
 ### 13.3 Validity
 
-A buildpath is valid iff all of the following hold, and each is decidable from manifests alone:
+A buildpath is valid **for a universe** iff all of the following hold, and each is decidable
+from manifests alone. Closure and compatibility quantify over the dependency records
+*applicable to that universe* (§13.2); uniqueness, namespace disjointness and resource
+disjointness are global.
 
 1. **Uniqueness**: at most one release per module name (**L111**).
 2. **Namespace disjointness**: the `owns` claims (namespaces such as packages, per-ecosystem
-   interpretation) of distinct modules are pairwise disjoint (**L112**).
-3. **Closure**: every module named by any `dependency` record is present (**L113**).
-4. **Compatibility**: every dependency requirement is satisfied per §13.2 (**L114**). Diamond
-   dependencies resolve by construction: requirements on two snapshots of one module are jointly
-   satisfiable iff some published lineage contains both — the incompatible-major case is exactly
-   the case where none does.
-5. **Profile coherence**: every ecosystem profile (§11.5) declared by any release on the
-   buildpath imposes its predicates over the whole buildpath, including any predicate over
+   interpretation) of distinct modules are pairwise disjoint — a namespace and any dotted
+   extension of it clash (**L112**).
+3. **Resource disjointness**: the `export` and `track` resource paths (§11.4) of distinct
+   modules are pairwise disjoint (**L126**), so a classpath-style resource reference resolves
+   to exactly one module. `scan` directories are exempt — cross-module aggregation under a
+   shared directory is their purpose.
+4. **Closure**: every module named by an applicable `dependency` record is present (**L113**).
+5. **Compatibility**: every applicable dependency requirement is satisfied per §13.2,
+   including any build pin (**L114**). Diamond dependencies resolve by construction:
+   requirements on two snapshots of one module are jointly satisfiable iff some published
+   lineage contains both — the incompatible-major case is exactly the case where none does.
+6. **Profile coherence**: every ecosystem profile (§11.6) declared by any release on the
+   buildpath imposes its predicates over the whole buildpath, including any predicate over the
    `toolchain` records — for example, mutual readability of metadata format versions. The base
    specification imposes none of its own, and a buildpath whose releases declare no profile is
-   subject to rules 1–4 alone. Profile predicates, like the rules above, MUST be decidable from
+   subject to rules 1–5 alone. Profile predicates, like the rules above, MUST be decidable from
    manifests; a profile predicate requiring payload inspection is a publish-time check (§16), not
    a buildpath rule.
 
@@ -625,14 +777,39 @@ From a valid buildpath and a chosen universe, a consumer derives a conventional 
 (e.g. a classpath) by, per release: selecting the section for that universe (a release lacking
 one is a validation-time error, not a link-time surprise), materializing it per §9.3 into a
 cache keyed by implementation identity, and appending whatever ecosystem-supplied platform
-runtime the universe requires. Reconstruction of a standalone per-platform archive (e.g. a
-platform jar) is the same materialization serialized to the ecosystem's container format.
+runtime the universe requires. Reconstruction of a standalone per-platform archive is the
+canonical derivative artifact of §13.6.
+
+### 13.6 Canonical Derivative Artifacts
+
+Each section deterministically derives one **canonical derivative artifact**: the section's
+materialized tree serialized to the ecosystem's container format under the canonical profile of
+Appendix C (for the motivating ecosystem, a JAR). Derivation is byte-deterministic — a pure
+function of the materialized tree — so the artifact's identity,
+
+```text
+derivative = hash("lira/1:derivative", artifact bytes)
+```
+
+is a stable fact about the section, which the section's OPTIONAL `derivative` field declares
+(§14) and verifiers recompute (§16, step 3).
+
+The declared derivative hashes make releases **findable from conventional artifacts alone**: a
+tool holding only a classpath of ordinary JARs hashes each under the derivative domain and
+looks the result up — against a buildpath's manifests, or a distribution index — recovering
+the release, its API identity, and its whole compatibility context. Materialization caches
+(§13.5) SHOULD store sections in exactly this form, so the cache entry *is* the canonical
+artifact.
 
 ## 14. Manifest Schema
 
-The `lira` TEL schema. (The companion schemas `lira-tree`, `lira-atoms`, `lira-uses`, and
-`lira-delta` for metadata blobs are structured per §9.2, §10.4, §13.4 and §12.3; their full
-definitions follow the same conventions and are elided in this draft.)
+The `lira` TEL schema, and the four companion schemas for metadata blobs. The scalar
+validators are normative: `base-256-hash` is exactly 32 BASE-256 characters; `module-name` is
+kebab-case segments joined by `/` or `.`; `namespace` is dotted package-style segments
+(letters, digits, `_`; no leading digit); `semver` is exactly `major.minor.patch`, each a
+decimal natural with no superfluous leading zero; `natural` is such a natural; `discipline-id`
+is `<kebab-name>/<positive integer>`; `tree-path` is a relative `/`-separated path with no
+empty, `.` or `..` segments; `atom-class` is `rigid` or `replaceable`.
 
 ```text
 tel 1.0
@@ -664,8 +841,12 @@ scalar ProfileId
   validate     profile-id
 
 scalar Guarantee
-  description  A guarantee level (§11.4): linkage or recompilation.
+  description  A guarantee level (§11.5): linkage or recompilation.
   validate     guarantee
+
+scalar TreePath
+  description  A relative tree path (§9.2).
+  validate     tree-path
 
 record Tool
   description  One tool that produced content in this release.
@@ -686,18 +867,27 @@ record Profile
   field id      ProfileId
   field breaks  Guarantee optional repeatable   # levels not preserved vs the predecessor (§12.4)
 
+record Resource
+  description  One resource claim for the resource/1 discipline (§11.4).
+
+  select  ResourceMode
+  field   path  TreePath
+
 record Dependency
   field module ModuleName
   field api Hash                        # required snapshot (satisfied by lineage membership)
   field version Semver optional         # human-readable hint; no authority
+  field build Hash optional             # development-time implementation-identity pin (§13.2)
+  field universe Identifier optional repeatable  # universes this dependency applies to (§13.2)
   field uses Hash optional              # Uses metadata blob
   field spans Hash optional repeatable  # snapshots provably spanned (§13.4)
 
 record Section
   select  Universe
-  field   against  Hash  optional  repeatable    # variant dependency snapshots (§9.5)
-  field   tree     Hash                          # Tree metadata blob
-  field   delete   String  optional  repeatable  # root paths removed in this overlay
+  field   against     Hash  optional  repeatable    # variant dependency snapshots (§9.5)
+  field   tree        Hash                          # Tree metadata blob
+  field   delete      String  optional  repeatable  # root paths removed in this overlay
+  field   derivative  Hash  optional                # canonical derivative artifact (§13.6)
 
 record Payload
   field  compression  Identifier          # brotli
@@ -711,23 +901,107 @@ record Signature
   field  value      String              # BASE-256 signature
 
 select Universe
-  variant  jvm     Flag
-  variant  js      Flag
-  variant  native  Flag
+  variant  jvm    Flag
+  variant  sjsir  Flag
+  variant  nir    Flag
+
+select ResourceMode
+  variant  export  Flag
+  variant  track   Flag
+  variant  scan    Flag
 
 document
   field module ModuleName
-  field version Semver
-  field lineage Hash repeatable         # snapshots, oldest first; last = this release
+  field version Semver optional         # absent on development releases (§12.4)
+  field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
   field owns Namespace optional repeatable
+  field resource Resource optional repeatable  # resource/1 claims (§11.4)
   field api Api repeatable
   field profile Profile optional repeatable
   field dependency Dependency optional repeatable
   field delta Hash optional             # Delta metadata blob for this lineage step
-  field section Section repeatable
+  field section Section repeatable     # first section = root (§9.1)
   field payload Payload
   field signature Signature optional repeatable
+```
+
+The four metadata-blob schemas:
+
+```text
+tel 1.0
+
+name lira-tree
+
+record Entry
+  field path TreePath
+  field blob Hash
+
+scalar Hash
+  validate base-256-hash
+
+scalar TreePath
+  validate tree-path
+
+document
+  field entry Entry optional repeatable
+```
+
+```text
+tel 1.0
+
+name lira-atoms
+
+record Atom
+  field class AtomClass
+  field hash Hash
+  field key String
+
+scalar Hash
+  validate base-256-hash
+
+scalar DisciplineId
+  validate discipline-id
+
+scalar AtomClass
+  validate atom-class
+
+document
+  field discipline DisciplineId
+  field atom Atom optional repeatable   # sorted by ascending value hash (§10.4)
+```
+
+```text
+tel 1.0
+
+name lira-uses
+
+scalar Hash
+  validate base-256-hash
+
+scalar ModuleName
+  validate module-name
+
+document
+  field module ModuleName
+  field atom Hash optional repeatable   # sorted ascending bytewise
+```
+
+```text
+tel 1.0
+
+name lira-delta
+
+record Replacement
+  field old Hash
+  field new Hash
+
+scalar Hash
+  validate base-256-hash
+
+document
+  field add Hash optional repeatable          # sorted ascending bytewise
+  field replace Replacement optional repeatable  # sorted by ascending old hash
 ```
 
 New universes, disciplines with schema-level needs, and future fields are introduced as TEL
@@ -760,8 +1034,8 @@ the file invalid before signatures are considered.
 
 ### 15.3 Keys
 
-`key` is `hash("lira/1:key", public-key-bytes)` using the algorithm's standard public-key
-encoding. Public-key distribution is out of band (a registry of authorized signers, analogous to
+`key` is `hash("lira/1:key", public-key-bytes)` over the algorithm's standard interchange
+encoding of the public key — for ML-DSA, the X.509 `SubjectPublicKeyInfo` (DER) form. Public-key distribution is out of band (a registry of authorized signers, analogous to
 SSH `allowed_signers`, is RECOMMENDED); a future schema layer MAY permit embedding public keys
 for trust-on-first-use deployments.
 
@@ -776,16 +1050,20 @@ file (and, where noted, additional artifacts):
 1. decompresses the payload within `payload.length` and checks `payload.hash` (§8.4);
 2. recomputes every blob hash while scanning the stream and checks sortedness and uniqueness
    (§8.2), and resolves every referenced blob (§8.3);
-3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3);
+3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3), and recomputes
+   every declared derivative hash from the materialized section (§13.6);
 4. re-atomizes content under each declared discipline and compares against the Atoms blobs,
    checks the cross-universe invariant over each discipline's domain (§9.6) and that no declared
-   discipline is inapplicable (**L117**) — requires an implementation of each discipline;
+   discipline is inapplicable (**L127**) — requires an implementation of each discipline (though
+   `opaque/1` and `resource/1` are language-blind and implementable by every verifier);
 5. recomputes the snapshot and checks it equals the last lineage entry (§12.1, **L109**);
 6. given the predecessor release, checks the lineage step's grade and delta (§12.3);
 7. checks the predicates of each declared profile, and — given the predecessor release — that
    every guarantee level the step fails to preserve is listed in that profile's `breaks` field
-   (§11.5, §12.4, **L118**, **L120**) — requires an implementation of each profile;
-8. recomputes the signing domain and verifies each signature (§15).
+   (§11.6, §12.4, **L128**, **L130**) — requires an implementation of each profile;
+8. recomputes the signing domain and verifies each signature (§15): a signature that does not
+   verify (**L121**), whose algorithm the verifier does not implement (**L122**), or whose key
+   fingerprint matches no trusted key (**L123**) fails the file.
 
 Steps 0–3, 5 (given the Atoms blobs) and 8 require no language knowledge and SHOULD be performed
 at installation. Steps 4, 6 and 7 are publish-time checks: a registry MUST perform them before
@@ -797,14 +1075,24 @@ attested by signature over recomputable claims; nothing is trusted testimony.
 
 ## 17. Determinism
 
-Producing a release twice from identical inputs MUST yield byte-identical `.lira` files. To that
-end: all orderings in this specification are total (blobs by hash; tree entries by path; atoms
-by value hash; lineage by history); the interpreter directive is a fixed string (§5.1); Brotli
-parameters are pinned (§8.1); no timestamps exist anywhere in the format; atomization is
-required to be run-independent (§11.2); and manifests generated by tools MUST use LF endings and
-canonical TEL formatting. Determinism is what makes
-the implementation identity meaningful and allows independent parties to reproduce and attest a
-release.
+Producing a release twice from identical inputs **with the same producer toolchain** MUST yield
+byte-identical unsigned `.lira` files. To that end: all orderings in this specification are
+total (blobs by hash; tree entries by path; atoms by value hash; lineage by history); the
+interpreter directive is a fixed string (§5.1); no timestamps exist anywhere in the format;
+atomization is required to be run-independent (§11.2); producers are required to be
+self-deterministic in their compression (§8.1); and manifests generated by tools MUST use LF
+endings and canonical TEL formatting.
+
+Two qualifications bound the claim precisely. *Across* producer toolchains, what is reproducible
+is the manifest's semantic model and the decompressed blob stream — every identity of §6 and
+§12 — while compressed bytes may differ (§8.1); implementation identity is defined over the
+decompressed stream for exactly this reason. And signing is excluded: the default ML-DSA
+signing mode is hedged (randomized), so re-signing yields different signature values over the
+same signed message; determinism claims apply to the file with its `signature` fields removed,
+which is also precisely the signing domain (§15.2).
+
+Determinism is what makes the implementation identity meaningful and allows independent parties
+to reproduce and attest a release.
 
 ## 18. Security Considerations
 
@@ -824,7 +1112,7 @@ release.
   invoking them, and the `lira` tool itself MUST treat the file as untrusted data (enforcing
   §8.1, §9.2 et al.).
 - **Guarantee scope**: a grade is a claim at the levels the release's disciplines and declared
-  profiles certify (§11.4), and at no others. Tools presenting a grade to a user SHOULD present
+  profiles certify (§11.5), and at no others. Tools presenting a grade to a user SHOULD present
   the level with it; a "minor" reported without its level invites a consumer relying on linkage
   to act on a claim that was only ever about recompilation.
 - **Behavioral compatibility**: no hash scheme certifies that unchanged signatures have
@@ -834,10 +1122,12 @@ release.
 
 ## Appendix A (Informative): The Scala Discipline `tasty/1`
 
-Atomization is performed over TASTy — never over raw TASTy bytes, which embed tool version
-strings, but over a canonical re-encoding of the semantic model (fully-qualified references,
-erased-signature overload disambiguators, alpha-normalized local names, API-relevant flags and
-annotations only, members sorted). Illustrative decomposition, applying the folding principle:
+The Scala discipline is specified normatively in the companion document
+[`tasty.md`](tasty.md); this appendix is an orientation. Atomization is performed
+over TASTy — never over raw TASTy bytes, which embed tool version strings, but over the
+semantic model as the compiler unpickles it (fully-qualified references, erased-signature
+overload disambiguators, alpha-normalized local names, API-relevant flags and annotations only,
+members sorted). Illustrative decomposition, applying the folding principle:
 
 - Standalone **rigid** atoms: concrete methods and fields; each overload (key includes erased
   signature); each default-argument's _existence_ (its body is excluded — defaults resolve at
@@ -853,7 +1143,7 @@ annotations only, members sorted). Illustrative decomposition, applying the fold
   — all of which is rigid-atomized.
 - TASTy-level and classfile-level compatibility diverge in both directions; `tasty/1`
   atomizes the TASTy level and certifies **recompilation**. The classfile-level invariants are
-  the JVM profile's (Appendix C), not the discipline's.
+  the JVM ecosystem profile's (Appendix D), not the discipline's.
 
 ### A.1 Type Hierarchies and Variance
 
@@ -892,20 +1182,25 @@ every hierarchy it participates in agrees" is thus decided across the whole buil
 manifests alone — which is the correct place for it, since no single module can hold the
 information needed to check it.
 
-### A.3 Keying: Why `tasty/1` Keys by Membership
+### A.3 Keying, and Where Inherited Members Live
 
-Under §11.2's keying requirement `tasty/1` MUST key by membership: an inherited concrete member
-is atomized under every type that presents it, not only under the type that declares it. The
-reason is a JVM fact rather than a Scala one. A consumer's call to `c.foo()`, where `C` inherits
-`foo` from `T`, compiles to an invocation naming `C` (or an interface in `C`'s hierarchy) — so
-`C`'s _linkage_ surface includes members `C` does not declare, and a declaration-keyed atom set
-would let `C`'s presented interface change while every atom keyed to `C` stayed fixed.
+Under §11.2's keying requirement `tasty/1` keys by **declaration**: a member is atomized once,
+under the type that declares it, with the erased-signature disambiguator of
+[`tasty.md`](tasty.md) §6. Inherited members are not re-atomized under each type that presents
+them.
 
-Membership keying costs redundancy — a member of a widely-inherited trait appears in many atoms
-— and buys a genuine property: the atom set of a type is the interface of that type, closed. It
-also interacts well with §13.4: a consumer's used-set names the atom under the type it actually
-referenced, so staleness and spanning are computed against the type the consumer named, not the
-type an implementation detail happened to place the member on.
+This is sound *because* of what the discipline certifies (§11.3): recompilation and TASTy-level
+linkage. A consumer's TASTy reference to `c.foo()`, where `C` inherits `foo` from `T`, names the
+symbol `T.foo` — the declaring owner — so the atom the consumer's used-set records is the one
+that changes if `foo` changes, wherever `foo` was declared. Cross-module hierarchy consistency
+then follows from A.2 rather than from redundant keys.
+
+Membership keying would be required for a discipline certifying *classfile* linkage, where a
+call site names the receiver and a type's linkage surface therefore includes members it does not
+declare. That is exactly the surface `tasty/1` scopes out to the JVM ecosystem profile
+(Appendix D), so the keying choice and the guarantee claim stay consistent: the discipline keys
+the way the representation it atomizes actually references things, and the profile covers the
+representation that references them differently.
 
 ## Appendix B (Informative): Worked Example
 
@@ -915,7 +1210,9 @@ tel 1.0 <lira schema signature>
 
 module gossamer-core
 version 0.64.2
-lineage Kx3f…  Lm81…  Pq44…
+lineage Kx3f…
+lineage Lm81…
+lineage Pq44…
 
 toolchain
   name scala
@@ -923,9 +1220,17 @@ toolchain
 
 owns gossamer
 
+# mode     # path
+resource export     gossamer/text-tables.conf
+resource scan       gossamer/templates
+
 api
   discipline tasty/1
   atoms Vw12…
+
+api
+  discipline resource/1
+  atoms Wz34…
 
 profile
   id jvm/1
@@ -939,9 +1244,10 @@ delta Xy56…
 
 section jvm
   tree Ef56…
-section js
+  derivative Tu78…
+section sjsir
   tree Gh78…
-section native
+section nir
   tree Ij90…
   delete gossamer/JvmOnly.class
 
@@ -961,19 +1267,42 @@ signature
 
 Reading this manifest alone, a tool can determine: the module's API history (three snapshots,
 two minor steps); that it satisfies any dependent requiring `Kx3f…`, `Lm81…` or `Pq44…`; which
-universes it supports; that the native view omits one root file; that the last step, though a
-minor by the atom algebra, did not preserve JVM linkage, so consumers holding compiled bytecode
-against `Lm81…` must recompile while consumers who build from source need do nothing; and
-everything needed to verify the file's integrity and authorship — all without decompressing a
-byte of the payload.
+universes it supports; that the `nir` view omits one root file; that the resource
+`gossamer/text-tables.conf` is contractually present on every universe's classpath; the hash of
+the classpath JAR its `jvm` section derives; that the last step, though a minor by the atom
+algebra, did not preserve JVM linkage, so consumers holding compiled bytecode against `Lm81…`
+must recompile while consumers who build from source need do nothing; and everything needed to
+verify the file's integrity and authorship — all without decompressing a byte of the payload.
 
-## Appendix C (Informative): The JVM Ecosystem Profile `jvm/1`
+## Appendix C (Normative): The Canonical Derivative Profile
+
+The canonical derivative artifact of a `jvm`, `sjsir` or `nir` section is a ZIP archive (a
+JAR) with exactly this layout:
+
+- one file entry per row of the materialized tree, in tree order (ascending bytewise UTF-8
+  path order); no directory entries;
+- entry names are the tree paths, UTF-8 encoded, with no transformation;
+- every entry uses the **Stored** method (no compression), with the CRC-32 and sizes of the
+  content bytes;
+- all timestamps are the DOS epoch (00:00:00, 1 January 1980); no extra fields, no entry or
+  archive comments, no archive prefix; ZIP64 structures only where entry counts or sizes make
+  them unavoidable;
+- the archive is local file headers with entry data in order, then the central directory,
+  then the end-of-central-directory record.
+
+Entries are Stored deliberately: a compression method would make every declared derivative
+hash depend on one encoder implementation's exact output forever, whereas the Stored profile
+depends only on the content itself. The artifact is nevertheless a fully conventional JAR,
+readable by any ZIP tooling.
+
+## Appendix D (Informative): The JVM Ecosystem Profile `jvm/1`
 
 The `jvm` universe is the case that motivates profiles, because it is the case where linkage and
 recompilation most visibly come apart. This appendix sketches what `jvm/1` must cover; like
-Appendix A it is informative, and a companion document will state it normatively.
+Appendix A it is informative, and a companion document will state it normatively. It is
+unrelated to Appendix C, which uses "profile" in the narrower sense of a canonical encoding.
 
-### C.1 The Two Levels Diverge in Both Directions
+### D.1 The Two Levels Diverge in Both Directions
 
 `tasty/1` certifies recompilation (§11.3). It does not certify JVM linkage, and cannot, because
 the linkage surface is a property of the classfiles — a representation below the one it
@@ -990,10 +1319,10 @@ atomizes. Concretely:
   descriptor in every classfile identical, and all can fail a consumer's next compile. Here the
   atoms correctly register a major and the bytecode would have permitted the change.
 
-Neither level subsumes the other, which is why `jvm/1` is a profile predicate (§11.5) rather
+Neither level subsumes the other, which is why `jvm/1` is a profile predicate (§11.6) rather
 than extra atoms: the two claims have different audiences and must be reportable separately.
 
-### C.2 What `jvm/1` Checks
+### D.2 What `jvm/1` Checks
 
 The predicates are bytecode-level and follow the model of existing binary-compatibility tooling
 (MiMa and the JLS binary-compatibility chapter are the rule table). Against the predecessor
@@ -1008,7 +1337,7 @@ remains a minor for recompiling consumers.
 a buildpath must carry TASTy that the consumer's compiler can read, since TASTy readability is
 versioned and not universally backward-compatible.
 
-### C.3 Can Classfiles Be Regenerated From TASTy?
+### D.3 Can Classfiles Be Regenerated From TASTy?
 
 The question is natural — TASTy is the full typed tree, `scalac -from-tasty` really does compile
 TASTy to classfiles, and if the classfiles are derivable then a linkage break might seem
@@ -1032,5 +1361,5 @@ What the derivability of classfiles genuinely does buy is worth stating positive
 is the reason a linkage break need not be fatal: **while TASTy is intact, a linkage break is a
 recompilation cost, not a wall.** Any consumer willing to rebuild from source can consume the
 release; only consumers pinned to prebuilt bytecode are blocked. That is precisely the
-distinction §11.4 draws and precisely what `breaks linkage` records — so the honest treatment of
+distinction §11.5 draws and precisely what `breaks linkage` records — so the honest treatment of
 regeneration is not to attempt it, but to grade with it in mind.

@@ -27,8 +27,8 @@ It is worth naming the three guarantee levels once:
 Each discipline below states which guarantee its rigid atoms certify. The algebra is
 indifferent — but publishers and consumers must know what a "minor" promises in each world.
 
-These three levels are now normative in the spec (§11.4), as is the mechanism for a guarantee a
-discipline cannot itself certify: an **ecosystem profile** (§11.5), a versioned predicate set
+These three levels are now normative in the spec (§11.5), as is the mechanism for a guarantee a
+discipline cannot itself certify: an **ecosystem profile** (§11.6), a versioned predicate set
 checked outside the atom algebra, whose shortfalls a release records as `breaks <level>`
 (§12.4). The rule of thumb for which mechanism to use: a claim belongs in atoms if it should
 change the release's API identity, and in a profile if it should not. Bytecode-level checks
@@ -39,13 +39,15 @@ depends on.
 
 - **Interface carrier**: TASTy (shared across `jvm`, `sjsir`, `nir` universes — hence one
   discipline and the cross-universe invariant, spec §9.6).
-- **Guarantee**: recompilation. Linkage at the TASTy level only; classfile-level linkage is the
-  `jvm/1` profile's business, not the discipline's (spec §11.3, Appendix C), and the two diverge
-  in both directions — a trait gaining a concrete method is a clean minor that still perturbs
-  every subclass's mixin forwarders, and an erasure-invisible bound change is a major that no
-  classfile would notice.
-- **Keying**: by membership, not declaration (spec §11.2, A.3) — an inherited member is atomized
-  under every type that presents it, because a JVM call site names the type it invoked on.
+- **Guarantee**: recompilation and TASTy-level linkage. Classfile-level linkage is the `jvm/1`
+  profile's business, not the discipline's (spec §11.3, Appendix D), and the two diverge in both
+  directions — a trait gaining a concrete method is a clean minor that still perturbs every
+  subclass's mixin forwarders, and an erasure-invisible bound change is a major that no classfile
+  would notice.
+- **Keying**: by declaration (spec §11.2, A.3; `tasty.md` §6) — a member is atomized once, under
+  its declaring owner, which is sound precisely because a TASTy reference names that owner.
+  Membership keying would be required only for a discipline certifying classfile linkage, where
+  call sites name the receiver — and that surface is scoped out to the profile.
 - **Hierarchies**: parents/variance/bounds fold into the type's own atom, so losing a parent is a
   removal and therefore major, with no subtyping reasoning anywhere in the checker (A.1);
   hierarchies spanning modules are kept consistent by used-sets and buildpath validity, not by
@@ -201,3 +203,4 @@ resolution (universes.md §4.1, step 3).
 | Java       | `classfile`        | jvm                | linkage + recomp| `static final` constants | MiMa, JLS 13                  |
 | JavaScript | `esm`              | js                 | export presence | —                        | —                             |
 | (WIT)      | `wit`              | component          | recomp + compose| —                        | WASI world versioning         |
+| (any)      | `resource`         | all                | name presence   | tracked resource content | —                             |
