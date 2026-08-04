@@ -244,7 +244,7 @@ The polarity is now correct at every point, and no new algebra is needed:
   content, where there genuinely is content to atomize, so §11.2 is satisfied honestly.
 
 Requirements sit on **sections**, not on the release: a library may shell out only in its `jvm`
-implementation. This does not collide with the cross-universe API invariant (spec §9.6), because
+implementation. This does not collide with the cross-section API invariant (spec §9.6), because
 requirements are not API — L108 constrains what a release *presents*, and two sections presenting
 one interface while needing different things of their hosts is ordinary, not a violation.
 

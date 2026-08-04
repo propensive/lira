@@ -56,8 +56,11 @@ described in RFC 2119 and RFC 8174 when, and only when, they appear in all capit
 - **Release**: one published `.lira` file for a module.
 - **Universe**: a library-composition world identifying the kind of representation a section
   holds (e.g. `jvm`, `sjsir`, `nir`). The universe vocabulary is open (§9.4).
-- **Section**: one compiled view of the release, keyed by universe and optionally by a
-  dependency vector (§9.5), stored as a tree of blobs.
+- **Section**: one compiled view of the release, keyed by universe and integration, stored as a
+  tree of blobs.
+- **Integration**: one alternative dependency vector a release was built against (§9.5).
+- **Assignment**: a choice of one integration per release on a buildpath, under which that
+  buildpath's validity is decided (§13.3).
 - **Blob**: a byte string in the payload, identified by its hash (§7).
 - **Atom**: the unit of API compatibility: a hash over the canonical encoding of one indivisible
   fragment of a module's public interface (§10).
@@ -237,6 +240,11 @@ this specification to any universe. For the motivating ecosystem the `jvm` secti
 conventionally first, holding the representation that is also valid as a conventional artifact
 of its ecosystem; a TypeScript release's root would be its `js` section.
 
+Where a release offers several integrations (§9.5) the sections form a matrix, and the root is
+still one section of it: every other section, of whatever universe or integration, is an overlay
+on that one (§9.3). Producers SHOULD make the root the section of the most widely applicable
+integration, since overlays are minimal with respect to it.
+
 ### 9.2 Trees
 
 Each section's `tree` field references a **Tree metadata blob**: a TEL document whose rows map
@@ -283,23 +291,55 @@ schema layers, which may append variants to a select but never remove them. A co
 only the base schema can still parse a layered manifest (TEL §8.2); it MUST treat sections of
 unknown universes as opaque and MUST NOT attempt to materialize them.
 
-### 9.5 Variant Sections
+### 9.5 Integrations
 
-A section MAY carry `against` entries: the API snapshot hashes of dependency releases it was
-compiled against, when these differ from the release's declared dependency list. This supports
-carrying compilations against multiple major versions of a dependency in one file. Sections
-without `against` are compiled against the manifest's own `dependency` list. Producers SHOULD
-prefer proving that a single compilation spans multiple dependency majors (§13.4) over emitting
-variant sections; variants are the fallback for genuine incompatibility.
+A release MAY have been built against more than one dependency vector: against two majors of one
+dependency, for consumers who cannot move together, or against alternative dependencies
+altogether, where a consumer chooses a backend. Each such alternative is an **integration**,
+declared by an `integration` record (§14) with an identifier unique within the release.
 
-### 9.6 Cross-Universe API Invariant
+Sections are keyed by universe **and** integration: a section names the integration it realizes,
+and no two sections may share a (universe, integration) pair (**L131**). A release therefore
+carries a matrix of sections, one per universe per integration, though it need not be full — a
+universe may be offered under only some integrations. Every declared integration MUST have at
+least one section (**L133**); an integration realized by nothing is a dependency vector no
+content was ever built against.
 
-For each discipline, atomizing each universe's **claimed** content (§11.2) MUST yield an
-identical atom set (**L108**): a release presents one API on every universe it supports.
-Implementations may differ per universe; interfaces may not. Producers MUST verify this at
-assembly time by atomizing each universe's materialized tree independently and comparing; the
-`api` records (§14) list this universe-invariant atomization, computed from the root section's
-materialized tree. (A library whose API genuinely differs by platform is two modules.)
+Dependency records are scoped to integrations exactly as they are scoped to universes (§13.2), so
+dependencies common to every integration are declared once and unscoped. A release declaring no
+integrations has exactly one, implicitly, and every section and dependency belongs to it; such a
+manifest is identical to one written before this mechanism existed.
+
+Integrations do not weaken the API guarantee. Every cell of the matrix presents the same
+interface (§9.6), so a release still has exactly one API identity and integrations are invisible
+to consumers' compatibility reasoning: which integration a buildpath selects (§13.3) changes what
+else must be present, never what the module offers.
+
+Producers SHOULD prefer proving that a single compilation spans multiple dependency majors
+(§13.4) over emitting integrations. Spanning is a proof about used-sets that costs nothing at
+consumption time; an integration is a second compilation that must be built, stored, verified and
+chosen between. Integrations are the fallback for genuine incompatibility, not the first answer
+to a version difference.
+
+### 9.6 Cross-Section API Invariant
+
+For each discipline, atomizing the **claimed** content (§11.2) of every section MUST yield an
+identical atom set (**L108**): a release presents one API on every universe it supports and under
+every integration it offers. Implementations may differ per universe and per integration;
+interfaces may not. Producers MUST verify this at assembly time by atomizing each section's
+materialized tree independently and comparing; the
+`api` records (§14) list this section-invariant atomization, computed from the root section's
+materialized tree. (A library whose API genuinely differs by platform, or by which dependencies
+it was built against, is two modules.)
+
+Holding the invariant across integrations is what keeps them cheap: because every integration
+presents one interface, the snapshot (§12.1), the lineage, dependency satisfaction (§13.2) and
+diamond resolution all remain single-valued and need no notion of integrations at all. The
+constraint bites on replaceable atoms, and publishers should know where: a public `inline` or
+macro body that splices integration-differing content has an integration-differing value hash,
+fails this invariant, and forces the module to be published as two. Rigid atoms are usually
+unaffected, since a signature naming a dependency's type names it identically whichever release
+of that dependency was on the compile classpath.
 
 The invariant is scoped per discipline to the content that discipline claims. Content that a
 discipline claims **atomless** (§11.2) — derived binaries such as classfiles, whose interface
@@ -400,7 +440,7 @@ A discipline defines, deterministically:
 
 1. **Domain**: the set of universes (§9.4) whose content it atomizes. The domain is a property of
    the discipline, fixed when the discipline is specified, not a property of any release. A
-   discipline whose domain holds more than one universe is bound by the cross-universe invariant
+   discipline whose domain holds more than one universe is bound by the cross-section invariant
    (§9.6) across the whole domain; one whose domain is a single universe is not bound by it at
    all. Domain is distinct from claiming: a discipline claims nothing in a universe outside its
    domain, and claiming nothing there is not the same as claiming content atomless.
@@ -459,7 +499,7 @@ This specification registers three disciplines:
   by name.
 - **`tasty/1`** (informative here; normative specification in [`tasty.md`](tasty.md)): the Scala
   discipline sketched in Appendix A. Its domain is every universe whose section carries TASTy —
-  `jvm`, `sjsir` and `nir` — and the cross-universe invariant over that domain is what makes "one
+  `jvm`, `sjsir` and `nir` — and the cross-section invariant over that domain is what makes "one
   API on every platform" checkable. Its keying is by declaration ([`tasty.md`](tasty.md) §6). It
   certifies **recompilation** and TASTy-level linkage on its whole domain; the classfile-level
   linkage obligations of the `jvm` universe are not its and belong to the JVM ecosystem profile
@@ -486,7 +526,7 @@ Each `resource` record declares one path in one of three modes:
   function of the name alone: the atom asserts *presence*, not content. Within a lineage,
   adding an export is a minor event and removing one is major (§12.3); editing the content is
   invisible to the algebra — a patch — because resource content is behavior, and no discipline
-  certifies behavior (§18). Because the atom is content-independent, the cross-universe
+  certifies behavior (§18). Because the atom is content-independent, the cross-section
   invariant (**L108**) permits an exported resource's bytes to differ per universe while
   automatically requiring the *path* to be present in every universe: a universe lacking it
   atomizes to a smaller set and fails L108.
@@ -715,6 +755,12 @@ A dependency record MAY additionally carry:
   may have genuinely different implementations per universe, and correspondingly different
   dependencies (a DOM facade needed only by the `sjsir` implementation; a C-binding wrapper
   only by `nir`). A dependency without `universe` entries applies to every universe.
+- **`integration`** entries, scoping the dependency to the named integrations (§9.5): the
+  dependency vectors that distinguish integrations are expressed exactly here. A dependency
+  without `integration` entries applies to every integration, which is how dependencies common to
+  all of them are declared once. The two scopes are independent and conjunctive: a dependency
+  applies to a (universe, integration) pair iff it applies to that universe and to that
+  integration.
 - **`build`**, a development-time pin to an exact implementation identity (§6): the candidate
   must additionally have exactly that `payload.hash`. Build pins express "this exact unpublished
   build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.4).
@@ -726,10 +772,12 @@ graph comes from re-validating the buildpath (§13.3), never from the grade.
 
 ### 13.3 Validity
 
-A buildpath is valid **for a universe** iff all of the following hold, and each is decidable
-from manifests alone. Closure and compatibility quantify over the dependency records
-*applicable to that universe* (§13.2); uniqueness, namespace disjointness and resource
-disjointness are global.
+A buildpath is valid **for a universe under an assignment** — a map from each release to one of
+its integrations (§9.5) — iff all of the following hold, and each is decidable from manifests
+alone. Closure and compatibility quantify over the dependency records *applicable to that
+universe and to that release's assigned integration* (§13.2); uniqueness, namespace disjointness
+and resource disjointness are global. A buildpath is **valid for a universe** iff some assignment
+makes it so (**L132**).
 
 1. **Uniqueness**: at most one release per module name (**L111**).
 2. **Namespace disjointness**: the `owns` claims (namespaces such as packages, per-ecosystem
@@ -752,6 +800,43 @@ disjointness are global.
    manifests; a profile predicate requiring payload inspection is a publish-time check (§16), not
    a buildpath rule.
 
+Where no release declares an integration, every release has one and the assignment is unique:
+the rules read exactly as they did before this mechanism, and validity is decided by one pass.
+
+Note what the quantifier does *not* add. No rule above mentions integrations, and none needs to:
+the rules that decide between them are the ones already there. An assignment whose integration
+requires a snapshot the present release of that module does not carry in its lineage fails rule
+5; one that would need a second release of a module already on the path fails rule 1; and one
+requiring a module absent altogether fails rule 4. So the version-alternative case resolves out
+of rules that predate integrations entirely, and all the quantifier adds is the search for an
+assignment that survives them.
+
+Rule 4 is also how a consumer expresses a backend choice without pinning: an integration naming a
+module the buildpath does not carry fails closure, so putting exactly one backend on the
+buildpath selects the integration that uses it. Pinning (below) is for the case where the
+buildpath carries both and the choice is genuinely free.
+
+**The canonical assignment.** More than one assignment may be valid — the case where a release
+offers alternative backends and the buildpath carries both. Resolution must still be
+reproducible, so among the
+valid assignments the **canonical** one is the lexicographically least sequence, taken over
+releases in ascending module-name order, of each assigned integration's `rank` then `id` (§14).
+Tools MUST select the canonical assignment unless the consumer pins otherwise, and a consumer MAY
+pin any release to a named integration, the search then ranging over the releases left free.
+Pinning is how a consumer states a preference the manifests cannot imply; `rank` is how a
+publisher states a default so that the unpinned case is deterministic rather than arbitrary.
+
+**The cost.** Finding an assignment is a search, and in the general case an intractable one —
+this is ordinary dependency resolution, which the rest of this specification avoids by requiring
+exact snapshots and deciding satisfaction by lineage membership. Four things bound it: the
+search ranges over
+integrations only and never over versions; the branching factor is the number of integrations a
+release declares, typically two or three; closure and uniqueness prune early, since a wrong
+choice usually contradicts a release already fixed; and §13.4's spanning often removes the need
+for an integration altogether. Tools SHOULD report an unsatisfiable buildpath by naming the
+releases whose integrations could not be reconciled, since "no valid assignment" is otherwise an
+unactionable diagnosis.
+
 ### 13.4 Used-Sets, Spanning, and Staleness
 
 A manifest MAY attach to each dependency a **Uses metadata blob**: the set of that dependency's
@@ -773,9 +858,10 @@ Used-sets enable two derived judgements:
 
 ### 13.5 Derivation of Conventional Artifacts
 
-From a valid buildpath and a chosen universe, a consumer derives a conventional artifact set
-(e.g. a classpath) by, per release: selecting the section for that universe (a release lacking
-one is a validation-time error, not a link-time surprise), materializing it per §9.3 into a
+From a valid buildpath, a chosen universe and the assignment that validated it (§13.3), a
+consumer derives a conventional artifact set (e.g. a classpath) by, per release: selecting the
+section for that universe and that release's assigned integration (a release lacking one is a
+validation-time error, not a link-time surprise), materializing it per §9.3 into a
 cache keyed by implementation identity, and appending whatever ecosystem-supplied platform
 runtime the universe requires. Reconstruction of a standalone per-platform archive is the
 canonical derivative artifact of §13.6.
@@ -797,7 +883,10 @@ is a stable fact about the section, which the section's OPTIONAL `derivative` fi
 The declared derivative hashes make releases **findable from conventional artifacts alone**: a
 tool holding only a classpath of ordinary JARs hashes each under the derivative domain and
 looks the result up — against a buildpath's manifests, or a distribution index — recovering
-the release, its API identity, and its whole compatibility context. Materialization caches
+the release, its API identity, and its whole compatibility context. Since a derivative belongs to
+one section, and a section to one (universe, integration) pair, the lookup also recovers *which
+integration* the artifact is, which no coordinate-mangling convention can tell it.
+Materialization caches
 (§13.5) SHOULD store sections in exactly this form, so the cache entry *is* the canonical
 artifact.
 
@@ -879,13 +968,21 @@ record Dependency
   field version Semver optional         # human-readable hint; no authority
   field build Hash optional             # development-time implementation-identity pin (§13.2)
   field universe Identifier optional repeatable  # universes this dependency applies to (§13.2)
+  field integration Identifier optional repeatable  # integrations it applies to (§9.5, §13.2)
   field uses Hash optional              # Uses metadata blob
   field spans Hash optional repeatable  # snapshots provably spanned (§13.4)
 
+record Integration
+  description  One alternative dependency vector this release was built against (§9.5).
+
+  field  id     Identifier
+  field  rank   Natural optional    # canonical-assignment preference, lower first (§13.3)
+  field  label  String optional     # human-readable note; no authority
+
 record Section
   select  Universe
-  field   against     Hash  optional  repeatable    # variant dependency snapshots (§9.5)
-  field   tree        Hash                          # Tree metadata blob
+  field   integration Identifier optional            # the integration realized (§9.5)
+  field   tree        Hash                           # Tree metadata blob
   field   delete      String  optional  repeatable  # root paths removed in this overlay
   field   derivative  Hash  optional                # canonical derivative artifact (§13.6)
 
@@ -919,9 +1016,10 @@ document
   field resource Resource optional repeatable  # resource/1 claims (§11.4)
   field api Api repeatable
   field profile Profile optional repeatable
+  field integration Integration optional repeatable  # alternative dependency vectors (§9.5)
   field dependency Dependency optional repeatable
   field delta Hash optional             # Delta metadata blob for this lineage step
-  field section Section repeatable     # first section = root (§9.1)
+  field section Section repeatable     # first section = root (§9.1); keyed (universe, integration)
   field payload Payload
   field signature Signature optional repeatable
 ```
@@ -1053,8 +1151,10 @@ file (and, where noted, additional artifacts):
 3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3), and recomputes
    every declared derivative hash from the materialized section (§13.6);
 4. re-atomizes content under each declared discipline and compares against the Atoms blobs,
-   checks the cross-universe invariant over each discipline's domain (§9.6) and that no declared
-   discipline is inapplicable (**L127**) — requires an implementation of each discipline (though
+   checks the cross-section invariant over each discipline's domain for every section of the
+   (universe × integration) matrix (§9.6), that integration declarations are well-formed
+   (**L131**) and each is realized (**L133**), and that no declared discipline is inapplicable
+   (**L127**) — requires an implementation of each discipline (though
    `opaque/1` and `resource/1` are language-blind and implementable by every verifier);
 5. recomputes the snapshot and checks it equals the last lineage entry (§12.1, **L109**);
 6. given the predecessor release, checks the lineage step's grade and delta (§12.3);
@@ -1236,20 +1336,38 @@ profile
   id jvm/1
   breaks linkage
 
+integration
+  id rudiments1
+  rank 0
+integration
+  id rudiments0
+  rank 1
+  label built against the rudiments 0.x line
+
 # module              # api     # version
 dependency anticipation-core      Ab12…     0.64.0
 dependency rudiments-core         Cd34…     0.64.1
+  integration rudiments1
+dependency rudiments-core         Ef90…     0.63.8
+  integration rudiments0
 
 delta Xy56…
 
 section jvm
+  integration rudiments1
   tree Ef56…
   derivative Tu78…
 section sjsir
+  integration rudiments1
   tree Gh78…
 section nir
+  integration rudiments1
   tree Ij90…
   delete gossamer/JvmOnly.class
+section jvm
+  integration rudiments0
+  tree Kl12…
+  derivative Vw90…
 
 payload
   compression brotli
@@ -1267,9 +1385,12 @@ signature
 
 Reading this manifest alone, a tool can determine: the module's API history (three snapshots,
 two minor steps); that it satisfies any dependent requiring `Kx3f…`, `Lm81…` or `Pq44…`; which
-universes it supports; that the `nir` view omits one root file; that the resource
-`gossamer/text-tables.conf` is contractually present on every universe's classpath; the hash of
-the classpath JAR its `jvm` section derives; that the last step, though a minor by the atom
+universes it supports; that it offers a `jvm` build against the `rudiments` 0.x line as well as
+the preferred one, so a buildpath pinned to `Ef90…` resolves without a second artifact, while
+`sjsir` and `nir` are offered only under the preferred integration; that the `nir` view omits one
+root file; that the resource `gossamer/text-tables.conf` is contractually present on every
+universe's classpath; the hash of the classpath JAR each `jvm` section derives, which identifies
+which integration a bare JAR is; that the last step, though a minor by the atom
 algebra, did not preserve JVM linkage, so consumers holding compiled bytecode against `Lm81…`
 must recompile while consumers who build from source need do nothing; and everything needed to
 verify the file's integrity and authorship — all without decompressing a byte of the payload.

@@ -35,10 +35,10 @@ change the release's API identity, and in a profile if it should not. Bytecode-l
 belong in a profile, because a bridge moving should not change what a recompiling consumer
 depends on.
 
-## 2. Scala — `tasty` (spec Appendix A; companion spec to come)
+## 2. Scala — `tasty` (spec Appendix A; normative spec: `tasty.md`)
 
 - **Interface carrier**: TASTy (shared across `jvm`, `sjsir`, `nir` universes — hence one
-  discipline and the cross-universe invariant, spec §9.6).
+  discipline and the cross-section invariant, spec §9.6).
 - **Guarantee**: recompilation and TASTy-level linkage. Classfile-level linkage is the `jvm/1`
   profile's business, not the discipline's (spec §11.3, Appendix D), and the two diverge in both
   directions — a trait gaining a concrete method is a clean minor that still perturbs every

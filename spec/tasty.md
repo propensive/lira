@@ -165,7 +165,7 @@ denylist direction only ever produces spurious majors. Denylisted (never folded)
   `scala.annotation.unchecked.*`);
 - cross-universe interop namespaces (`scala.scalajs.js.annotation.*`,
   `scala.scalanative.unsafe.*`) — these are API to *foreign* callers, not to Scala consumers,
-  and folding them would spuriously break the cross-universe invariant (§14).
+  and folding them would spuriously break the cross-section invariant (§13).
 
 ## 11. Replaceable Atoms
 
@@ -199,10 +199,10 @@ After atomization, references whose keys belong to this module's own atom set ar
 listings by exact key match — exact, because both sides spell keys with the same
 erased-signature disambiguators.
 
-## 13. Cross-Universe Policy
+## 13. Cross-Section Policy
 
-The atomization of each universe's materialized `.tasty` set (with that universe's classpath)
-MUST be identical as (key, class, value hash) — LIRA's L108. Universes MAY differ in:
+The atomization of each section's materialized `.tasty` set (with that section's classpath) MUST
+be identical as (key, class, value hash) — LIRA's L108. Sections MAY differ in:
 
 - implementation, including byte-divergent `.tasty` files (a fresh compiler run pickles fresh
   UUIDs and tool strings, none of which enter the model);
@@ -210,6 +210,15 @@ MUST be identical as (key, class, value hash) — LIRA's L108. Universes MAY dif
 - denylisted interop annotations (§10).
 
 In nothing else. A library whose API genuinely differs by platform is two modules.
+
+Sections differ along two axes (LIRA §9.5): universe, and **integration** — the dependency
+vector the section was built against. The rule is the same for both, but integrations make one
+consequence sharp. A section built against a different release of a dependency compiles with a
+different classpath, so any replaceable atom whose body splices content from that dependency
+will differ in value hash between integrations and fail L108. Rigid atoms are typically
+unaffected, since a signature naming a dependency's type names it identically whichever release
+supplied it (§6, §7). A module whose public `inline` or macro bodies reach into a swappable
+dependency therefore cannot offer integrations, and must be published as separate modules.
 
 ## 14. Determinism
 
