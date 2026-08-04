@@ -808,7 +808,7 @@ the rules that decide between them are the ones already there. An assignment who
 requires a snapshot the present release of that module does not carry in its lineage fails rule
 5; one that would need a second release of a module already on the path fails rule 1; and one
 requiring a module absent altogether fails rule 4. So the version-alternative case resolves out
-of rules that predate integrations entirely, and all the quantifier adds is the search for an
+of rules that predate integrations entirely, and all the quantifier adds is the choice of an
 assignment that survives them.
 
 Rule 4 is also how a consumer expresses a backend choice without pinning: an integration naming a
@@ -818,24 +818,42 @@ buildpath carries both and the choice is genuinely free.
 
 **The canonical assignment.** More than one assignment may be valid — the case where a release
 offers alternative backends and the buildpath carries both. Resolution must still be
-reproducible, so among the
-valid assignments the **canonical** one is the lexicographically least sequence, taken over
-releases in ascending module-name order, of each assigned integration's `rank` then `id` (§14).
-Tools MUST select the canonical assignment unless the consumer pins otherwise, and a consumer MAY
-pin any release to a named integration, the search then ranging over the releases left free.
-Pinning is how a consumer states a preference the manifests cannot imply; `rank` is how a
-publisher states a default so that the unpinned case is deterministic rather than arbitrary.
+reproducible, so among the valid assignments the **canonical** one is the lexicographically least
+sequence, taken over releases in ascending module-name order, of each assigned integration's
+`rank` then `id` (§14). Tools MUST select the canonical assignment unless the consumer pins
+otherwise, and a consumer MAY pin any release to a named integration, the remaining releases
+still taking their canonical choices. Pinning is how a consumer states a preference the manifests
+cannot imply; `rank` is how a publisher states a default so that the unpinned case is
+deterministic rather than arbitrary.
 
-**The cost.** Finding an assignment is a search, and in the general case an intractable one —
-this is ordinary dependency resolution, which the rest of this specification avoids by requiring
-exact snapshots and deciding satisfaction by lineage membership. Four things bound it: the
-search ranges over
-integrations only and never over versions; the branching factor is the number of integrations a
-release declares, typically two or three; closure and uniqueness prune early, since a wrong
-choice usually contradicts a release already fixed; and §13.4's spanning often removes the need
-for an integration altogether. Tools SHOULD report an unsatisfiable buildpath by naming the
-releases whose integrations could not be reconciled, since "no valid assignment" is otherwise an
-unactionable diagnosis.
+**The cost, and why there is almost none.** The existential quantifier reads like a search, and
+it is worth saying plainly that under these rules it is not one.
+
+A buildpath is a **fixed** set of releases, so which release provides a module is settled before
+any integration is chosen. Every rule an assignment can affect — closure (4) and compatibility
+(5) — then turns on one release together with its own choice, and on nothing else: no rule
+relates one release's integration to another's. The choices are therefore independent, and the
+canonical assignment is obtained by taking, for each release in isolation, the first of its
+integrations in (`rank`, `id`) order whose own dependencies hold. That is linear in the total
+number of integrations declared across the buildpath, requires no backtracking, and yields the
+canonical assignment by construction rather than by minimizing over candidates.
+
+A buildpath admits no valid assignment (**L132**) exactly when some single release has no viable
+integration — never through some irreducible interaction between releases. A specific diagnosis
+is therefore always available, and tools SHOULD name that release and, for each of its
+integrations, the rule that rejected it. "No valid assignment" as a bare verdict is never the
+best a tool can do.
+
+The general problem this resembles — where choices genuinely interact, and search is
+intractable — arises only for a resolver that also decides *which releases to include*, since an
+integration can then pull a module onto the buildpath and change what other releases resolve
+against. That is dependency resolution proper. This specification does not do it: §13.3 audits a
+buildpath it is handed, and §13.2 requires exact snapshots satisfied by lineage membership, which
+is what keeps the two problems apart. A tool that constructs buildpaths inherits the harder
+problem, and inherits it from its own design rather than from this section.
+
+Even so, §13.4's spanning often removes the need for an integration altogether, which remains the
+cheapest answer to a version difference (§9.5).
 
 ### 13.4 Used-Sets, Spanning, and Staleness
 
