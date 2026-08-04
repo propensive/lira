@@ -506,9 +506,12 @@ This specification registers three disciplines:
   (Appendix D).
 
 Anticipated future disciplines include declaration-surface disciplines for TypeScript (`dts`),
-Java classfile signatures, and Kotlin metadata. Foreign content — JavaScript modules resolved at
-link time, C sources compiled by a downstream linker, and so on — is admissible in any section
-today under `opaque/1`.
+Java classfile signatures, and Kotlin metadata. A discipline need not atomize a *library*: a
+`webidl` discipline over Web IDL would atomize a browser's capability contract, which is content
+of the host rather than of anything published against it — a shape this specification admits but
+does not yet make use of, since host contracts await a `requires` mechanism. Foreign content —
+JavaScript modules resolved at link time, C sources compiled by a downstream linker, and so on —
+is admissible in any section today under `opaque/1`.
 
 ### 11.4 The `resource/1` Discipline
 
