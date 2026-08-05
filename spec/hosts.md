@@ -125,10 +125,10 @@ fails the schema, whose rows are unsorted or duplicated, is invalid at assembly 
 time, on the same terms as a malformed Atoms blob.
 
 **Atomization.** One rigid atom per `capability` row. The key is the capability's name; the
-canonical encoding is the UTF-8 bytes of the name, then `0x00`, then the UTF-8 bytes of the
-version predicate or an absence marker. The `probe` field enters no atom: it participates in
-implementation identity (it is bytes in the payload) but never in API identity, so editing a
-probe is a patch.
+canonical encoding is the UTF-8 bytes of the name, then `0x00`, then — where a version predicate
+is declared — `0x01` followed by the predicate's UTF-8 bytes, or the single byte `0x00` where
+none is. The `probe` field enters no atom: it participates in implementation identity (it is
+bytes in the payload) but never in API identity, so editing a probe is a patch.
 
 **Version predicates.** A predicate folds into the atom's value, so a contract *tightening* a
 minimum (`git >= 2.30` → `git >= 2.40`) changes the atom — a removal plus an addition, hence
