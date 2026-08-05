@@ -490,8 +490,6 @@ This specification registers three disciplines:
   claims: nothing in a LIRA file is ever outside the compatibility algebra; unknown content is
   merely maximally conservative. Its domain is every universe; its keying is by declaration
   (paths); it certifies linkage and recompilation trivially, since it admits no change at all
-  merely maximally conservative. Its domain is every universe; its keying is by declaration
-  (paths); it certifies linkage and recompilation trivially, since it admits no change at all
   below the major grade.
 - **`resource/1`** (normative; §11.4): resources declared in the manifest — presence-guaranteed
   exports, content-tracked resources, and scanned directories claimed atomless. Its domain is
@@ -505,8 +503,23 @@ This specification registers three disciplines:
   linkage obligations of the `jvm` universe are not its and belong to the JVM ecosystem profile
   (Appendix D).
 
-Anticipated future disciplines include declaration-surface disciplines for TypeScript (`dts`),
-Java classfile signatures, and Kotlin metadata. A discipline need not atomize a *library*: a
+- **`classfile/1`** (informative here; normative specification in
+  [`classfile.md`](classfile.md)): the JVM bytecode discipline. Its domain is the single universe
+  `{jvm}`, so the cross-section invariant is vacuous for it; its keying is by **membership**,
+  since a JVM call site names the receiver and a type's linkage surface therefore includes
+  members it does not declare. It certifies **linkage** and only linkage. Registering it is a
+  deliberate choice with a cost — see §11.6 and [`classfile.md`](classfile.md) §14 — and for most
+  JVM ecosystems the `jvm/1` profile ([`jvm.md`](jvm.md)) is the better instrument.
+- **`dts/1`** (informative here; normative specification in [`dts.md`](dts.md)): the TypeScript
+  declaration discipline. Its domain is every universe, for want of a universe to name — `js` is
+  reserved (§9.4) but not yet defined — which usefully brings a declared TypeScript surface under
+  the cross-section invariant. Its keying is by declaration. It certifies **recompilation** and
+  not linkage: `.d.ts` declarations are erased before anything runs, so there is no late linking
+  for them to protect.
+
+Anticipated future disciplines include a declaration-surface discipline for Kotlin metadata, and
+one for Java source signatures where no `.class` files are shipped. A discipline need not
+atomize a *library*: a
 `webidl` discipline over Web IDL would atomize a browser's capability contract, which is content
 of the host rather than of anything published against it — a shape this specification admits but
 does not yet make use of, since host contracts await a `requires` mechanism. Foreign content —
@@ -613,8 +626,8 @@ invalid (**L128**), and a registry MUST check declared profiles before accepting
 ecosystem-specific claim and is graded by the core algebra alone.
 
 **Why profile predicates are not simply more atoms.** An ecosystem could instead define a
-universe-specific discipline — a `classfile/1` whose domain is `{jvm}` — and let bytecode surface
-enter the atom set directly. This specification permits that and, for an ecosystem whose primary
+universe-specific discipline — `classfile/1`, whose domain is `{jvm}`
+([`classfile.md`](classfile.md)) — and let bytecode surface enter the atom set directly. This specification permits that and, for an ecosystem whose primary
 contract genuinely _is_ linkage, it is the better choice. But it is the wrong default, because
 atoms feed the snapshot (§12.1), and the snapshot is API identity: fusing the two levels into one
 identity means that a release whose source-level interface is unchanged but whose bridge methods
@@ -1441,7 +1454,7 @@ readable by any ZIP tooling.
 
 The `jvm` universe is the case that motivates profiles, because it is the case where linkage and
 recompilation most visibly come apart. This appendix sketches what `jvm/1` must cover; like
-Appendix A it is informative, and a companion document will state it normatively. It is
+Appendix A it is informative, and [`jvm.md`](jvm.md) states it normatively. It is
 unrelated to Appendix C, which uses "profile" in the narrower sense of a canonical encoding.
 
 ### D.1 The Two Levels Diverge in Both Directions
