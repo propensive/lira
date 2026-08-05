@@ -124,7 +124,9 @@ Three rules govern the ordering of folded lists:
   atom.
 - **Unions and intersections sort**, by their members' encoded bytes. `A | B` and `B | A` are the
   same type. Sorting by encoded bytes rather than by rendered text keeps the order a property of
-  the structure.
+  the structure. **An inline object type's member list sorts** likewise, by selector: object
+  types are structural, so `{ a: string, b: number }` and `{ b: number, a: string }` are the same
+  type and must encode identically.
 - **Everything else keeps declaration order**, because that order is semantic: tuple elements are
   positional; heritage clauses decide how conflicting inherited members resolve; overload
   signatures decide which signature a given call selects.
@@ -144,9 +146,22 @@ which parameter is narrowed is positional.
 
 ## 9. Rigid Atoms: Members
 
-One rigid atom per visible member of an interface, class or inline object type. The value folds,
-in order: the member's selector; its kind; its visibility; its `static`, `readonly`, `optional`
-and `abstract` flags; and its signature list, in declaration order.
+One rigid atom per visible member of an interface or class. The value folds, in order: **the
+declaring declaration's key**; then the member's selector; its kind; its visibility; its
+`static`, `readonly`, `optional` and `abstract` flags; and its signature list, in declaration
+order.
+
+The declaration's key is not redundant with the atom's own key, and omitting it would be
+unsound: a snapshot is the hash of the set of *distinct* value hashes (LIRA §12.1), so two
+identically-shaped members of different declarations would collapse into one term, and removing
+one of them would leave API identity unchanged. This is the same obligation `classfile.md` §10
+item 2 records for membership keying; it binds here for the same reason despite declaration
+keying, because selectors repeat freely across declarations.
+
+An **inline object type's** members are not atoms of their own: they fold into whatever type
+encoding contains them (§8). A standalone atom there could grade nothing — any change to an
+inline object type already changes the enclosing declaration's atom — and object types nest, so
+such atoms could not be keyed without collision.
 
 ## 10. Rigid Atoms: Declarations
 

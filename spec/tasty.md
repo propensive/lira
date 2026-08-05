@@ -117,9 +117,10 @@ observe, and the placeholder is an artifact of completion order, not of the API.
 construct outside this vocabulary is a hard atomization error**: toolchain vocabulary drift
 is detected, never silently absorbed.
 
-Modifier flags fold as a fixed-order bit set: abstract, case, deferred, enum, erased, exported,
-final, given, implicit, infix, inline, lazy, macro, module, mutable, opaque, open, protected,
-sealed, trait, transparent.
+Modifier flags fold as a fixed-order bit set: abstract, case, deferred, enum, erased, final,
+given, implicit, infix, inline, lazy, macro, module, mutable, opaque, open, protected, sealed,
+trait, transparent. The `exported` flag is not in the set, consistently with its stripping in
+§9.
 
 ## 8. Rigid Atoms: Templates
 

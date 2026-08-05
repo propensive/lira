@@ -258,7 +258,8 @@ producers: cross-implementation bit-reproduction of a `.lira` file requires the 
 toolchain (§17). Readers MUST enforce `payload.length` (the declared decompressed size, §14)
 as a hard limit during decompression and MUST reject a payload whose decompressed length is
 not exactly the declared value (**L102**) — the upper bound is what bounds
-decompression-bomb exposure.
+decompression-bomb exposure. A payload whose compressed bytes do not decode as a Brotli stream
+is malformed (**L139**).
 
 ### 8.2 Blob Stream
 
@@ -269,8 +270,10 @@ record = uvarint(length) ++ bytes
 ```
 
 where `uvarint` is unsigned LEB128. Each record's bytes constitute one blob. The blob's identity
-is `hash("lira/1:blob", bytes)`. Records MUST be sorted in ascending bytewise order of their
-blob hashes, and no two records may have equal hashes (**L103**). Blob hashes are not stored in
+is `hash("lira/1:blob", bytes)`. A record whose length prefix is not a well-formed uvarint, or
+which overruns the end of the stream, renders the payload malformed (**L139**). Records MUST be
+sorted in ascending bytewise order of their blob hashes, and no two records may have equal
+hashes (**L103**). Blob hashes are not stored in
 the stream: a reader recomputes them while scanning, and this recomputation is the integrity
 check. A blob referenced anywhere in the manifest or in a metadata blob that is absent from the
 stream renders the file invalid (**L104**); unreferenced blobs are permitted but producers
@@ -1034,7 +1037,8 @@ derivative = hash("lira/1:derivative", artifact bytes)
 ```
 
 is a stable fact about the section, which the section's OPTIONAL `derivative` field declares
-(§14) and verifiers recompute (§16, step 3).
+(§14) and verifiers recompute (§16, step 3); a declared derivative hash that does not recompute
+from the materialized tree is invalid (**L138**).
 
 The declared derivative hashes make releases **findable from conventional artifacts alone**: a
 tool holding only a classpath of ordinary JARs hashes each under the derivative domain and
@@ -1316,8 +1320,9 @@ file (and, where noted, additional artifacts):
 2. recomputes every blob hash while scanning the stream and checks sortedness and uniqueness
    (§8.2), and resolves every referenced blob (§8.3);
 3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3), and recomputes
-   every declared derivative hash from the materialized section (§13.6);
-4. re-atomizes content under each declared discipline and compares against the Atoms blobs,
+   every declared derivative hash from the materialized section (§13.6, **L138**);
+4. re-atomizes content under each declared discipline and compares against the Atoms blobs —
+   a listing that does not recompute is invalid (**L141**) —
    checks the cross-section invariant over each discipline's domain for every section of the
    (universe × integration) matrix (§9.6), that integration declarations are well-formed
    (**L131**) and each is realized (**L133**), that no declared discipline is inapplicable
@@ -1337,8 +1342,8 @@ file (and, where noted, additional artifacts):
 Steps 0–3, 5 (given the Atoms blobs) and 8 require no language knowledge and SHOULD be performed
 at installation. Steps 4, 6 and 7 are publish-time checks: a registry MUST perform them before
 accepting a release, since they are what make manifests trustworthy at use-time. A registry that
-cannot implement a declared discipline or profile MUST reject the release rather than accept it
-unchecked — an unverifiable claim is worse than an absent one, because consumers cannot tell the
+cannot implement a declared discipline or profile MUST reject the release (**L140**) rather than
+accept it unchecked — an unverifiable claim is worse than an absent one, because consumers cannot tell the
 two apart from the manifest. Every claim in a manifest is thus either recomputable locally or
 attested by signature over recomputable claims; nothing is trusted testimony — with one
 deliberate, labelled exception. A section's `requires` records (§13.3 rule 7,
