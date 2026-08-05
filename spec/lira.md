@@ -379,7 +379,9 @@ altogether, where a consumer chooses a backend. Each such alternative is an **in
 declared by an `integration` record (§14) with an identifier unique within the release.
 
 Sections are keyed by universe **and** integration: a section names the integration it realizes,
-and no two sections may share a (universe, integration) pair (**L131**). A release therefore
+and no two sections may share a (universe, integration) pair (**L131**). Where a release
+declares any integration, *every* section MUST name one (also **L131**): an unlabelled section
+beside declared integrations belongs to no cell of the matrix and is ambiguous, not implicit. A release therefore
 carries a matrix of sections, one per universe per integration, though it need not be full — a
 universe may be offered under only some integrations. Every declared integration MUST have at
 least one section (**L133**); an integration realized by nothing is a dependency vector no
