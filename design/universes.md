@@ -13,6 +13,12 @@ pipeline graph** rather than by file format.
 
 ## 1. Definitions
 
+> **Status.** The definitions of this section are now normative in the spec's taxonomy
+> (spec §4.1: format, world, universe, host, host contract, application type, egress, join,
+> ecosystem, language, platform, compatible). This section remains the informative elaboration —
+> the litmus-test walkthroughs and the registry below — and where wording differs, the spec
+> governs.
+
 **Format.** A concrete byte-level encoding: classfile, TASTy, SJSIR, NIR, Kotlin `@Metadata`,
 klib, `.d.ts`, ES module, rmeta/rlib, LLVM bitcode, WASM core module, WASM component, WIT, DEX,
 ELF/Mach-O/PE object. A format has no intrinsic role: the same format can appear at different
@@ -195,10 +201,17 @@ application type **T**:
 The DAG should ultimately be machine-readable — a TEL document (`universes.tel`) shipping with
 the toolchain, registering universes, egresses, joins, and the tools implementing each edge —
 so that step 4 is data-driven and new universes/egresses are registry entries, not code
-changes. Steps 1–3 extend the buildpath validity rules of spec §13.3; the current spec's
-"select the section for that universe" (§13.5) is the special case of a single-universe path.
+changes. Steps 1–3 are now normative as the **target** and `serves` rules of spec §13.2–§13.3
+and §13.5 (host-contract satisfiability as rule 7); step 4 remains build-tool territory pending
+the registry.
 
 ## 5. Hosts as modules: the `requires` axis
+
+> **Status.** This design is now normative: [`spec/hosts.md`](../spec/hosts.md) specifies host
+> contracts, the `host` world, `requires`, satisfaction and cross-contract spanning, the
+> `capability/1` discipline, and the third verification moment (§5.5 below). The subsections
+> below are kept as the derivation and rationale; where they differ from `hosts.md`, the spec
+> governs.
 
 §4.1 step 3 checks host-contract satisfiability as a side condition, and compatibility.md §9
 reserves a unification as "a possible later elegance": *a host contract is a module whose atoms
@@ -214,7 +227,7 @@ It does not work, in three independent ways:
 
 - **Nothing to atomize.** A discipline is `content → atoms` (spec §11.2), claiming blobs by path
   and bytes. Command availability is a property of the environment, not of any blob. Spec
-  **L117** now invalidates a release declaring a discipline whose domain is disjoint from the
+  **L127** now invalidates a release declaring a discipline whose domain is disjoint from the
   sections it carries, which is exactly this case.
 - **Inverted polarity.** Atoms describe what a module *provides*, and rigid atoms are monotonic
   because *addition is safe* (spec §10.2–§10.3). A requirement is what a module *needs*, and
@@ -347,33 +360,32 @@ an omission, never prove the list complete.
 
 ### 5.6 Open questions
 
-- Who publishes host contracts? A registry-blessed `posix/1`, `nodejs/22`, `jdk/21` set is the
-  obvious start, but the namespace is a governance question, not a technical one.
-- **What universe does a host contract's section carry?** This one blocks implementation. A
-  release needs at least one `section` (spec §9.1) and sections are keyed by universe, but a host
-  contract is not a library composing in any universe — that is the whole point of the host axis.
-  Either contract-only releases carry no section, which means relaxing §9.1 and deciding what
-  §13.5 materializes for them, or a `host` pseudo-universe is introduced, which puts something on
-  the universe axis that fails the §1 litmus test. Neither is obviously right, and `requires`
-  cannot become normative until one is chosen.
-- Does a capability atom carry anything beyond name and version — an execution-semantics note, a
-  probe command? A probe (`git --version`) would make §5.5's check data-driven rather than
-  convention-driven, at the cost of putting executable strings in a manifest.
-- Are transitive requirements aggregated at resolution? Almost certainly yes, and by the same
-  closure used for used-sets — but it wants stating.
+Three of the four questions this section originally posed are resolved by
+[`spec/hosts.md`](../spec/hosts.md): the section question — a `host` **world**, the one section
+key that is not a universe, so contract content is ordinary content and the §1 litmus test is
+preserved by naming rather than bent (spec §4.1, §9.4, L135); the probe question — an advisory
+`probe` field on `capability/1` rows, excluded from every atom, treated as untrusted input
+(hosts.md §5, §9); and transitive aggregation — required, per hosts.md §10, with joint
+satisfiability by the diamond rule.
+
+Still open:
+
+- Who publishes host contracts? A registry-blessed `posix`, `nodejs`, `jdk` set is the obvious
+  start, but the namespace is a governance question, not a technical one (hosts.md §11).
 
 ## 6. Spec impact
 
-Applied to the spec: the universe select's variants are `jvm | sjsir | nir` (§9.4), freeing
-`js` for the JS universe proper; and the root section is per-file, defined as the first
-section (§9.1).
+Applied to the spec: the section key is a **world** — `jvm | sjsir | nir | host` (§9.4), freeing
+`js` for the JS universe proper; the root section is per-file, defined as the first section
+(§9.1); the taxonomy of §1 is normative (spec §4.1); host contracts and `requires` are normative
+([`spec/hosts.md`](../spec/hosts.md)), in the host-as-module form of §5, with the third
+verification moment of §5.5 named in spec §16; and cross-universe dependencies are normative via
+the `serves` field and the **target** generalization of buildpath validity and derivation
+(spec §13.2, §13.3, §13.5) — the manifest-decidable slice of §4.1's resolution, steps 1–3.
 
 Still proposed:
 
-1. New host-requirements field on sections (`requires`, versioned capability constraints:
-   JDK, Android API, WASI world, Node/DOM, shell commands) — as a schema layer, taking the
-   host-as-module form of §5 so that satisfaction is lineage membership and not a bespoke
-   predicate. Needs the install-time verification moment of §5.5 named explicitly, alongside
-   §16's publish-time and §13.3's resolution-time checks.
-2. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
-3. §13.3/§13.5: generalize buildpath validity and derivation to DAG resolution (§4.1 above).
+1. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
+2. The machine-readable pipeline registry (`universes.tel`) driving §4.1 step 4, so that
+   egresses, joins and the tools implementing them are registry entries rather than build-tool
+   code.

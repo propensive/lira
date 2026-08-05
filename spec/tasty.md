@@ -27,7 +27,12 @@ staleness is computable. Classfile-level invariants (bridges, forwarders and oth
 binary-compatibility concerns of the JVM's late linking) are the province of a JVM ecosystem
 profile with bytecode-level checks, and are out of scope here.
 
-## 3. Content Claiming
+## 3. Domain and Content Claiming
+
+The discipline's domain (LIRA §11.2 requirement 1) is the universes `jvm`, `sjsir` and `nir` —
+every universe whose sections carry TASTy — and the cross-section invariant (LIRA §9.6) binds it
+across that whole domain: enforcing one Scala API on every platform is the point of the
+discipline.
 
 The discipline claims:
 

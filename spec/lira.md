@@ -22,6 +22,10 @@ LIRA defines:
   language-specific canonicalizers, while everything above the atom level remains language-blind;
 - **ecosystem profiles**, by which an ecosystem adds the checks its own linkage model requires —
   bytecode-level invariants, toolchain coherence — without any of that entering the core;
+- **host contracts**, by which the capability interface of a runtime environment — a JDK, a
+  browser, Node, an Android API level, a WASI world — is published as a release of its own, and
+  a library's per-section `requires` is satisfied by the same algebra as any dependency
+  ([`hosts.md`](hosts.md));
 - the **buildpath**: a composition of LIRA files whose coherence — including diamond-dependency
   resolution — is decidable from manifests alone, without reading any payload.
 
@@ -32,8 +36,10 @@ appendices.
 ## 1. Status
 
 This document is a working draft. Numbered requirements and the schema in §14 are expected to
-change. The Scala discipline is specified normatively in the companion document
-[`tasty.md`](tasty.md); the JVM ecosystem profile (Appendix D) awaits one.
+change. The companion documents are normative for their subjects: the Scala discipline
+([`tasty.md`](tasty.md)), the JVM bytecode discipline ([`classfile.md`](classfile.md)), the
+TypeScript declaration discipline ([`dts.md`](dts.md)), the JVM ecosystem profile
+([`jvm.md`](jvm.md)), and host contracts and requirements ([`hosts.md`](hosts.md)).
 
 ## 2. Conformance Language
 
@@ -52,11 +58,71 @@ described in RFC 2119 and RFC 8174 when, and only when, they appear in all capit
 
 ## 4. Terminology
 
-- **Module**: a named library. A module has one API lineage and many releases.
+### 4.1 The Taxonomy
+
+The terms of this subsection categorize what a `.lira` file is *about*: representations, the
+places where they compose, and the environments they run in. Common usage conflates them under
+words like "platform" and "target"; this specification separates them, because the overlaps that
+make a flat vocabulary feel impossible (one representation serving several runtimes; one runtime
+executing several representations) dissolve once each thing is named by its **role**.
+
+- **Format**: a concrete byte-level encoding of compiled or declared content — classfile, TASTy,
+  SJSIR, NIR, Kotlin metadata, `.d.ts`, ES module, WASM component, WIT. A format has no intrinsic
+  role: the same format can appear at different points of a pipeline with different meanings, so
+  nothing in this specification is keyed by format.
+- **World**: an axis by which a section may be keyed. Every universe is a world, and the `host`
+  world ([`hosts.md`](hosts.md)) is the one world that is not a universe: it holds a host
+  contract's content rather than a composable library representation.
+- **Universe**: a world in which independently-published libraries meet and compose, characterized
+  by an **interface convention** (how a library's API is expressed to other libraries), a
+  **linkage mechanism** (how library artifacts are later combined), and a **capability model**
+  (what composed code may assume of its surroundings). The litmus test for universe-hood: *do
+  independently-published libraries compose there?* `jvm` passes — classloading composes arbitrary
+  classfile sets; DEX fails — Android libraries ship classfiles, and dexing happens after the
+  library world closes; LLVM bitcode fails — no ecosystem publishes open-world libraries as
+  bitcode. The universe vocabulary is open (§9.4).
+- **Host**: a runtime environment that executes *closed* artifacts, exposing a versioned
+  capability interface: the JVM at a JDK version, a browser with its Web APIs, Node with its
+  builtins, the Android runtime at an API level, a WASI runtime with its world, an operating
+  system with its libc and shell. A host is not a universe: nothing composes *in* it; artifacts
+  run *on* it.
+- **Host contract**: the published, verifiable statement of a host's capability interface — an
+  ordinary release whose atoms are capabilities ([`hosts.md`](hosts.md)). Host contracts bring
+  hosts under the compatibility algebra — versioned by lineage, required by `requires`, satisfied
+  by lineage membership — while remaining a distinct axis from dependencies (hosts.md §8).
+- **Application type**: a pair of a closed artifact format and a host contract — an executable
+  JAR on JDK ≥ 21, an APK on Android API ≥ 26, an ES-module bundle in a baseline browser, a WASM
+  component in a WASI 0.2 world. Application types are what *builds* produce; they are never
+  stored in a `.lira` file.
+- **Egress**: a linking edge from a universe to an application type: it closes over a buildpath's
+  artifacts in that universe and produces the application artifact. One universe may have many
+  egresses (`sjsir` egresses to JS bundles, to browser WASM, and to WASI components) — which is
+  why a library stores its representation once and never chooses its application type.
+- **Join**: the point where two universes' contributions merge into one application — a bundler
+  linking Scala.js output with TypeScript-compiled modules; a system linker combining native
+  objects with C libraries. Joins are what make cross-universe dependencies meaningful (§13.2).
+- **Ecosystem**: the community and toolchain conventions surrounding one or more universes. An
+  ecosystem is not a formal object of this specification; its formal projections are the
+  ecosystem profile (§11.6) and the canonical container format of its derivative artifacts
+  (§13.6).
+- **Language**: a producer of formats. Languages deliberately have no formal role here: one
+  language may present several interface carriers and one carrier may serve several languages,
+  which is why disciplines are named for the carrier they canonicalize, never for a language
+  (§11.1).
+- **Platform**: not a term of this specification. Common usage conflates a universe with a host
+  ("the JVM platform" names both the `jvm` universe and the JVM host) and sometimes with an
+  application type; wherever this specification's prose says "platform" informally, one of the
+  precise terms above is meant and recoverable from context.
+- **Compatible**: meaningful only relative to a **guarantee level** (§11.5) — linkage,
+  recompilation, or behavior. Every compatibility claim in this specification names its level; a
+  claim without one is an equivocation, not a claim.
+
+### 4.2 Terms of the Format
+
+- **Module**: a named library — or, per [`hosts.md`](hosts.md), a named host contract. A module
+  has one API lineage and many releases.
 - **Release**: one published `.lira` file for a module.
-- **Universe**: a library-composition world identifying the kind of representation a section
-  holds (e.g. `jvm`, `sjsir`, `nir`). The universe vocabulary is open (§9.4).
-- **Section**: one compiled view of the release, keyed by universe and integration, stored as a
+- **Section**: one compiled view of the release, keyed by world and integration, stored as a
   tree of blobs.
 - **Integration**: one alternative dependency vector a release was built against (§9.5).
 - **Assignment**: a choice of one integration per release on a buildpath, under which that
@@ -280,16 +346,27 @@ replacement spelled redundantly) — each is invalid (**L107**): overlays are mi
 construction, which makes divergence between platforms _visible_ in the manifest rather than
 buried in the payload.
 
-### 9.4 Universes
+### 9.4 Worlds: Universes and `host`
 
-The base schema (§14) defines universe variants `jvm`, `sjsir`, and `nir` — the three
-library-composition worlds of the motivating ecosystem. (The names `js`, `klib`, `component`
-and their kin are reserved for the universes proper of other ecosystems, arriving as schema
-layers; a universe names the world in which independently-published libraries compose, not a
-language's view of a target.) The vocabulary is open: new universes are introduced by TEL
-schema layers, which may append variants to a select but never remove them. A consumer knowing
-only the base schema can still parse a layered manifest (TEL §8.2); it MUST treat sections of
-unknown universes as opaque and MUST NOT attempt to materialize them.
+Sections are keyed by **world** (§4.1). The base schema (§14) defines the world variants `jvm`,
+`sjsir`, and `nir` — the three universes of the motivating ecosystem — and `host`, the one world
+that is not a universe. (The names `js`, `klib`, `component` and their kin are reserved for the
+universes proper of other ecosystems, arriving as schema layers; a universe names the world in
+which independently-published libraries compose, not a language's view of a target.) The
+universe vocabulary is open: new universes are introduced by TEL schema layers, which may append
+variants to a select but never remove them. A consumer knowing only the base schema can still
+parse a layered manifest (TEL §8.2); it MUST treat sections of unknown universes as opaque and
+MUST NOT attempt to materialize them.
+
+A `host` section holds a **host contract**'s content — the carrier of a runtime environment's
+capability interface — and a release carrying one is a host contract rather than a library. Such
+a release MUST carry exactly that one section, MUST declare no integrations and no
+dependencies, and its section MUST carry no `requires` records (**L135**); a library release,
+conversely, never carries a
+`host` section, since L135 leaves no room for one beside its universe sections. Host sections
+are never materialized onto any artifact path (§13.5). The full treatment — what a host contract
+is, how libraries require one, and how requirements are satisfied — is the companion document
+[`hosts.md`](hosts.md).
 
 ### 9.5 Integrations
 
@@ -438,7 +515,8 @@ and one language may present several carriers.
 
 A discipline defines, deterministically:
 
-1. **Domain**: the set of universes (§9.4) whose content it atomizes. The domain is a property of
+1. **Domain**: the set of worlds (§4) — universes, and possibly the `host` world
+   ([`hosts.md`](hosts.md)) — whose content it atomizes. The domain is a property of
    the discipline, fixed when the discipline is specified, not a property of any release. A
    discipline whose domain holds more than one universe is bound by the cross-section invariant
    (§9.6) across the whole domain; one whose domain is a single universe is not bound by it at
@@ -450,7 +528,12 @@ A discipline defines, deterministically:
    interface it already carries through other claimed content (a Scala discipline claims
    `.class`, `.sjsir` and `.nir` files atomless, since the TASTy it atomizes is their
    interface), or content deliberately outside the API surface (scanned resource directories,
-   §11.4). Content claimed by no discipline falls to `opaque/1` (§11.3).
+   §11.4). Claiming partitions each section's materialized tree: every content item has exactly
+   one claimant, determined by **first match** over the release's `api` records in manifest
+   order, then `resource/1`, then the `opaque/1` fallback (**L134**). The order of `api` records
+   is therefore semantic, and producers MUST order them so that each item is claimed by the
+   discipline that carries its contract — [`classfile.md`](classfile.md) §4 is the case that
+   makes the order load-bearing. Content claimed by no discipline falls to `opaque/1` (§11.3).
 3. **Atomization**: claimed content → a set of atoms, each with key, class, value hash, obeying
    the folding principle (§10.3). Atomization MUST be a pure function of the content's semantic
    model: independent of file ordering, compilation timestamps, tool version strings, fresh-name
@@ -482,7 +565,7 @@ A discipline defines, deterministically:
 
 ### 11.3 Registered Disciplines
 
-This specification registers three disciplines:
+This specification and its companion documents register six disciplines:
 
 - **`opaque/1`** (normative): the entire content item is a single **rigid** atom whose key is
   its path and whose canonical encoding is its bytes. Any change is therefore a removal plus an
@@ -496,13 +579,12 @@ This specification registers three disciplines:
   every universe; it certifies presence, which is the recompilation level for content addressed
   by name.
 - **`tasty/1`** (informative here; normative specification in [`tasty.md`](tasty.md)): the Scala
-  discipline sketched in Appendix A. Its domain is every universe whose section carries TASTy —
-  `jvm`, `sjsir` and `nir` — and the cross-section invariant over that domain is what makes "one
-  API on every platform" checkable. Its keying is by declaration ([`tasty.md`](tasty.md) §6). It
+  discipline sketched in Appendix A. Its domain is the fixed set `{jvm, sjsir, nir}` — the
+  universes whose sections carry TASTy — and the cross-section invariant over that domain is what
+  makes "one API on every platform" checkable. Its keying is by declaration ([`tasty.md`](tasty.md) §6). It
   certifies **recompilation** and TASTy-level linkage on its whole domain; the classfile-level
   linkage obligations of the `jvm` universe are not its and belong to the JVM ecosystem profile
   (Appendix D).
-
 - **`classfile/1`** (informative here; normative specification in
   [`classfile.md`](classfile.md)): the JVM bytecode discipline. Its domain is the single universe
   `{jvm}`, so the cross-section invariant is vacuous for it; its keying is by **membership**,
@@ -511,18 +593,25 @@ This specification registers three disciplines:
   deliberate choice with a cost — see §11.6 and [`classfile.md`](classfile.md) §14 — and for most
   JVM ecosystems the `jvm/1` profile ([`jvm.md`](jvm.md)) is the better instrument.
 - **`dts/1`** (informative here; normative specification in [`dts.md`](dts.md)): the TypeScript
-  declaration discipline. Its domain is every universe, for want of a universe to name — `js` is
+  declaration discipline. Its domain is every world, for want of a universe to name — `js` is
   reserved (§9.4) but not yet defined — which usefully brings a declared TypeScript surface under
-  the cross-section invariant. Its keying is by declaration. It certifies **recompilation** and
-  not linkage: `.d.ts` declarations are erased before anything runs, so there is no late linking
-  for them to protect.
+  the cross-section invariant, and makes it the natural discipline for host contracts carried as
+  `.d.ts` (a Node-builtins contract, [`hosts.md`](hosts.md)). Its keying is by declaration. It
+  certifies **recompilation** and not linkage: `.d.ts` declarations are erased before anything
+  runs, so there is no late linking for them to protect.
+- **`capability/1`** (informative here; normative specification in [`hosts.md`](hosts.md)): the
+  plain host-capability discipline. Its domain is the single world `{host}`; its keying is by
+  declaration; one rigid atom per declared capability, the value hash covering the capability's
+  name and optional version predicate. It is the discipline of host contracts with no formal
+  carrier — POSIX commands, tool availability; a contract with a formal grammar (Web IDL, `.d.ts`)
+  uses a discipline over that carrier instead. It certifies presence, on the same terms as
+  `resource/1`.
 
 Anticipated future disciplines include a declaration-surface discipline for Kotlin metadata, and
 one for Java source signatures where no `.class` files are shipped. A discipline need not
-atomize a *library*: a
-`webidl` discipline over Web IDL would atomize a browser's capability contract, which is content
-of the host rather than of anything published against it — a shape this specification admits but
-does not yet make use of, since host contracts await a `requires` mechanism. Foreign content —
+atomize a *library*: a `webidl` discipline over Web IDL would atomize a browser's capability
+contract — content of the `host` world ([`hosts.md`](hosts.md)), where a formal carrier exists
+and `capability/1` would be needlessly coarse. Foreign content —
 JavaScript modules resolved at link time, C sources compiled by a downstream linker, and so on —
 is admissible in any section today under `opaque/1`.
 
@@ -561,9 +650,10 @@ Each `resource` record declares one path in one of three modes:
 
 Declarations MUST be well-formed (**L124**): no path may be declared twice, and an `export` or
 `track` path MUST NOT lie under a declared `scan` directory, so the partition of §11.2 has a
-single claimant by construction. In the claiming order, `resource/1` follows every language
-discipline and precedes the `opaque/1` fallback: an item under a `scan` directory that a
-language discipline claims goes to that discipline, and the remainder are atomless. An
+single claimant by construction. In the claiming order (**L134**, §11.2), `resource/1` follows
+every `api`-record discipline and precedes the `opaque/1` fallback: an item under a `scan`
+directory that a language discipline claims goes to that discipline, and the remainder are
+atomless. An
 `export` or `track` declaration, by contrast, MUST be effective (**L125**): a declared path
 that another discipline claims, or that resolves to no item in any universe's materialized
 tree, is an assembly-time error — a presence guarantee over nothing, or over content whose
@@ -771,6 +861,16 @@ A dependency record MAY additionally carry:
   may have genuinely different implementations per universe, and correspondingly different
   dependencies (a DOM facade needed only by the `sjsir` implementation; a C-binding wrapper
   only by `nir`). A dependency without `universe` entries applies to every universe.
+- **`serves`**, naming the universe in which the dependency itself offers its content, when that
+  differs from the universes the depending sections consume it in — the **join** case (§4.1). A
+  Scala module intending its `sjsir` build to invoke a TypeScript module declares that dependency
+  with `universe sjsir` and `serves js`: the TypeScript release carries a `js` section, not an
+  `sjsir` one, and the two universes meet at a bundler join. A dependency without `serves` is
+  satisfied in the same universe it applies to. Whether two universes can in fact meet in one
+  application is a property of the application type's pipeline, declared by ecosystems rather
+  than by this specification (informatively,
+  [`universes.md`](../design/universes.md) §4); the rules here need only know which universe the
+  dependency's section is selected from (§13.3 rule 4, §13.5).
 - **`integration`** entries, scoping the dependency to the named integrations (§9.5): the
   dependency vectors that distinguish integrations are expressed exactly here. A dependency
   without `integration` entries applies to every integration, which is how dependencies common to
@@ -779,7 +879,7 @@ A dependency record MAY additionally carry:
   integration.
 - **`build`**, a development-time pin to an exact implementation identity (§6): the candidate
   must additionally have exactly that `payload.hash`. Build pins express "this exact unpublished
-  build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.4).
+  build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.5).
 
 Dependency requirements are per-release facts: a module's dependency graph — which modules it
 names, at which snapshots, in which universes — may change freely between releases at any
@@ -788,12 +888,17 @@ graph comes from re-validating the buildpath (§13.3), never from the grade.
 
 ### 13.3 Validity
 
-A buildpath is valid **for a universe under an assignment** — a map from each release to one of
-its integrations (§9.5) — iff all of the following hold, and each is decidable from manifests
-alone. Closure and compatibility quantify over the dependency records *applicable to that
-universe and to that release's assigned integration* (§13.2); uniqueness, namespace disjointness
-and resource disjointness are global. A buildpath is **valid for a universe** iff some assignment
-makes it so (**L132**).
+A buildpath is valid **for a target under an assignment**. A **target** is a universe — the one
+an egress will close over — together with any universes that join it (§4.1), and optionally a
+host contract for rule 7; in the common single-universe case, every rule below reads exactly as
+it did when this section was defined over one universe. An **assignment** is a map from each
+release to one of its integrations (§9.5). Each release **serves** one universe of the target:
+the target's primary universe, unless the dependency records that name the release carry
+`serves` (§13.2), in which case it is the universe they name. Validity holds iff all of the
+following hold, and each is decidable from manifests alone. Closure and compatibility quantify
+over the dependency records *applicable to the universe a release serves and to its assigned
+integration* (§13.2); uniqueness, namespace disjointness and resource disjointness are global. A
+buildpath is **valid for a target** iff some assignment makes it so (**L132**).
 
 1. **Uniqueness**: at most one release per module name (**L111**).
 2. **Namespace disjointness**: the `owns` claims (namespaces such as packages, per-ecosystem
@@ -804,6 +909,10 @@ makes it so (**L132**).
    to exactly one module. `scan` directories are exempt — cross-module aggregation under a
    shared directory is their purpose.
 4. **Closure**: every module named by an applicable `dependency` record is present (**L113**).
+   A dependency carrying `serves` additionally requires the named universe to be in the target
+   and the candidate to carry a section in it: a join edge to a universe the target does not
+   include, or to content the candidate does not offer, fails closure exactly as an absent
+   module does.
 5. **Compatibility**: every applicable dependency requirement is satisfied per §13.2,
    including any build pin (**L114**). Diamond dependencies resolve by construction:
    requirements on two snapshots of one module are jointly satisfiable iff some published
@@ -815,6 +924,15 @@ makes it so (**L132**).
    subject to rules 1–5 alone. Profile predicates, like the rules above, MUST be decidable from
    manifests; a profile predicate requiring payload inspection is a publish-time check (§16), not
    a buildpath rule.
+7. **Host requirements**: when the target names a host contract, every `requires` record of
+   every selected section — the section chosen by each release's served universe and assigned
+   integration (§13.5) — is satisfied by that contract per [`hosts.md`](hosts.md) §7
+   (**L136**): the required snapshot appears in the contract's lineage, or the requirement's
+   used-set is contained in the contract's atom set (spanning, §13.4). A `requires` record
+   naming a module whose releases are not host contracts is invalid (**L137**). A buildpath
+   validated without a host contract leaves this rule pending, and a tool MUST report which
+   mode it validated in: a buildpath can be coherent as a library composition and still
+   unsatisfiable on the host a consumer intends.
 
 Where no release declares an integration, every release has one and the assignment is unique:
 the rules read exactly as they did before this mechanism, and validity is decided by one pass.
@@ -846,9 +964,9 @@ deterministic rather than arbitrary.
 it is worth saying plainly that under these rules it is not one.
 
 A buildpath is a **fixed** set of releases, so which release provides a module is settled before
-any integration is chosen. Every rule an assignment can affect — closure (4) and compatibility
-(5) — then turns on one release together with its own choice, and on nothing else: no rule
-relates one release's integration to another's. The choices are therefore independent, and the
+any integration is chosen. Every rule an assignment can affect — closure (4), compatibility
+(5) and host requirements (7) — then turns on one release together with its own choice, and on
+nothing else: no rule relates one release's integration to another's. The choices are therefore independent, and the
 canonical assignment is obtained by taking, for each release in isolation, the first of its
 integrations in (`rank`, `id`) order whose own dependencies hold. That is linear in the total
 number of integrations declared across the buildpath, requires no backtracking, and yields the
@@ -892,13 +1010,17 @@ Used-sets enable two derived judgements:
 
 ### 13.5 Derivation of Conventional Artifacts
 
-From a valid buildpath, a chosen universe and the assignment that validated it (§13.3), a
-consumer derives a conventional artifact set (e.g. a classpath) by, per release: selecting the
-section for that universe and that release's assigned integration (a release lacking one is a
-validation-time error, not a link-time surprise), materializing it per §9.3 into a
-cache keyed by implementation identity, and appending whatever ecosystem-supplied platform
-runtime the universe requires. Reconstruction of a standalone per-platform archive is the
-canonical derivative artifact of §13.6.
+From a valid buildpath, a target and the assignment that validated it (§13.3), a consumer
+derives one conventional artifact set (e.g. a classpath) **per universe of the target** by, per
+release serving that universe: selecting the section for that universe and that release's
+assigned integration (a release lacking one is a validation-time error, not a link-time
+surprise), materializing it per §9.3 into a cache keyed by implementation identity, and
+appending whatever ecosystem-supplied runtime the universe requires. The per-universe artifact
+sets are what the target's egress and joins consume; invoking those tools is the build's
+business, not this specification's. `host` sections are never materialized onto any artifact
+path (§9.4): a host contract's content describes the environment and joins nothing.
+Reconstruction of a standalone per-platform archive is the canonical derivative artifact of
+§13.6.
 
 ### 13.6 Canonical Derivative Artifacts
 
@@ -1002,6 +1124,7 @@ record Dependency
   field version Semver optional         # human-readable hint; no authority
   field build Hash optional             # development-time implementation-identity pin (§13.2)
   field universe Identifier optional repeatable  # universes this dependency applies to (§13.2)
+  field serves Identifier optional      # universe the dependency offers, when joining (§13.2)
   field integration Identifier optional repeatable  # integrations it applies to (§9.5, §13.2)
   field uses Hash optional              # Uses metadata blob
   field spans Hash optional repeatable  # snapshots provably spanned (§13.4)
@@ -1013,12 +1136,21 @@ record Integration
   field  rank   Natural optional    # canonical-assignment preference, lower first (§13.3)
   field  label  String optional     # human-readable note; no authority
 
+record Requires
+  description  One host requirement of this section (hosts.md).
+
+  field module ModuleName               # the host contract's module name
+  field api Hash                        # required contract snapshot (satisfied by lineage membership)
+  field version Semver optional         # human-readable hint; no authority
+  field uses Hash optional              # Uses metadata blob against the contract (hosts.md §7)
+
 record Section
-  select  Universe
+  select  World
   field   integration Identifier optional            # the integration realized (§9.5)
   field   tree        Hash                           # Tree metadata blob
   field   delete      String  optional  repeatable  # root paths removed in this overlay
   field   derivative  Hash  optional                # canonical derivative artifact (§13.6)
+  field   requires    Requires optional repeatable  # host requirements (hosts.md)
 
 record Payload
   field  compression  Identifier          # brotli
@@ -1031,10 +1163,11 @@ record Signature
   field  key        Hash                # public-key fingerprint (§15.3)
   field  value      String              # BASE-256 signature
 
-select Universe
+select World
   variant  jvm    Flag
   variant  sjsir  Flag
   variant  nir    Flag
+  variant  host   Flag                  # host-contract sections only (§9.4, hosts.md)
 
 select ResourceMode
   variant  export  Flag
@@ -1043,7 +1176,7 @@ select ResourceMode
 
 document
   field module ModuleName
-  field version Semver optional         # absent on development releases (§12.4)
+  field version Semver optional         # absent on development releases (§12.5)
   field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
   field owns Namespace optional repeatable
@@ -1053,7 +1186,7 @@ document
   field integration Integration optional repeatable  # alternative dependency vectors (§9.5)
   field dependency Dependency optional repeatable
   field delta Hash optional             # Delta metadata blob for this lineage step
-  field section Section repeatable     # first section = root (§9.1); keyed (universe, integration)
+  field section Section repeatable     # first section = root (§9.1); keyed (world, integration)
   field payload Payload
   field signature Signature optional repeatable
 ```
@@ -1187,9 +1320,11 @@ file (and, where noted, additional artifacts):
 4. re-atomizes content under each declared discipline and compares against the Atoms blobs,
    checks the cross-section invariant over each discipline's domain for every section of the
    (universe × integration) matrix (§9.6), that integration declarations are well-formed
-   (**L131**) and each is realized (**L133**), and that no declared discipline is inapplicable
-   (**L127**) — requires an implementation of each discipline (though
-   `opaque/1` and `resource/1` are language-blind and implementable by every verifier);
+   (**L131**) and each is realized (**L133**), that no declared discipline is inapplicable
+   (**L127**), that content claiming follows the claiming order (**L134**, §11.2), and that a
+   `host` section, where present, obeys the host-contract shape (**L135**, §9.4) — requires an
+   implementation of each discipline (though `opaque/1`, `resource/1` and `capability/1` are
+   language-blind and implementable by every verifier);
 5. recomputes the snapshot and checks it equals the last lineage entry (§12.1, **L109**);
 6. given the predecessor release, checks the lineage step's grade and delta (§12.3);
 7. checks the predicates of each declared profile, and — given the predecessor release — that
@@ -1205,7 +1340,15 @@ accepting a release, since they are what make manifests trustworthy at use-time.
 cannot implement a declared discipline or profile MUST reject the release rather than accept it
 unchecked — an unverifiable claim is worse than an absent one, because consumers cannot tell the
 two apart from the manifest. Every claim in a manifest is thus either recomputable locally or
-attested by signature over recomputable claims; nothing is trusted testimony.
+attested by signature over recomputable claims; nothing is trusted testimony — with one
+deliberate, labelled exception. A section's `requires` records (§13.3 rule 7,
+[`hosts.md`](hosts.md)) are **authorial**: no step above can verify that code needs what it
+declares, because a requirement is an assertion about the code's runtime behavior, not a fact
+recomputable from its content. What is verifiable is the two ends of the edge — a host
+contract's atoms are recomputed from its payload like any release's, and requirement
+*satisfaction* is decided from manifests at resolution time — and the environment itself is
+checked at a **third verification moment**: probing at install or launch time (hosts.md §9),
+after publish-time recomputation and resolution-time manifest checking.
 
 ## 17. Determinism
 
