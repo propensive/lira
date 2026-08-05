@@ -15,6 +15,13 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`spec/jvm.md`](spec/jvm.md) — the normative JVM ecosystem profile.
 - [`spec/hosts.md`](spec/hosts.md) — host contracts, the `host` world, `requires`, and the
   `capability/1` discipline.
+- [`spec/webidl.md`](spec/webidl.md) — the normative Web IDL discipline, for browser host
+  contracts.
+- [`spec/wit.md`](spec/wit.md) — the normative WIT discipline, for WASI worlds and, ahead, the
+  `component` universe.
+- [`spec/cheader.md`](spec/cheader.md) — the normative C header discipline, for shared-library
+  host contracts.
+- [`spec/kotlin.md`](spec/kotlin.md) — the normative Kotlin metadata discipline.
 - [`design/universes.md`](design/universes.md) — the taxonomy of formats, universes, hosts and
   application types; the pipeline DAG; what belongs in a `.lira` file.
 - [`design/compatibility.md`](design/compatibility.md) — per-language compatibility

@@ -58,9 +58,13 @@ The contract's content — the carrier from which its atoms are recomputed — l
   availability — atomized by `capability/1` (§5);
 - **`.d.ts` declarations** for JavaScript runtimes — Node's builtins, Deno's globals — atomized
   by `dts/1`, whose domain is every world ([`dts.md`](dts.md) §3);
-- **Web IDL** for browsers, atomized by the anticipated `webidl` discipline
-  ([`universes.md`](../design/universes.md) §5.4), whose folding decisions differ instructively
-  from `dts/1`'s because the IDL declares the usage direction TypeScript cannot;
+- **Web IDL** for browsers, atomized by `webidl/1` ([`webidl.md`](webidl.md)), whose folding
+  decisions differ instructively from `dts/1`'s because the IDL declares the usage direction
+  TypeScript cannot;
+- **WIT** for WASI runtimes — the world a component assumes — atomized by `wit/1`
+  ([`wit.md`](wit.md));
+- **C headers** for environment-supplied shared libraries — a libc, `libcrypto`, any `dlopen`ed
+  dependency — atomized by `cheader/1` ([`cheader.md`](cheader.md));
 - **API stubs** for the JDK and for Android (`android.jar`'s surface), atomized by a
   classfile-signature discipline whose domain includes `host` — noting that `classfile/1` will
   not serve, since its domain is `{jvm}` ([`classfile.md`](classfile.md) §3) and its guarantee
@@ -260,8 +264,9 @@ The contracts the focus ecosystems want first, with their natural carriers:
 | `jdk`              | Java standard library                     | capability listing now; classfile-signature discipline later (§3) |
 | `android`          | `android.jar` per API level               | as `jdk`; majors track removals, minors track API levels |
 | `nodejs`           | Node builtins and globals                 | `.d.ts` / `dts/1`                  |
-| `browser-baseline` | interoperable Web APIs ("Baseline")       | Web IDL / anticipated `webidl`     |
-| `wasi`             | a WASI world (0.2+)                       | WIT / anticipated `wit` discipline |
+| `browser-baseline` | interoperable Web APIs ("Baseline")       | Web IDL / `webidl/1`               |
+| `wasi`             | a WASI world (0.2+)                       | WIT / `wit/1`                      |
+| `openssl`          | `libcrypto`'s declared surface            | C header / `cheader/1`             |
 | `posix`            | POSIX shell and userland commands         | `capability/1`                     |
 | `scalajs-javalib`  | the JDK subset Scala.js reimplements      | same discipline as `jdk` — which is what makes cross-contract spanning (§7) decide JVM/Scala.js/Android portability |
 

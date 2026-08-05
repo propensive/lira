@@ -570,7 +570,7 @@ A discipline defines, deterministically:
 
 ### 11.3 Registered Disciplines
 
-This specification and its companion documents register six disciplines:
+This specification and its companion documents register ten disciplines:
 
 - **`opaque/1`** (normative): the entire content item is a single **rigid** atom whose key is
   its path and whose canonical encoding is its bytes. Any change is therefore a removal plus an
@@ -612,13 +612,30 @@ This specification and its companion documents register six disciplines:
   uses a discipline over that carrier instead. It certifies presence, on the same terms as
   `resource/1`.
 
-Anticipated future disciplines include a declaration-surface discipline for Kotlin metadata, and
-one for Java source signatures where no `.class` files are shipped. A discipline need not
-atomize a *library*: a `webidl` discipline over Web IDL would atomize a browser's capability
-contract — content of the `host` world ([`hosts.md`](hosts.md)), where a formal carrier exists
-and `capability/1` would be needlessly coarse. Foreign content —
-JavaScript modules resolved at link time, C sources compiled by a downstream linker, and so on —
-is admissible in any section today under `opaque/1`.
+- **`wit/1`** (informative here; normative specification in [`wit.md`](wit.md)): the WIT
+  discipline of the WebAssembly Component Model. Its domain is `{host, component}` — WASI-world
+  host contracts today, `component`-universe libraries when that reserved universe's schema
+  layer lands. Keying by declaration; certifies **recompilation**.
+- **`webidl/1`** (informative here; normative specification in [`webidl.md`](webidl.md)): the
+  Web IDL discipline, for browser host contracts. Its domain is `{host}`; keying by
+  declaration; certifies **recompilation**. Its folding decisions differ instructively from
+  `dts/1`'s, because the IDL declares the usage direction TypeScript cannot: interface members
+  are additive, and only required dictionary members fold.
+- **`cheader/1`** (informative here; normative specification in [`cheader.md`](cheader.md)):
+  the C header discipline, for host contracts over environment-supplied shared libraries — a
+  libc, `libcrypto`, any `dlopen`ed dependency. Its domain is `{host}`; keying by declaration;
+  certifies **recompilation** and symbol presence.
+- **`kotlin-metadata/1`** (informative here; normative specification in
+  [`kotlin.md`](kotlin.md)): the Kotlin declaration-surface discipline over the `@Metadata`
+  annotation. Its domain is `{jvm, host}`; keying by **membership**; certifies
+  **recompilation**. It covers what `classfile/1` cannot see — nullability, properties,
+  default-parameter existence, suspend coloring — and its claiming order beside `classfile/1`
+  is load-bearing, exactly as [`classfile.md`](classfile.md) §4.
+
+Anticipated future disciplines include one for Java source signatures where no `.class` files
+are shipped, and a klib-metadata sibling of `kotlin-metadata/1` for Kotlin multiplatform.
+Foreign content — JavaScript modules resolved at link time, C sources compiled by a downstream
+linker, and so on — is admissible in any section today under `opaque/1`.
 
 ### 11.4 The `resource/1` Discipline
 
