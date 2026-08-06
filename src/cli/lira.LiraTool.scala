@@ -203,9 +203,11 @@ private def assign(file: Text, previous: Optional[Text], forceMajor: Boolean)(us
     Out.println(t"assigned $version -> $target")
     Exit.Ok
 
-// Harvests a host's surface into its contract lineage (LIRA hosts.md, jsig.md): one tagged,
-// versioned `.lira` host contract per vendor release, graded by the algebra, with majors — the
-// removals in the vendor's history — requiring explicit `+<tag>` sanction (L110). Emitted
+// Harvests a host's surface into its contract lineages (LIRA hosts.md, jsig.md): where the
+// vendor modularizes — the JDK — one contract module per platform module, coordinated across a
+// vendor release by a shared tag (hosts.md §3, "Granularity"); for a flat platform — Android —
+// one contract module. Majors — the removals in a vendor's history — require explicit `+<tag>`
+// sanction (L110), applied per module wherever that vendor release removed surface. Emitted
 // files carry the executable bit, as §5.1 requires of producers.
 private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using cli: Cli)
 :   Exit =
@@ -216,8 +218,43 @@ private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using c
 
     val majors = extra.filter(_.s.startsWith("+")).map { tag => Text(tag.s.substring(1).nn) }
     val sources = extra.filter { arg => !arg.s.startsWith("+") }
+    val directory = resolve(out)
 
-    val releases: proscenium.List[HostRelease] = kind.s match
+    def emit(module: Text, releases: proscenium.List[HostRelease]): Boolean =
+      val contracts =
+        try
+          HostContracts.assemble(
+            module,
+            releases,
+            toolchain  = proscenium.List(LiraManifest.Tool(t"lira", t"0.1")),
+            allowMajor = { tag => majors.stdlib.contains(tag) })
+        catch case error: LiraError =>
+          error.reason match
+            case LiraError.Reason.UngradedSuccessor(tag) =>
+              Out.println(t"lira: $module: $tag grades as a major over its predecessor (a")
+              Out.println(t"      removal in the vendor's history); sanction it with +$tag")
+
+            case _ => Out.println(t"lira: $module: ${error.message}")
+
+          return false
+
+      val target = directory.resolve(module.s).nn
+      jnf.Files.createDirectories(target)
+
+      contracts.stdlib.foreach: (tag, bytes) =>
+        val file = target.resolve(s"$tag.lira").nn
+        jnf.Files.write(file, Array.unsafeJvm(bytes))
+        file.toFile.nn.setExecutable(true, false)
+
+        val manifest = Lira.read(bytes).manifest
+        val version = manifest.version.let { v => t"$v" }.or(t"unversioned")
+
+        Out.println(t"$module $tag -> ${Text(file.toString)} ($version, lineage of ${manifest
+            .lineage.stdlib.size})")
+
+      true
+
+    kind.s match
       case "jdk" =>
         val path = sources.stdlib.headOption.getOrElse:
           CtSym.location().or:
@@ -226,11 +263,24 @@ private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using c
 
         val resolved = Text(resolve(path).toString)
 
-        proscenium.List.from:
-          CtSym.releases(resolved).stdlib.map: release =>
-            val surface = CtSym.surface(resolved, release)
-            Out.println(t"harvested jdk-$release (${surface.stdlib.size} classes)")
-            HostRelease(Text(s"jdk-$release"), surface)
+        val perModule = scala.collection.mutable.LinkedHashMap
+            [Text, scala.collection.mutable.ListBuffer[HostRelease]]()
+
+        CtSym.releases(resolved).stdlib.foreach: release =>
+          val tag = Text(s"jdk-$release")
+          val modules = CtSym.modules(resolved, release)
+          Out.println(t"harvested $tag (${modules.stdlib.size} modules)")
+
+          modules.stdlib.foreach: (module, content) =>
+            perModule.getOrElseUpdate(module, scala.collection.mutable.ListBuffer())
+              += HostRelease(tag, content)
+
+        var good = true
+
+        perModule.foreach: (module, releases) =>
+          if !emit(module, proscenium.List.from(releases.toList)) then good = false
+
+        if good then Exit.Ok else Exit.Fail(1)
 
       case "android" =>
         if sources.stdlib.isEmpty then
@@ -252,42 +302,11 @@ private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using c
           Out.println(t"harvested $tag (${surface.stdlib.size} classes)")
           (tag, surface)
 
-        proscenium.List.from:
+        val releases = proscenium.List.from:
           parsed.sortBy { pair => pair(0).s }.map { pair => HostRelease(pair(0), pair(1)) }
+
+        if emit(t"android", releases) then Exit.Ok else Exit.Fail(1)
 
       case other =>
         Out.println(t"lira: unknown host kind '$other' (expected jdk or android)")
-        return Exit.Fail(1)
-
-    val contracts =
-      try
-        HostContracts.assemble(
-          kind,
-          releases,
-          toolchain  = proscenium.List(LiraManifest.Tool(t"lira", t"0.1")),
-          allowMajor = { tag => majors.stdlib.contains(tag) })
-      catch case error: LiraError =>
-        if error.reason == LiraError.Reason.UngradedSuccessor then
-          Out.println(t"lira: a release grades as a major over its predecessor (a removal in")
-          Out.println(t"      the vendor's history); sanction it by adding +<tag> for the")
-          Out.println(t"      first release after those already reported as harvested")
-          return Exit.Fail(1)
-        else
-          Out.println(t"lira: ${error.message}")
-          return Exit.Fail(1)
-
-    val directory = resolve(out)
-    jnf.Files.createDirectories(directory)
-
-    contracts.stdlib.foreach: (tag, bytes) =>
-      val target = directory.resolve(s"$tag.lira").nn
-      jnf.Files.write(target, Array.unsafeJvm(bytes))
-      target.toFile.nn.setExecutable(true, false)
-
-      val manifest = Lira.read(bytes).manifest
-      val version = manifest.version.let { v => t"$v" }.or(t"unversioned")
-
-      Out.println(t"$tag -> ${Text(target.toString)} ($version, lineage of ${manifest
-          .lineage.stdlib.size})")
-
-    Exit.Ok
+        Exit.Fail(1)
