@@ -579,7 +579,7 @@ A discipline defines, deterministically:
 
 ### 11.3 Registered Disciplines
 
-This specification and its companion documents register ten disciplines:
+This specification and its companion documents register eleven disciplines:
 
 - **`opaque/1`** (normative): the entire content item is a single **rigid** atom whose key is
   its path and whose canonical encoding is its bytes. Any change is therefore a removal plus an
@@ -634,6 +634,12 @@ This specification and its companion documents register ten disciplines:
   the C header discipline, for host contracts over environment-supplied shared libraries — a
   libc, `libcrypto`, any `dlopen`ed dependency. Its domain is `{host}`; keying by declaration;
   certifies **recompilation** and symbol presence.
+- **`jsig/1`** (informative here; normative specification in [`jsig.md`](jsig.md)): the Java
+  signature-surface discipline, over the same canonical encoding as `classfile/1` but claiming
+  what stubs can promise — **recompilation** and presence, never linkage. Its domain is
+  `{jvm, host}`; keying by membership. It is the discipline of the `jdk` and `android` host
+  contracts, and of `scalajs-javalib`, whose shared discipline is what lets cross-contract
+  spanning decide portability.
 - **`kotlin-metadata/1`** (informative here; normative specification in
   [`kotlin.md`](kotlin.md)): the Kotlin declaration-surface discipline over the `@Metadata`
   annotation. Its domain is `{jvm, host}`; keying by **membership**; certifies
@@ -873,6 +879,35 @@ Consumers still make every decision on hashes: to a consumer the version remains
 human-readable projection, and any disagreement it observes (for example, a dependency's
 `version` hint against the resolved release) is a warning, never an error.
 
+### 12.6 Tags
+
+A release MAY carry **tags**: user-facing, immutable names for the release, in the sense of a
+version-control tag. The derived version (§12.5) is a projection of the lineage and says
+nothing a human recognizes; a tag carries the name the world already uses. The motivating case
+is host contracts (hosts.md §3), whose vendors number by marketing convention: the `jdk`
+contract release whose derived version is `8.2.0` carries `tag jdk-19`, and "compatible with
+JDK 19" resolves through the tag to a snapshot without anyone memorizing lineage arithmetic.
+
+Each `tag` field names one tag (§14; the `tag-name` scalar). Tags are:
+
+- **signed**: a tag is a manifest field, covered by the manifest signature (§15.2) like every
+  other. There is no separate tag object to distribute or verify.
+- **unique and immutable**: within one module, a tag names exactly one release, forever. A
+  publishing tool MUST refuse to publish a release carrying a tag that any already-published
+  release of the module carries (**L142**), and re-signing a release's manifest (as assignment
+  does, §12.5) MAY add tags but MUST NOT remove or alter one a published manifest for the same
+  release carries (also **L142**).
+- **without algebraic authority**: nothing in §12 or §13 reads a tag. A consumer or authoring
+  tool MAY resolve a tag to the tagged release's snapshot — for writing a `dependency` or
+  `requires` record by name — but what the record carries, and what satisfaction is decided
+  on, is the snapshot, exactly as with the `version` hint. Unlike the hint, a tag's uniqueness
+  and immutability make the resolution stable: the same tag resolves to the same snapshot on
+  every registry that holds the release.
+
+Tagging after publication is the assignment pattern of §12.5 applied again: the payload is
+untouched, the manifest gains the tag, and the result is re-signed. The signed manifest is the
+tag record.
+
 ## 13. The Buildpath
 
 ### 13.1 Definition
@@ -1086,7 +1121,8 @@ kebab-case segments joined by `/` or `.`; `namespace` is dotted package-style se
 (letters, digits, `_`; no leading digit); `semver` is exactly `major.minor.patch`, each a
 decimal natural with no superfluous leading zero; `natural` is such a natural; `discipline-id`
 is `<kebab-name>/<positive integer>`; `tree-path` is a relative `/`-separated path with no
-empty, `.` or `..` segments; `atom-class` is `rigid` or `replaceable`.
+empty, `.` or `..` segments; `atom-class` is `rigid` or `replaceable`; `tag-name` is a
+letter followed by letters, digits, `-` and `.` (`jdk-19`, `scala-3.9`).
 
 ```text
 tel 1.0
@@ -1105,6 +1141,10 @@ scalar Namespace
 
 scalar Semver
   validate semver
+
+scalar TagName
+  description  A user-facing, immutable release name (§12.6), e.g. jdk-19.
+  validate     tag-name
 
 scalar Natural
   validate natural
@@ -1209,6 +1249,7 @@ select ResourceMode
 document
   field module ModuleName
   field version Semver optional         # absent on development releases (§12.5)
+  field tag TagName optional repeatable # immutable user-facing names (§12.6, L142)
   field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
   field owns Namespace optional repeatable

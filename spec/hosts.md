@@ -65,11 +65,11 @@ The contract's content — the carrier from which its atoms are recomputed — l
   ([`wit.md`](wit.md));
 - **C headers** for environment-supplied shared libraries — a libc, `libcrypto`, any `dlopen`ed
   dependency — atomized by `cheader/1` ([`cheader.md`](cheader.md));
-- **API stubs** for the JDK and for Android (`android.jar`'s surface), atomized by a
-  classfile-signature discipline whose domain includes `host` — noting that `classfile/1` will
-  not serve, since its domain is `{jvm}` ([`classfile.md`](classfile.md) §3) and its guarantee
-  is linkage against a lineage of shipped bytecode, not presence of a platform surface. This is
-  a future discipline, and the near-term JDK contract is a `capability/1` listing.
+- **API stubs** for the JDK and for Android (`android.jar`'s surface), atomized by `jsig/1`
+  ([`jsig.md`](jsig.md)) — the signature-surface discipline whose domain includes `host`;
+  `classfile/1` will not serve, since its domain is `{jvm}` ([`classfile.md`](classfile.md)
+  §3) and its guarantee is linkage against a lineage of shipped bytecode, not presence of a
+  platform surface.
 
 Content claiming inside a `host` section follows LIRA §11.2 unchanged, including the claiming
 order (**L134**) and the `opaque/1` fallback; **L127** applies unchanged, so a host contract can
@@ -79,8 +79,10 @@ declare only disciplines whose domain includes `host`.
 versions do not: "JDK 21" and "API level 26" are facts about the host vendor's numbering, not
 about the lineage. A publisher maps them onto modules and lineages as a naming decision — one
 module `jdk` whose majors track surface removals, or one module per vendor major — and the
-algebra cares only that removals begin new lineages. The `version` hint field carries the human
-label as it does everywhere else: without authority.
+algebra cares only that removals begin new lineages. The vendor's name for a release rides as
+a **tag** (LIRA §12.6): unique, immutable and signed under the manifest, so `tag jdk-19` names
+the release whose derived version happens to be `8.2.0`, and resolving the tag to a snapshot
+is stable on every registry that holds the release.
 
 ## 4. The `host` World
 

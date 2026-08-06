@@ -22,6 +22,8 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`spec/cheader.md`](spec/cheader.md) — the normative C header discipline, for shared-library
   host contracts.
 - [`spec/kotlin.md`](spec/kotlin.md) — the normative Kotlin metadata discipline.
+- [`spec/jsig.md`](spec/jsig.md) — the normative Java signature-surface discipline, for the
+  `jdk` and `android` host contracts.
 - [`design/universes.md`](design/universes.md) — the taxonomy of formats, universes, hosts and
   application types; the pipeline DAG; what belongs in a `.lira` file.
 - [`design/compatibility.md`](design/compatibility.md) — per-language compatibility
