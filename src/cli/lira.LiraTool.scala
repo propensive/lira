@@ -21,6 +21,7 @@ import workingDirectories.systemWorkingDirectory
 // first invocation starts a background JVM; every later one attaches over a socket, giving
 // millisecond startup and live tab-completions.
 val Verify = Subcommand("verify", "verify a .lira file (install grade)")
+val Harvest = Subcommand("harvest", "harvest a host's surface into tagged .lira contracts")
 val Jar = Subcommand("jar", "write a section's canonical derivative JAR")
 val Assign = Subcommand("assign", "assign the next derived version to a development release")
 val Install = Subcommand("install", "install tab-completions into the shell")
@@ -38,6 +39,9 @@ def main(): Unit = cli:
     case Assign() :: file :: previous :: Nil =>
       execute(assign(file(), previous(), Major().present))
 
+    case Harvest() :: kind :: out :: rest =>
+      execute(harvest(kind(), out(), rest.map(_())))
+
     case Install() :: _           => execute(installCompletions())
     case Help() :: _              => execute(usage(Exit.Ok))
     case Quit() :: _              => execute(quit())
@@ -54,6 +58,12 @@ private def usage(exit: Exit)(using cli: Cli): Exit =
   Out.println(t"       lira jar <universe> <file.lira>     write the canonical derivative JAR")
   Out.println(t"       lira assign <file.lira> [<previous.lira>] [--major]")
   Out.println(t"                                           assign the next derived version")
+  Out.println(t"       lira harvest jdk <dir> [<ct.sym>] [+<tag> ...]")
+  Out.println(t"                                           harvest the JDK lineage from ct.sym")
+  Out.println(t"       lira harvest android <dir> <android.jar ...> [+<tag> ...]")
+  Out.println(t"                                           harvest Android API levels")
+  Out.println(t"       (a +<tag> argument sanctions that release as a major: a removal in the")
+  Out.println(t"        vendor's history, beginning a fresh lineage)")
   Out.println(t"       lira install                        install shell tab-completions")
   Out.println(t"       lira help                           show this usage information")
   Out.println(t"       lira quit                           shut down the background daemon")
@@ -146,7 +156,7 @@ private def verify(file: Text)(using cli: Cli): Exit = guard:
   if manifest.development then Out.println(t"version:   (development release)")
   Out.println(t"snapshot:  ${LiraHash.text(manifest.lineage.stdlib.last)}")
   Out.println(t"payload:   ${LiraHash.text(manifest.payload.hash)}")
-  Out.println(t"sections:  ${Text(manifest.section.stdlib.map(_.universe.s).mkString(", "))}")
+  Out.println(t"sections:  ${Text(manifest.section.stdlib.map(_.world.s).mkString(", "))}")
 
   report.advisories.stdlib.each: advisory =>
     Out.println(t"advisory:  ${Text(advisory.toString)}")
@@ -160,7 +170,7 @@ private def jar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
   val lira = Lira.read(load(file))
   val report = Verification.install(lira)
 
-  report.materialized.stdlib.find(_(0) == universe) match
+  report.materialized.stdlib.find { pair => pair(0).world == universe } match
     case scala.Some(pair) =>
       val data = Derivative.jar(pair(1), report.blobstore)
       val target = t"${stem(file)}-$universe.jar"
@@ -191,4 +201,93 @@ private def assign(file: Text, previous: Optional[Text], forceMajor: Boolean)(us
     val target = t"${stem(file)}-$version.lira"
     save(target, Lira.assemble(manifest, blobs))
     Out.println(t"assigned $version -> $target")
+    Exit.Ok
+
+// Harvests a host's surface into its contract lineage (LIRA hosts.md, jsig.md): one tagged,
+// versioned `.lira` host contract per vendor release, graded by the algebra, with majors — the
+// removals in the vendor's history — requiring explicit `+<tag>` sanction (L110). Emitted
+// files carry the executable bit, as §5.1 requires of producers.
+private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using cli: Cli)
+:   Exit =
+
+  guard:
+    given Stdio = cli.stdio
+    import strategies.throwUnsafely
+
+    val majors = extra.filter(_.s.startsWith("+")).map { tag => Text(tag.s.substring(1).nn) }
+    val sources = extra.filter { arg => !arg.s.startsWith("+") }
+
+    val releases: proscenium.List[HostRelease] = kind.s match
+      case "jdk" =>
+        val path = sources.stdlib.headOption.getOrElse:
+          CtSym.location().or:
+            Out.println(t"lira: no ct.sym found; pass its path explicitly")
+            return Exit.Fail(1)
+
+        val resolved = Text(resolve(path).toString)
+
+        proscenium.List.from:
+          CtSym.releases(resolved).stdlib.map: release =>
+            val surface = CtSym.surface(resolved, release)
+            Out.println(t"harvested jdk-$release (${surface.stdlib.size} classes)")
+            HostRelease(Text(s"jdk-$release"), surface)
+
+      case "android" =>
+        if sources.stdlib.isEmpty then
+          Out.println(t"lira: pass one android.jar per API level")
+          return Exit.Fail(1)
+
+        val level = java.util.regex.Pattern.compile("android-([0-9]+)").nn
+
+        val parsed = sources.stdlib.map: jar =>
+          val matcher = level.matcher(jar.s).nn
+
+          val tag =
+            if matcher.find() then Text(s"android-${matcher.group(1)}")
+            else
+              val name = resolve(jar).getFileName.nn.toString
+              Text(name.stripSuffix(".jar").nn)
+
+          val surface = HostArchive.surface(Text(resolve(jar).toString))
+          Out.println(t"harvested $tag (${surface.stdlib.size} classes)")
+          (tag, surface)
+
+        proscenium.List.from:
+          parsed.sortBy { pair => pair(0).s }.map { pair => HostRelease(pair(0), pair(1)) }
+
+      case other =>
+        Out.println(t"lira: unknown host kind '$other' (expected jdk or android)")
+        return Exit.Fail(1)
+
+    val contracts =
+      try
+        HostContracts.assemble(
+          kind,
+          releases,
+          toolchain  = proscenium.List(LiraManifest.Tool(t"lira", t"0.1")),
+          allowMajor = { tag => majors.stdlib.contains(tag) })
+      catch case error: LiraError =>
+        if error.reason == LiraError.Reason.UngradedSuccessor then
+          Out.println(t"lira: a release grades as a major over its predecessor (a removal in")
+          Out.println(t"      the vendor's history); sanction it by adding +<tag> for the")
+          Out.println(t"      first release after those already reported as harvested")
+          return Exit.Fail(1)
+        else
+          Out.println(t"lira: ${error.message}")
+          return Exit.Fail(1)
+
+    val directory = resolve(out)
+    jnf.Files.createDirectories(directory)
+
+    contracts.stdlib.foreach: (tag, bytes) =>
+      val target = directory.resolve(s"$tag.lira").nn
+      jnf.Files.write(target, Array.unsafeJvm(bytes))
+      target.toFile.nn.setExecutable(true, false)
+
+      val manifest = Lira.read(bytes).manifest
+      val version = manifest.version.let { v => t"$v" }.or(t"unversioned")
+
+      Out.println(t"$tag -> ${Text(target.toString)} ($version, lineage of ${manifest
+          .lineage.stdlib.size})")
+
     Exit.Ok

@@ -9,11 +9,11 @@ import scalalib.*
 object settings:
   // The propensive Scala fork, resolved from the soundness worktree's toolchain repository
   // view (regenerate with `./mill show toolchain.repo` there), overridable for other machines.
-  val scalaVersion = "3.9.0-RC4-p8"
+  val scalaVersion = "3.9.0-RC4-p9"
 
   val toolchainRepo: String = sys.env.getOrElse(
     "LIRA_TOOLCHAIN_REPO",
-    "file:///Users/propensive/work/worktrees/soundness/gondor/soundness/out/toolchain/repo.dest")
+    "file:///Users/propensive/work/worktrees/soundness/arnor/soundness/out/toolchain/repo.dest")
 
   // Locally-published soundness (from the soundness worktree):
   //   SOUNDNESS_RELEASE_VERSION=0.0.0-lira ./mill <closure>.publishLocal
@@ -45,6 +45,7 @@ object lira extends ScalaModule:
   def mvnDeps = Seq(
     mvn"dev.soundness:reliquary-core:${settings.soundnessVersion}",
     mvn"dev.soundness:reliquary-derive:${settings.soundnessVersion}",
+    mvn"dev.soundness:mandible-lira:${settings.soundnessVersion}",
     mvn"dev.soundness:ethereal-core:${settings.soundnessVersion}",
     mvn"dev.soundness:exoskeleton-core:${settings.soundnessVersion}",
     mvn"dev.soundness:exoskeleton-args:${settings.soundnessVersion}",

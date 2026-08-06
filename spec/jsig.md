@@ -71,9 +71,11 @@ claim.
 
 ## 6. The Contracts This Discipline Carries (Informative)
 
-- **`jdk`**: harvested from `ct.sym`, which carries the signature surface of every release
-  back to JDK 8 — one modern JDK yields the whole lineage. Marketing names ride as tags
-  (LIRA §12.6): the release whose derived version is `8.2.0` carries `tag jdk-19`.
+- **`java.base`** and its sibling platform modules: harvested from `ct.sym`, which carries
+  the signature surface of every release back to JDK 8 — one modern JDK yields the whole set
+  of lineages, one contract module per platform module (hosts.md §3, "Granularity"). Marketing
+  names ride as coordinated tags (LIRA §12.6): every module contract harvested from JDK 19
+  carries `tag jdk-19`, and the platform release is the tag-coordinated set.
 - **`android`**: harvested from `android.jar` per API level; `tag android-37` and kin.
 - **`scalajs-javalib`**: the JDK subset Scala.js reimplements, under this same discipline —
   which is what makes cross-contract spanning ([`hosts.md`](hosts.md) §7) decide JVM/JS

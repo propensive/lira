@@ -84,6 +84,21 @@ a **tag** (LIRA §12.6): unique, immutable and signed under the manifest, so `ta
 the release whose derived version happens to be `8.2.0`, and resolving the tag to a snapshot
 is stable on every registry that holds the release.
 
+**Granularity.** Where the vendor modularizes its platform, contracts SHOULD follow the
+vendor's modules — one contract module per platform module (`java.base`, `java.sql`), not one
+for the union. The union fuses every module's churn into one atom set, so any module's removal
+fractures the lineage of consumers who never touched it; per-module contracts give each
+surface its own honest history, and a platform module's removal simply ends its lineage. What
+coordinates a platform *release* across them is the tag: every module contract harvested from
+one vendor release carries the same tag, and "JDK 19" is the set of releases tagged `jdk-19`
+across the `java.*` contract modules — resolved per L142's uniqueness, validated by handing
+rule 7 the whole set, whose aggregation (§10) already spans contract modules. A library's
+per-module requirements are then computable rather than authored: its used-set partitions by
+the module that carries each reference, and the modules with non-empty parts are the
+requirements — which is also exactly the question a trimmed runtime (a jlink image, a
+native-image build) asks, since such a runtime is a host whose contract is the union of the
+module contracts it includes.
+
 ## 4. The `host` World
 
 The `host` world is the one world that is not a universe (LIRA §4.1): independently-published
