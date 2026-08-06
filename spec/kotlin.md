@@ -51,9 +51,10 @@ to claim, so a release registering both MUST list `kotlin-metadata/1` first.
 ## 4. Extraction
 
 Atomization reads the metadata's declaration model — via the published metadata library, whose
-version travels in `toolchain` — and never the bytecode: `Code`, private members, and synthetic
-bridges are invisible here (they are `classfile/1`'s subject). Local and synthetic declarations
-never enter the model.
+version travels in `toolchain` — and never the bytecode: `Code`, synthetic bridges and
+`$default` machinery are invisible here (they are `classfile/1`'s subject). `private`,
+`internal` and local declarations never enter the model: neither is nameable by a consumer
+outside the module.
 
 **Metadata the library cannot read is a hard atomization error**: an unreadable contract must
 fail at the producer, not understate at the consumer.
@@ -62,6 +63,11 @@ fail at the producer, not understate at the consumer.
 
 Keying is by **membership**, as `classfile.md` §6: a Kotlin call site resolves members through
 the receiver after inheritance, so the contract surface of a type includes what it presents.
+The presented set is walked through the **Kotlin** supertype closure — the supertypes that
+themselves carry metadata. A supertype carrying none contributes nothing here: a Java
+superclass's surface belongs to a classfile-level discipline, and the virtual builtins
+(`kotlin.Any` and the mapped types) have no metadata carrier at all.
+
 Keys are:
 
 - a class, interface, object or companion: its Kotlin fully-qualified name;
@@ -88,13 +94,13 @@ Keys are:
 - **Data classes**: constructor parameters fold into the class's atom — `copy`'s signature
   changes when any is added, so the addition is correctly major (the
   binary-compatibility-validator rule).
-- **Replaceable atoms**: the body of an `inline` function is compiled into consumers, so each
-  inline function yields, beside its rigid signature atom, one **replaceable** atom keyed
-  `<rigid key>[inline]` whose value covers the function's implementation as the metadata
-  exposes it. Version 1 takes the conservative reading available from metadata alone — the
-  implementation is hashed at the granularity the carrier offers — with reference lists naming
-  the `@PublishedApi` internals it may reach, which are themselves rigid-atomized
-  (LIRA §11.2 requirement 5).
+- **Replaceable atoms: none in version 1.** The natural candidate is the `inline` function's
+  body, which is compiled into consumers — but the `@Metadata` carrier holds declarations, not
+  bodies, and a replaceable atom whose value cannot be computed from the claimed content would
+  violate LIRA §11.2's purity requirement. The inline flag's *existence* folds into the rigid
+  signature atom, so gaining or losing inline-ness registers; body churn is invisible at this
+  level, exactly as classfile-level bridge churn is invisible to `tasty/1`, and a
+  `kotlin-metadata/2` MAY add body tracking over a carrier that has one.
 
 ## 7. Canonical Encoding
 
