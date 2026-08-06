@@ -17,7 +17,9 @@ pipeline graph** rather than by file format.
 > (spec §4.1: format, world, universe, host, host contract, application type, egress, join,
 > ecosystem, language, platform, compatible). This section remains the informative elaboration —
 > the litmus-test walkthroughs and the registry below — and where wording differs, the spec
-> governs.
+> governs. The application-type examples and the packaging exclusion from **egress** are
+> likewise normative (spec §4.1); the application types themselves, and their triple
+> parameterization, are not spec objects at all (§6).
 
 **Format.** A concrete byte-level encoding: classfile, TASTy, SJSIR, NIR, Kotlin `@Metadata`,
 klib, `.d.ts`, ES module, rmeta/rlib, LLVM bitcode, WASM core module, WASM component, WIT, DEX,
@@ -51,9 +53,18 @@ minSdk 26" or "JDK 17+". They belong on the *host* axis, versioned like any API.
 
 **Application type.** A pair (closed artifact format, host contract): an executable jar on
 JDK ≥ N; an APK on ART ≥ API 26; an ES-module bundle in a browser; a script for Node ≥ 20; a
-core-WASM module + JS glue in a browser; a WASM component exporting `wasi:cli/run@0.2`; an ELF
-executable for `x86_64-linux-gnu`. Application types are what a *build* produces; they are
-never stored in a `.lira` file.
+core-WASM module + JS glue in a browser; a WASM component exporting `wasi:cli/run@0.2`; that
+same component packaged as a Wasm OCI Artifact, for a runtime that schedules it from a registry;
+a self-extracting command-line bundle for a POSIX or Windows shell with a JVM; an ELF executable
+for `x86_64-linux-gnu`. Application types are what a *build* produces; they are never stored in
+a `.lira` file.
+
+Two application types may share a format and differ only in how it is packaged: a WASM component
+and that component wrapped as an OCI artifact are the same bytes under different envelopes,
+distinguishable to a build because they reach different hosts. A packaging step is not an egress
+— it closes over nothing and reads no `.lira` file (spec §4.1) — but it is an edge of the
+pipeline all the same, running from one application type to another, and resolution follows it
+exactly as it follows an egress.
 
 **Egress.** A linking edge from a universe to an application type: it consumes the closed set
 of that universe's library artifacts (drawn from a buildpath) and produces the application
@@ -61,12 +72,14 @@ artifact. One universe may have many egresses — this is the resolution of the 
 JS *and* WASM" puzzle:
 
 - `sjsir` has egresses to **js-app** (ESM/CJS/script), **wasm-browser** (core wasm + JS glue),
-  and **wasi-component** (WASM component against a WIT world, WASI 0.2).
-- `jvm` has egresses to **jvm-app** (jar), **android-app** (DEX/APK, via D8), and
-  **native-exe** (GraalVM native-image).
+  and **wasi-component** (WASM component against a WIT world, WASI 0.2), which in turn packages
+  to **wasi-oci** (that component as a Wasm OCI Artifact).
+- `jvm` has egresses to **jvm-app** (jar), **android-app** (DEX/APK, via D8),
+  **native-image/⟨triple⟩** (GraalVM native-image), and **xeq-bundle** (a jar appended to a
+  native launcher stub, wrapped in a polyglot script).
 
 A library never chooses its egress; an application does. That is *why* the sjsir section is
-stored once and serves three application types.
+stored once and serves four application types.
 
 **Join.** The point where two universes' contributions merge into one application. Examples:
 the output of the sjsir→js egress joins the `js` universe (a bundler links Scala.js output
@@ -103,6 +116,12 @@ Notes:
   with others; a classfile set is a `jvm` library until an egress closes it into a jar/APK.
 - `native/<triple>` is a family of universes, one per target triple, because C-ABI artifacts
   do not compose across triples. Triple-parameterized universes arrive as a schema layer.
+- The application axis is parameterized by triple for the same reason, one step further on:
+  `native-exe/<triple>` and `native-image/<triple>` are families, one member per triple, because
+  a closed native artifact does not *run* across triples any more than an open one composes
+  across them. The parameter is part of the application type rather than a setting of its
+  egress, since it is what decides whether the artifact runs at all on the host in hand — as
+  visible a distinction to whoever receives the artifact as jar-versus-bundle is.
 
 ## 3. Where LLVM fits
 
@@ -143,12 +162,14 @@ graph LR
   subgraph applications
     JAR[jvm-app jar → JVM ≥ N]
     APK[android-app apk → ART ≥ api]
-    NIMG[native-image → OS/triple]
+    XEQ[xeq-bundle → shell + JVM ≥ N]
+    NIMG[native-image/triple → os/triple]
     JSAPP[js-app bundle → browser/Node]
     WASMB[wasm-browser → browser]
     WASI2[wasi-component → WASI 0.2 world]
+    WASIOCI[wasi-oci → WASI 0.2 world]
     WASI1[wasi-module → WASI 0.1]
-    EXE[native-exe → OS/triple]
+    EXE[native-exe/triple → os/triple]
   end
 
   SCALA -->|scalac| JVM
@@ -165,9 +186,11 @@ graph LR
   JVM -->|jar link| JAR
   JVM -->|d8 dex| APK
   JVM -->|graal native-image| NIMG
+  JAR -->|xeq package| XEQ
   SJSIR -->|sjs linker| JSAPP
   SJSIR -->|sjs linker wasm| WASMB
   SJSIR -->|sjs linker component| WASI2
+  WASI2 -->|oci package| WASIOCI
   KLIB -->|kotlin backends| JSAPP
   KLIB -->|kotlin/native + llvm| EXE
   NIR -->|scala-native + llvm| EXE
@@ -180,7 +203,13 @@ graph LR
 ```
 
 (LLVM sits invisibly inside the three edges into `EXE`/`NIMG`; DEX inside the edge into
-`APK`.)
+`APK`. `EXE` and `NIMG` are families, one node per triple, elided here to one box each.)
+
+Two edges run between application nodes rather than out of a universe: `JAR → XEQ` and
+`WASI2 → WASIOCI`. Both are packaging steps, which take a closed artifact and re-envelope it for
+a different host, so their input is an application artifact and not a set of library artifacts.
+Resolution treats them like any other edge — the path from `jvm` to `xeq-bundle` simply runs two
+tools — and nothing about either is visible to a library.
 
 ### 4.1 Resolution
 
@@ -382,10 +411,25 @@ Applied to the spec: the section key is a **world** — `jvm | sjsir | nir | hos
 verification moment of §5.5 named in spec §16; and cross-universe dependencies are normative via
 the `serves` field and the **target** generalization of buildpath validity and derivation
 (spec §13.2, §13.3, §13.5) — the manifest-decidable slice of §4.1's resolution, steps 1–3.
+Spec §4.1's application-type examples now cover OCI-packaged components and per-triple native
+executables, and its **egress** definition now says explicitly that packaging an application
+artifact is not an egress: it closes over nothing and reads no `.lira` file, so it stays outside
+the compatibility algebra entirely.
+
+Nothing on the application axis is a schema object, so the nodes and edges added here — the
+`wasi-oci` and `xeq-bundle` application types, the packaging edges reaching them, and the
+triple-parameterized native families — change no manifest, no atom and no buildpath rule. They
+are the pipeline registry's business (item 2 below), and are recorded here so that the registry
+has something to be faithful to.
 
 Still proposed:
 
-1. Triple-parameterized universes (`native/<triple>`) — as a schema layer.
+1. Triple-parameterized universes (`native/<triple>`) — as a schema layer — and, on the
+   application axis, the triple-parameterized families `native-exe/<triple>` and
+   `native-image/<triple>` (§1, §2). The application axis is not a schema object, so this half
+   is a registry concern rather than a spec one.
 2. The machine-readable pipeline registry (`universes.tel`) driving §4.1 step 4, so that
    egresses, joins and the tools implementing them are registry entries rather than build-tool
-   code.
+   code. Application-to-application packaging edges (`jar → xeq-bundle`,
+   `wasi-component → wasi-oci`) belong in it on the same footing as the egresses out of a
+   universe.

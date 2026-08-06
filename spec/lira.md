@@ -92,12 +92,18 @@ executing several representations) dissolve once each thing is named by its **ro
   by lineage membership — while remaining a distinct axis from dependencies (hosts.md §8).
 - **Application type**: a pair of a closed artifact format and a host contract — an executable
   JAR on JDK ≥ 21, an APK on Android API ≥ 26, an ES-module bundle in a baseline browser, a WASM
-  component in a WASI 0.2 world. Application types are what *builds* produce; they are never
-  stored in a `.lira` file.
+  component in a WASI 0.2 world, that component packaged as a Wasm OCI Artifact for a runtime
+  that schedules it from a registry, a native executable for one target triple. Two application
+  types may share a format and differ only in how it is packaged, since what distinguishes them
+  is the host they reach. Application types are what *builds* produce; they are never stored in
+  a `.lira` file.
 - **Egress**: a linking edge from a universe to an application type: it closes over a buildpath's
   artifacts in that universe and produces the application artifact. One universe may have many
   egresses (`sjsir` egresses to JS bundles, to browser WASM, and to WASI components) — which is
-  why a library stores its representation once and never chooses its application type.
+  why a library stores its representation once and never chooses its application type. What a
+  build then does to an application artifact — repackaging it as an OCI artifact, appending it to
+  a launcher stub — is not an egress and not in scope here: it reads no `.lira` file and closes
+  over nothing.
 - **Join**: the point where two universes' contributions merge into one application — a bundler
   linking Scala.js output with TypeScript-compiled modules; a system linker combining native
   objects with C libraries. Joins are what make cross-universe dependencies meaningful (§13.2).
