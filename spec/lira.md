@@ -361,6 +361,15 @@ variants to a select but never remove them. A consumer knowing only the base sch
 parse a layered manifest (TEL §8.2); it MUST treat sections of unknown universes as opaque and
 MUST NOT attempt to materialize them.
 
+The first anticipated layer is the web layer, appending the two reserved universes this
+specification's disciplines already reach for: **`js`** — interface convention `.d.ts`
+([`dts.md`](dts.md), whose domain SHOULD narrow to it in a `dts/2`), linkage by bundler and ESM
+resolution, capability model that of the host the bundle lands on — and **`component`** —
+interface convention WIT ([`wit.md`](wit.md)), linkage by component composition, capabilities
+declared by world imports. Each is a TEL schema layer appending a variant to the `World` select
+(TEL §8.2); a consumer knowing only the base schema still parses a layered manifest and holds
+the new universes' sections opaque, exactly as §9.4 requires.
+
 A `host` section holds a **host contract**'s content — the carrier of a runtime environment's
 capability interface — and a release carrying one is a host contract rather than a library. Such
 a release MUST carry exactly that one section, MUST declare no integrations and no

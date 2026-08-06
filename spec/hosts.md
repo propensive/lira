@@ -270,6 +270,17 @@ The contracts the focus ecosystems want first, with their natural carriers:
 | `posix`            | POSIX shell and userland commands         | `capability/1`                     |
 | `scalajs-javalib`  | the JDK subset Scala.js reimplements      | same discipline as `jdk` — which is what makes cross-contract spanning (§7) decide JVM/Scala.js/Android portability |
 
+Two further axes are anticipated rather than specified. The `jdk` and `android` contracts want
+a **classfile-signature discipline whose domain includes `host`** (§3): `classfile/1` will not
+serve, since its domain is `{jvm}` and its guarantee is linkage against shipped bytecode rather
+than presence of a platform surface — though where the stubs carry Kotlin metadata,
+`kotlin-metadata/1` ([`kotlin.md`](kotlin.md)) already reaches them. And **target triples**
+parameterize contract *modules*, not the format: an operating-system contract is published per
+triple family (`glibc-x86-64-linux`, or coarser where surfaces genuinely coincide), exactly as
+`sed:gnu` names a variant capability (§5) — satisfaction stays lineage membership and spanning,
+with no new mechanism, and a library's per-triple requirements are ordinary per-section
+`requires` records.
+
 Who publishes these — a registry-blessed set, the platform vendors, or the community — is a
 governance question this specification deliberately does not answer
 ([`universes.md`](../design/universes.md) §5.6). The format's only stake is that whoever does

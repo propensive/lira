@@ -204,14 +204,15 @@ keep interface members additive where `dts` must fold them. Inverting the direct
 
 ## 10. Summary table
 
-| Language   | Discipline         | Universe(s)        | Guarantee       | Replaceable atoms        | Rule-table prior art          |
+| Language   | Discipline         | World(s)           | Guarantee       | Replaceable atoms        | Rule-table prior art          |
 | ---------- | ------------------ | ------------------ | --------------- | ------------------------ | ----------------------------- |
-| Scala      | `tasty`            | jvm, sjsir, nir    | recomp + linkage| inline/macro bodies      | TASTy-MiMa, MiMa              |
-| Kotlin     | `kotlin`           | jvm, klib          | recomp + linkage| inline fun bodies        | binary-compatibility-validator|
-| TypeScript | `dts`              | js                 | recompilation   | —                        | api-extractor, semver-ts      |
-| Rust       | `rmeta`            | crate              | recompilation   | generic/inline bodies    | cargo-semver-checks           |
-| Java       | `classfile`        | jvm                | linkage + recomp| `static final` constants | MiMa, JLS 13                  |
-| JavaScript | `esm`              | js                 | export presence | —                        | —                             |
-| (WIT)      | `wit`              | component          | recomp + compose| —                        | WASI world versioning         |
-| (any)      | `resource`         | all                | name presence   | tracked resource content | —                             |
-| (host)     | `webidl`           | — (host axis)      | recompilation   | —                        | webref IDL, compat-data       |
+| Scala      | `tasty/1`          | jvm, sjsir, nir    | recomp + linkage| inline/macro bodies      | TASTy-MiMa, MiMa              |
+| Kotlin     | `kotlin-metadata/1`| jvm, host          | recompilation   | — (v1; bodies not carried)| binary-compatibility-validator|
+| TypeScript | `dts/1`            | all (js reserved)  | recompilation   | —                        | api-extractor, semver-ts      |
+| Rust       | `rmeta`            | crate (anticipated)| recompilation   | generic/inline bodies    | cargo-semver-checks           |
+| Java       | `classfile/1`      | jvm                | linkage         | `static final` constants | MiMa, JLS 13                  |
+| JavaScript | `esm`              | js (anticipated)   | export presence | —                        | —                             |
+| (WIT)      | `wit/1`            | host, component    | recompilation   | —                        | WASI world versioning         |
+| (C)        | `cheader/1`        | host               | recomp/presence | —                        | pkg-config, symbol versioning |
+| (any)      | `resource/1`       | all                | name presence   | tracked resource content | —                             |
+| (host)     | `webidl/1`         | host               | recompilation   | —                        | webref IDL, compat-data       |

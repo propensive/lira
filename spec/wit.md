@@ -51,7 +51,10 @@ interfaces, worlds and their contents — never over the text: comments, whitesp
 declaration order at the top level never enter the model.
 
 **A construct outside the parser's vocabulary is a hard atomization error** (the rule of
-`tasty.md` §7, for the same reason).
+`tasty.md` §7, for the same reason). Two gates are treated distinctly: `@since` is consumed and
+ignored — it documents when a stable item arrived, which the lineage already records — while
+`@unstable` is a hard error, since an unstable item published in a contract would be a stable
+claim about an unstable surface.
 
 ## 5. Keys
 
@@ -82,10 +85,12 @@ what the component model's own evolution rules make safe:
   declarations — not its functions: adding a function to an interface is additive for callers,
   and nothing implements a host interface from outside. Its use-clauses are transparent:
   references are encoded fully qualified, so re-exports and renames carry no semantic content.
-- **A world's atom** folds its sorted import list and sorted export list, by key. Adding an
-  *export* to a world is additive (the host offers more); adding an *import* folds — a
-  component targeting the world must supply it, so the addition is breaking for world
-  implementors — which mirrors the required-dictionary-member rule of `webidl.md` §6.
+- **A world's imports are standalone atoms**, keyed `<world>#import <name>`: an import is a
+  capability the host supplies to components targeting the world, so a world gaining one is a
+  minor — the polarity of hosts.md §2, where a host gaining a capability is the additive
+  direction. **Its exports fold**, as a sorted key list, into the world's own atom: an export
+  is an obligation on every component targeting the world, so adding one is breaking for them —
+  the required-dictionary-member rule of `webidl.md` §6, transposed.
 - **Record fields fold** into the record's atom, in declaration order (the canonical ABI is
   positional). **Variant cases and enum cases fold** in declaration order (case indices are
   ABI). **Flags fold** likewise. Adding a field or case is therefore major — the conservative
