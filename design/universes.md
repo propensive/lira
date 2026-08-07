@@ -114,6 +114,10 @@ Notes:
 - The dual-role formats are handled by role, not by format: a WASM component is an application
   type when it exports a runnable world, and a `component`-universe library when it is composed
   with others; a classfile set is a `jvm` library until an egress closes it into a jar/APK.
+  One tool edge can therefore land in either node: the sjs linker's component output is a
+  `wasi-component` application when the world it exports is runnable, and `component`-universe
+  library content otherwise — which is what the registry's "Scala (via sjsir egress)" row means,
+  and why the DAG draws the same-labelled edge into both.
 - `native/<triple>` is a family of universes, one per target triple, because C-ABI artifacts
   do not compose across triples. Triple-parameterized universes arrive as a schema layer.
 - The application axis is parameterized by triple for the same reason, one step further on:
@@ -190,6 +194,7 @@ graph LR
   SJSIR -->|sjs linker| JSAPP
   SJSIR -->|sjs linker wasm| WASMB
   SJSIR -->|sjs linker component| WASI2
+  SJSIR -->|sjs linker component| COMP
   WASI2 -->|oci package| WASIOCI
   KLIB -->|kotlin backends| JSAPP
   KLIB -->|kotlin/native + llvm| EXE
