@@ -32,9 +32,12 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   vectors: the section matrix, the one-API rule, and buildpath resolution as a search.
 - [`design/distribution.md`](design/distribution.md) — the index service: DNS-verified
   namespaces, transparency log, single-packet UDP resolution, GitHub Releases hosting.
+- [`design/tool.md`](design/tool.md) — the unified `lira` tool: the content-addressed store,
+  cache and retention, the command surface, and node roles.
 
 Status: specification and implementation in progress. The language-blind core — container,
 compatibility algebra, buildpath validation, signing, and canonical derivative artifacts — is
 implemented as the [`reliquary`](https://github.com/propensive/soundness) module of Soundness,
 and the Scala discipline (`tasty/1`) as its `degustation` module; the `lira`
-command-line tool (in this repository, built on Soundness) is next.
+command-line tool (in this repository, built on Soundness) covers the artifact commands today,
+with its full design — store, cache, and node — in [`design/tool.md`](design/tool.md).

@@ -19,6 +19,9 @@ Bluesky's handle verification (DNS TXT record carrying a key binding); ACME DNS-
    (verified: release-asset downloads honour `Range` requests — `206 Partial Content`,
    `accept-ranges: bytes` — and the manifest is the head of a `.lira` file by construction,
    spec §5, so `Range: bytes=0-(manifest length−1)` retrieves it without the payload).
+   Hosting is pluggable: a node running the *host* role (tool.md §6) is a second byte-serving
+   backend beside GitHub Releases. The principle constrains the index — the directory role —
+   and stands even when one node happens to hold both roles.
 3. **Everything is content-addressed and append-only** — records, proofs, manifests, payloads
    — so caching and mirroring are trivial and unbounded.
 
@@ -77,7 +80,8 @@ spec §7.1, replacing RFC 6962's 0x00/0x01 prefixes).
   cached head — so the log can only ever extend, never rewrite. The expensive post-quantum
   signature is thus amortized over every query made against that head.
 - **Witnesses and mirrors**: anyone may mirror the log (bulk range download, §7) and gossip
-  STHs; two inconsistent STHs are cryptographic proof of misbehavior. Split-view attacks
+  STHs — operationally, `lira serve --mirror`/`--witness` (tool.md §6); two inconsistent STHs
+  are cryptographic proof of misbehavior. Split-view attacks
   (equivocating between clients) require permanently forking the log per victim, which
   witness gossip makes detectable.
 - **Registration-time verification**: before appending a `Release` leaf the index performs
@@ -98,6 +102,7 @@ schemas in the spec); each is one Merkle leaf.
 | `NamespaceProof` | domain; fingerprints observed; vantage evidence; DNSSEC flag; time       |
 | `Release`        | coordinate; version label; snapshot; manifest hash; manifest byte-length; payload hash; total byte-length; artifact location (owner, repo, tag, asset); publisher key fingerprint |
 | `Withdrawal`     | reference to a `Release`; reason — advisory only; nothing is ever deleted |
+| `Referral`       | another directory's endpoint, STH key fingerprint, and namespace scope: the log this directory relied on when verifying a registration whose dependencies it does not itself serve — verification evidence and client routing hint at once (tool.md §4) |
 
 The `Release` record is deliberately a *bounded* projection of the manifest: it contains no
 lineage list and no signatures (both unbounded/large), which is what lets it fit in a
@@ -204,4 +209,6 @@ sub-millisecond datagrams. Organizations can run a caching mirror with zero trus
 - Rate limiting and abuse handling on the HTTPS registration path.
 - Whether the index should also serve `uses`/delta blob summaries so staleness queries
   (spec §13.4) can be answered without fetching predecessors.
-- Mirror/witness protocol details (log range format, gossip envelope).
+- Mirror/witness protocol details (log range format, gossip envelope) — partially answered by
+  the store API of tool.md §7 (`SET-ROOT` commitments plus want/have blob sync); the gossip
+  envelope remains open.

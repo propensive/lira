@@ -13,24 +13,39 @@ object settings:
 
   val toolchainRepo: String = sys.env.getOrElse(
     "LIRA_TOOLCHAIN_REPO",
-    "file:///Users/propensive/work/worktrees/soundness/arnor/soundness/out/toolchain/repo.dest")
+    "file:///Users/propensive/work/soundness/out/toolchain/repo.dest")
 
   // Locally-published soundness (from the soundness worktree):
   //   SOUNDNESS_RELEASE_VERSION=0.0.0-lira ./mill <closure>.publishLocal
   val soundnessVersion = sys.env.getOrElse("LIRA_SOUNDNESS_VERSION", "0.0.0-lira")
 
+  // The same typesafety discipline as the Soundness build's `settings.sep(...)`: capture
+  // checking plus separation checking (each flag subsumes the per-file language import),
+  // explicit nulls, and the experimental language features Soundness compiles with.
   val scalaOptions = Seq(
     "-experimental",
     "-new-syntax",
     "-feature",
     "-preview",
     "-deprecation",
+    "-Wimplausible-patterns",
+    "-Yno-flexible-types",
+    "-Yexplicit-nulls",
+    "-Ycheck-all-patmat",
+    "-Ycc-new",
+    "-language:experimental.captureChecking",
+    "-language:experimental.separationChecking",
     "-language:experimental.modularity",
+    "-language:experimental.dependent",
+    "-language:experimental.relaxedLambdaSyntax",
     "-language:experimental.into",
     "-language:experimental.erasedDefinitions",
     "-language:implicitConversions",
     "-language:experimental.saferExceptions",
     "-language:experimental.genericNumberLiterals",
+    "-language:experimental.strictEqualityPatternMatching",
+    "-language:experimental.subCases",
+    "-language:experimental.multiSpreads",
     "-Yno-predef", "-Yimports:java.lang,proscenium")
 
 object lira extends ScalaModule:

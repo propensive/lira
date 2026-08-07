@@ -4,8 +4,11 @@ assembly:
 
 # Package the assembly and the Ethereal launcher into a single self-contained executable:
 # the first invocation starts a background JVM daemon, and all later invocations attach to
-# it over a socket, for millisecond startup and live tab-completions.
+# it over a socket, for millisecond startup and live tab-completions. Any running daemon is
+# shut down first: overwriting the executable under a live daemon leaves its open jar's
+# central directory stale, and later lazily-loaded classes fail with ClassNotFoundException.
 lira: assembly
+	-./lira quit 2>/dev/null || true
 	cp out/lira/assembly.dest/out.jar lira.jar
 	java -Dbuild.executable=lira -jar lira.jar
 

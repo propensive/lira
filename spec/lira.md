@@ -250,6 +250,13 @@ The `lira/1` prefix is the **format epoch**. Any future revision of this specifi
 changes the meaning of any hashed encoding MUST change the epoch, invalidating no existing hash
 but guaranteeing that old and new hashes never mix silently.
 
+Companion documents define further domains under the same epoch, reserved here so they can
+never collide: `lira/1:leaf` and `lira/1:node` (the transparency log, distribution.md §4);
+`lira/1:set-leaf` and `lira/1:set-node` (a node's published-set commitment, tool.md §7); and
+`lira/1:manifest-bytes` (the raw bytes of a manifest as stored, served, and pinned by
+distribution records, tool.md §2.2 — distinct from `lira/1:manifest`, which hashes the
+canonical signing encoding and so identifies content rather than bytes).
+
 ## 8. Payload
 
 ### 8.1 Compression Envelope
