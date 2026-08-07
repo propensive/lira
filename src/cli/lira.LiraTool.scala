@@ -24,16 +24,37 @@ val Verify = Subcommand("verify", "verify a .lira file (install grade)")
 val Harvest = Subcommand("harvest", "harvest a host's surface into tagged .lira contracts")
 val Jar = Subcommand("jar", "write a section's canonical derivative JAR")
 val Assign = Subcommand("assign", "assign the next derived version to a development release")
+val Cache = Subcommand("cache", "manage the content-addressed store (add/ls/rm/path)")
+val Pin = Subcommand("pin", "pin a cached release, exempting it from eviction")
+val Unpin = Subcommand("unpin", "unpin a cached release")
+val Gc = Subcommand("gc", "collect unreferenced objects; evict to the byte budget")
+val Fsck = Subcommand("fsck", "re-verify every store object; quarantine mismatches")
+val Id = Subcommand("id", "identify a bare artifact by its derivative hash")
 val Install = Subcommand("install", "install tab-completions into the shell")
 val Help = Subcommand("help", "show usage information")
 val Quit = Subcommand("quit", "shut down the background daemon")
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
+val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
+
+// Preloads parasite's failure-path class. A failed strand is recorded via `Fulfillment.Failed`,
+// which otherwise loads lazily at the moment of first failure — and classloading can itself
+// fail at exactly that moment (an interrupted thread, or a jar overwritten under a running
+// daemon), which both swallows the original error and leaves the strand's promise
+// unfulfilled, hanging the client. Candidate for an upstream fix in parasite.
+private val fulfilmentPreload: parasite.Fulfillment[?] =
+  parasite.Fulfillment.Failed(java.lang.Exception())
 
 @main
 def main(): Unit = cli:
   arguments match
     case Verify() :: file :: Nil  => execute(verify(file()))
-    case Jar() :: universe :: file :: Nil => execute(jar(universe(), file()))
+    case Jar() :: universe :: file :: Nil => execute(storeJar(universe(), file()))
+    case Cache() :: rest          => execute(cache(rest.map(_())))
+    case Pin() :: target :: Nil   => execute(pin(target(), true))
+    case Unpin() :: target :: Nil => execute(pin(target(), false))
+    case Gc() :: _                => execute(gcCommand(Budget()))
+    case Fsck() :: _              => execute(fsck())
+    case Id() :: file :: Nil      => execute(identify(file()))
     case Assign() :: file :: Nil  => execute(assign(file(), Unset, Major().present))
 
     case Assign() :: file :: previous :: Nil =>
@@ -64,6 +85,15 @@ private def usage(exit: Exit)(using cli: Cli): Exit =
   Out.println(t"                                           harvest Android API levels")
   Out.println(t"       (a +<tag> argument sanctions that release as a major: a removal in the")
   Out.println(t"        vendor's history, beginning a fresh lineage)")
+  Out.println(t"       lira cache add <file.lira> ...      ingest files into the store")
+  Out.println(t"       lira cache ls                       list cached releases")
+  Out.println(t"       lira cache rm <hash-prefix>         remove a cached release")
+  Out.println(t"       lira cache path <hash-prefix>       print a store object's path")
+  Out.println(t"       lira pin <hash-prefix>              exempt a release from eviction")
+  Out.println(t"       lira unpin <hash-prefix>            allow eviction again")
+  Out.println(t"       lira gc [--budget <bytes>]          collect garbage; evict to budget")
+  Out.println(t"       lira fsck                           re-verify the store; quarantine")
+  Out.println(t"       lira id <artifact>                  identify a bare artifact")
   Out.println(t"       lira install                        install shell tab-completions")
   Out.println(t"       lira help                           show this usage information")
   Out.println(t"       lira quit                           shut down the background daemon")
@@ -83,18 +113,25 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
   import errorDiagnostics.stackTracesDiagnostics
   import workingDirectories.javaWorkingDirectory
 
-  given Entrypoint = summon[DaemonService[?]]
+  given entrypoint: (Entrypoint^{service}) = service
 
-  recover:
-    case error: InstallError =>
-      Out.println(t"lira: could not install tab-completions")
-      Exit.Fail(2)
+  try
+    recover:
+      case error: InstallError =>
+        Out.println(t"lira: could not install tab-completions")
+        Exit.Fail(2)
 
-  . protect:
-      Completions.ensure(force = true).each(Out.println(_))
-      Exit.Ok
+    . protect:
+        Completions.ensure(force = true).each(Out.println(_))
+        Exit.Ok
 
-private def guard(block: => Exit)(using cli: Cli): Exit =
+  catch case error: Throwable =>
+    // This handler is outside `guard`, so surface fatal errors the same way it does.
+    error.printStackTrace()
+    Out.println(t"lira: fatal: ${Text(error.toString)}")
+    Exit.Fail(3)
+
+private def guard(using cli: Cli)(block: ->{cli} Exit): Exit =
   given Stdio = cli.stdio
   import strategies.throwUnsafely
 
@@ -103,9 +140,20 @@ private def guard(block: => Exit)(using cli: Cli): Exit =
       Out.println(t"lira: ${error.message}")
       Exit.Fail(1)
 
+    case error: StoreError =>
+      Out.println(t"lira: ${error.message}")
+      Exit.Fail(1)
+
     case error: Exception =>
       Out.println(t"lira: ${Text(error.toString)}")
       Exit.Fail(2)
+
+    // Non-Exception throwables would otherwise propagate into the worker's failure path,
+    // where they are easy to lose; print the stack to the daemon log and fail loudly.
+    case error: Throwable =>
+      error.printStackTrace()
+      Out.println(t"lira: fatal: ${Text(error.toString)}")
+      Exit.Fail(3)
 
 // Relative paths arrive from the client and must resolve against the *client's* working
 // directory, which the launcher forwards — never the daemon's own.
@@ -128,12 +176,13 @@ private def stem(file: Text): Text =
 private def manifest(file: Text)(using cli: Cli): Exit = guard:
   given Stdio = cli.stdio
   val data = load(file)
+  val bytes = data.readable
   var index = 0
   var found = -1
 
   while found < 0 && index + 4 <= data.length do
-    if data(index) == '\n' && data(index + 1) == '#' && data(index + 2) == '#'
-        && data(index + 3) == '\n'
+    if bytes(index) == '\n' && bytes(index + 1) == '#' && bytes(index + 2) == '#'
+        && bytes(index + 3) == '\n'
     then found = index
     index += 1
 
@@ -163,24 +212,6 @@ private def verify(file: Text)(using cli: Cli): Exit = guard:
 
   Out.println(t"verified (install grade)")
   Exit.Ok
-
-private def jar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
-  given Stdio = cli.stdio
-  import strategies.throwUnsafely
-  val lira = Lira.read(load(file))
-  val report = Verification.install(lira)
-
-  report.materialized.stdlib.find { pair => pair(0).world == universe } match
-    case scala.Some(pair) =>
-      val data = Derivative.jar(pair(1), report.blobstore)
-      val target = t"${stem(file)}-$universe.jar"
-      save(target, data)
-      Out.println(t"wrote $target (${LiraHash.text(LiraHash(LiraHash.Domain.Derivative, data))})")
-      Exit.Ok
-
-    case _ =>
-      Out.println(t"lira: the release has no $universe section")
-      Exit.Fail(1)
 
 private def assign(file: Text, previous: Optional[Text], forceMajor: Boolean)(using cli: Cli)
 :   Exit =
