@@ -35,7 +35,7 @@ one this discipline is silent on.
 
 ## 3. Domain
 
-The domain is **every world**, the `host` world included.
+The domain is **every realm**, the `host` realm included.
 
 This is a consequence of the universe vocabulary, not a claim about JavaScript. LIRA §9.4 defines
 `jvm`, `sjsir` and `nir` in the base schema and reserves `js` for a schema layer that does not
@@ -48,7 +48,7 @@ the cross-section API invariant (LIRA §9.6), so a release offering several univ
 the *same* declared TypeScript surface in each. A surface that differed per universe would be a
 defect rather than a feature.
 
-Including the `host` world is not a workaround but a use: `.d.ts` is the natural carrier for the
+Including the `host` realm is not a workaround but a use: `.d.ts` is the natural carrier for the
 host contracts of JavaScript runtimes — Node's builtins, Deno's globals — and `dts/1` atomizes a
 contract's declaration surface exactly as it atomizes a library's (LIRA [`hosts.md`](hosts.md)
 §3).

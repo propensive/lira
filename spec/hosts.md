@@ -19,9 +19,14 @@ content is that the polarity of the existing machinery, inverted, is correct for
 
 It also specifies **`capability/1`**, the discipline for host contracts with no formal carrier.
 
+The satisfaction algebra of this document also serves deployed services: a running service is
+a host to its consumers, publishing its network surface as its own release's atoms, and
+`requires` records name service modules and contract modules alike
+([`services.md`](services.md)).
+
 ## 1. Status
 
-This document is a working draft. It is normative for the `host` world (LIRA §9.4), the
+This document is a working draft. It is normative for the `host` realm (LIRA §9.4), the
 `requires` mechanism (LIRA §13.2–§13.3, §14), and the `capability/1` discipline; the labels
 **L135**, **L136** and **L137** are defined in the base specification and elaborated here.
 
@@ -57,7 +62,7 @@ The contract's content — the carrier from which its atoms are recomputed — l
 - a **TEL capability listing** for contracts with no formal grammar — POSIX commands, tool
   availability — atomized by `capability/1` (§5);
 - **`.d.ts` declarations** for JavaScript runtimes — Node's builtins, Deno's globals — atomized
-  by `dts/1`, whose domain is every world ([`dts.md`](dts.md) §3);
+  by `dts/1`, whose domain is every realm ([`dts.md`](dts.md) §3);
 - **Web IDL** for browsers, atomized by `webidl/1` ([`webidl.md`](webidl.md)), whose folding
   decisions differ instructively from `dts/1`'s because the IDL declares the usage direction
   TypeScript cannot;
@@ -99,9 +104,10 @@ requirements — which is also exactly the question a trimmed runtime (a jlink i
 native-image build) asks, since such a runtime is a host whose contract is the union of the
 module contracts it includes.
 
-## 4. The `host` World
+## 4. The `host` Realm
 
-The `host` world is the one world that is not a universe (LIRA §4.1): independently-published
+The `host` realm is one of the two realms that are not universes (LIRA §4.1; the other is
+`app`, [`services.md`](services.md)): independently-published
 libraries do not compose in it, and its sections are never materialized onto any artifact path
 (LIRA §13.5) and never consumed by any egress or join. It exists so that a host contract's
 content is *ordinary content* — held in a tree, deduplicated in the payload, hashed, atomized,
@@ -120,7 +126,7 @@ aggregate contract is published whole.
 ## 5. The `capability/1` Discipline
 
 `capability/1` is the discipline of host contracts with no formal carrier. Its domain is the
-single world `{host}`; its keying is by declaration; it emits only rigid atoms and no reference
+single realm `{host}`; its keying is by declaration; it emits only rigid atoms and no reference
 lists; it certifies **presence**, on the same terms as `resource/1` — which is the recompilation
 level for content addressed by name, and the only level that "the command exists" can mean.
 
@@ -167,9 +173,11 @@ short one.
 
 A library section MAY carry `requires` records (LIRA §14): each names a host contract's module
 and a required snapshot, optionally with a Uses blob against the contract and a human-readable
-version hint. A `requires` record naming a module whose releases are not host contracts is
-invalid (**L137**, LIRA §13.3) — checkable wherever the named module's manifest is in hand,
-since a host contract is recognizable by its `host` section.
+version hint. A `requires` record naming a module whose releases are neither host contracts
+nor deployable releases is invalid (**L137**, LIRA §13.3) — checkable wherever the named
+module's manifest is in hand, since the two kinds of provider are recognizable by their `host`
+and `app` sections respectively; requirements on deployed services are the subject of
+[`services.md`](services.md) §5, and this document's rules are stated for contracts.
 
 Requirements sit on **sections**, not on releases, because needs genuinely differ per universe
 and per integration: a library may shell out only in its `jvm` implementation, or touch the DOM
@@ -270,7 +278,10 @@ resolve exactly as diamond dependencies do (some lineage contains both, LIRA §1
 spanning, the union of the used-sets must be contained in one contract's atom set. The
 aggregated set — "this application, on this target, needs a host providing these capabilities" —
 is the application's host contract in all but publication, and SHOULD be reported as such; a
-probing tool (§9) consumes it whole.
+probing tool (§9) consumes it whole. Where the application is then published as a deployable
+release ([`services.md`](services.md)), tooling SHOULD record this aggregated set as the
+`requires` of its `app` section — the point at which the phrase "in all but publication" stops
+applying.
 
 ## 11. Contract Registry (Informative)
 
@@ -286,6 +297,12 @@ The contracts the focus ecosystems want first, with their natural carriers:
 | `openssl`          | `libcrypto`'s declared surface            | C header / `cheader/1`             |
 | `posix`            | POSIX shell and userland commands         | `capability/1`                     |
 | `scalajs-javalib`  | the JDK subset Scala.js reimplements      | same discipline as `jdk` — which is what makes cross-contract spanning (§7) decide JVM/Scala.js/Android portability |
+
+Beyond this registry of *given* environments, every deployed service adds a provider of its
+own: a service's surface is its release's own atom set, under `openapi/1`
+([`openapi.md`](openapi.md)) and kin ([`services.md`](services.md) §3), while a *standard*
+several services implement — an S3-style API, a mock target — is published as an ordinary host
+contract under the same disciplines and satisfied across modules by spanning (§7).
 
 Two further axes are anticipated rather than specified. The `jdk` and `android` contracts want
 a **classfile-signature discipline whose domain includes `host`** (§3): `classfile/1` will not

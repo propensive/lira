@@ -35,7 +35,7 @@ the native idiom.
 
 ## 3. Domain and Content Claiming
 
-The domain is the single world `{host}`. A release carrying `webidl/1` is a host contract
+The domain is the single realm `{host}`. A release carrying `webidl/1` is a host contract
 (LIRA L135), and the cross-section invariant (LIRA §9.6) is vacuous.
 
 The discipline claims `**/*.idl`, atomized. It claims nothing else.

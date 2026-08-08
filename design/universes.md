@@ -14,8 +14,10 @@ pipeline graph** rather than by file format.
 ## 1. Definitions
 
 > **Status.** The definitions of this section are now normative in the spec's taxonomy
-> (spec §4.1: format, world, universe, host, host contract, application type, egress, join,
-> ecosystem, language, platform, compatible). This section remains the informative elaboration —
+> (spec §4.1: format, realm, universe, host, host contract, application type, egress, join,
+> ecosystem, language, platform, compatible; the spec's generic section-key axis is the
+> **realm**, a term postdating this document — where this document says "world" in that role,
+> read "realm"). This section remains the informative elaboration —
 > the litmus-test walkthroughs and the registry below — and where wording differs, the spec
 > governs. The application-type examples and the packaging exclusion from **egress** are
 > likewise normative (spec §4.1); the application types themselves, and their triple
@@ -41,8 +43,10 @@ there?* SJSIR passes (the Scala.js linker consumes the sjsir of many libraries).
 (Android libraries ship classfiles; dexing happens after the library world closes). LLVM IR
 fails (no ecosystem publishes libraries as bitcode for open composition).
 
-**A universe is what a LIRA section is keyed by.** Sections hold open-world, pre-link
-representations, because a `.lira` file is a *library*.
+**A universe is what a library's LIRA section is keyed by.** (The spec has since generalized
+the key to the **realm**, of which universes are the composing kind, `host` and `app` the
+non-composing ones.) Sections of a library hold open-world, pre-link representations, because
+such a `.lira` file is a *library*.
 
 **Host.** A runtime environment that executes *closed* artifacts, exposing a **versioned
 capability interface**: the JVM (JDK N), a browser (DOM/Web APIs), Node (builtins, version),
@@ -56,8 +60,11 @@ JDK ≥ N; an APK on ART ≥ API 26; an ES-module bundle in a browser; a script 
 core-WASM module + JS glue in a browser; a WASM component exporting `wasi:cli/run@0.2`; that
 same component packaged as a Wasm OCI Artifact, for a runtime that schedules it from a registry;
 a self-extracting command-line bundle for a POSIX or Windows shell with a JVM; an ELF executable
-for `x86_64-linux-gnu`. Application types are what a *build* produces; they are never stored in
-a `.lira` file.
+for `x86_64-linux-gnu`. Application types are what a *build* produces; they are never stored as
+composable content. (Since this was written, the spec's `app` realm lets a **deployable
+release** store or pin exactly one, as *closed* content — spec §9.4,
+[`spec/services.md`](../spec/services.md) — which refines rather than reverses this rule: the
+artifact still composes in no universe.)
 
 Two application types may share a format and differ only in how it is packaged: a WASM component
 and that component wrapped as an OCI artifact are the same bytes under different envelopes,
@@ -242,7 +249,7 @@ the registry.
 ## 5. Hosts as modules: the `requires` axis
 
 > **Status.** This design is now normative: [`spec/hosts.md`](../spec/hosts.md) specifies host
-> contracts, the `host` world, `requires`, satisfaction and cross-contract spanning, the
+> contracts, the `host` realm, `requires`, satisfaction and cross-contract spanning, the
 > `capability/1` discipline, and the third verification moment (§5.5 below). The subsections
 > below are kept as the derivation and rationale; where they differ from `hosts.md`, the spec
 > governs.
@@ -395,8 +402,8 @@ an omission, never prove the list complete.
 ### 5.6 Open questions
 
 Three of the four questions this section originally posed are resolved by
-[`spec/hosts.md`](../spec/hosts.md): the section question — a `host` **world**, the one section
-key that is not a universe, so contract content is ordinary content and the §1 litmus test is
+[`spec/hosts.md`](../spec/hosts.md): the section question — a `host` **realm**, a section key
+that is not a universe, so contract content is ordinary content and the §1 litmus test is
 preserved by naming rather than bent (spec §4.1, §9.4, L135); the probe question — an advisory
 `probe` field on `capability/1` rows, excluded from every atom, treated as untrusted input
 (hosts.md §5, §9); and transitive aggregation — required, per hosts.md §10, with joint
@@ -409,7 +416,8 @@ Still open:
 
 ## 6. Spec impact
 
-Applied to the spec: the section key is a **world** — `jvm | sjsir | nir | host` (§9.4), freeing
+Applied to the spec: the section key is a **realm** — now `jvm | sjsir | nir | host | app`
+(§9.4), freeing
 `js` for the JS universe proper; the root section is per-file, defined as the first section
 (§9.1); the taxonomy of §1 is normative (spec §4.1); host contracts and `requires` are normative
 ([`spec/hosts.md`](../spec/hosts.md)), in the host-as-module form of §5, with the third

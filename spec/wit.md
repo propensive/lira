@@ -37,7 +37,7 @@ Presence of an interface or function in a host contract is certified on the term
 
 ## 3. Domain and Content Claiming
 
-The domain is `{host, component}`: the `host` world for WASI-world contracts, and the reserved
+The domain is `{host, component}`: the `host` realm for WASI-world contracts, and the reserved
 `component` universe for library components when its schema layer arrives. Until then every
 release carrying this discipline is in practice a host contract, and the cross-section
 invariant (LIRA §9.6) is vacuous.

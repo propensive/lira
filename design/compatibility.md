@@ -204,7 +204,7 @@ keep interface members additive where `dts` must fold them. Inverting the direct
 
 ## 10. Summary table
 
-| Language   | Discipline         | World(s)           | Guarantee       | Replaceable atoms        | Rule-table prior art          |
+| Language   | Discipline         | Realm(s)           | Guarantee       | Replaceable atoms        | Rule-table prior art          |
 | ---------- | ------------------ | ------------------ | --------------- | ------------------------ | ----------------------------- |
 | Scala      | `tasty/1`          | jvm, sjsir, nir    | recomp + linkage| inline/macro bodies      | TASTy-MiMa, MiMa              |
 | Kotlin     | `kotlin-metadata/1`| jvm, host          | recompilation   | — (v1; bodies not carried)| binary-compatibility-validator|

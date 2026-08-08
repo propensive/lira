@@ -3,7 +3,10 @@
 A language-agnostic artifact format: one `.lira` file carries every compiled representation of
 a library release (e.g. JVM classfiles + TASTy + Scala.js IR + Scala Native IR), deduplicated,
 with a human-readable [TEL](https://github.com/propensive/tel) manifest, verifiable
-API-derived versioning, and quantum-safe signatures. Executing a `.lira` file invokes the
+API-derived versioning, and quantum-safe signatures. The same format and algebra extend to
+deploy time: a deployable service publishes one `.lira` release carrying its closed artifact
+(or an OCI pin to one) whose atoms are the network surface it serves, and deployability into a
+running environment is checked from manifests alone. Executing a `.lira` file invokes the
 `lira` tool on it.
 
 Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and JavaScript.
@@ -12,9 +15,13 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`spec/tasty.md`](spec/tasty.md) — the normative Scala discipline.
 - [`spec/classfile.md`](spec/classfile.md) — the normative JVM bytecode discipline.
 - [`spec/dts.md`](spec/dts.md) — the normative TypeScript declaration discipline.
+- [`spec/openapi.md`](spec/openapi.md) — the normative OpenAPI discipline, for HTTP service
+  contracts and deployable self-descriptions.
 - [`spec/jvm.md`](spec/jvm.md) — the normative JVM ecosystem profile.
-- [`spec/hosts.md`](spec/hosts.md) — host contracts, the `host` world, `requires`, and the
+- [`spec/hosts.md`](spec/hosts.md) — host contracts, the `host` realm, `requires`, and the
   `capability/1` discipline.
+- [`spec/services.md`](spec/services.md) — deployable releases, the `app` realm, environments,
+  and deployment.
 - [`spec/webidl.md`](spec/webidl.md) — the normative Web IDL discipline, for browser host
   contracts.
 - [`spec/wit.md`](spec/wit.md) — the normative WIT discipline, for WASI worlds and, ahead, the
