@@ -229,7 +229,7 @@ private def verify(file: Text)(using cli: Cli): Exit = guard:
   if manifest.development then Out.println(t"version:   (development release)")
   Out.println(t"snapshot:  ${LiraHash.text(manifest.lineage.stdlib.last)}")
   Out.println(t"payload:   ${LiraHash.text(manifest.payload.hash)}")
-  Out.println(t"sections:  ${Text(manifest.section.stdlib.map(_.world.s).mkString(", "))}")
+  Out.println(t"sections:  ${Text(manifest.section.stdlib.map(_.realm.s).mkString(", "))}")
 
   report.advisories.stdlib.each: advisory =>
     Out.println(t"advisory:  ${Text(advisory.toString)}")

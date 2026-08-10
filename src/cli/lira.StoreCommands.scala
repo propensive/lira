@@ -205,7 +205,7 @@ private def identify(file: Text)(using cli: Cli): Exit = guard:
   store.identify(clientPath(file).read[Data]).let: (release, section) =>
     val version = release.manifest.version.let { version => t"$version" }.or(t"development")
     val integration = section.integration.let { id => t", integration $id" }.or(t"")
-    Out.println(t"${release.manifest.module} $version (${section.world}$integration)")
+    Out.println(t"${release.manifest.module} $version (${section.realm}$integration)")
     Exit.Ok
 
   . or:
@@ -224,7 +224,7 @@ private def storeJar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
   store.ingest(data)
 
   val declared: Optional[Data] = lira.manifest.section.stdlib
-    . find { section => section.world == universe }
+    . find { section => section.realm == universe }
     . map(_.derivative)
     . getOrElse(Unset)
 
@@ -234,7 +234,7 @@ private def storeJar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
   val jarData: Optional[Data] = cached.or:
     val report = Verification.install(lira)
 
-    report.materialized.stdlib.find { pair => pair(0).world == universe } match
+    report.materialized.stdlib.find { pair => pair(0).realm == universe } match
       case scala.Some(pair) =>
         val built = Derivative.jar(pair(1), report.blobstore)
         val hex = LiraHash(LiraHash.Domain.Derivative, built).serialize[Hex]
