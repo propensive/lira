@@ -17,9 +17,9 @@ polarities is atomized once per direction.
 
 The discipline serves the two kinds of provider ([`services.md`](services.md)): it atomizes a
 **standard contract**'s carrier in its `host` section, and a **deployable release**'s served
-surface in its `app` section, under one identifier — so a requirement is satisfiable
-interchangeably by a standard or by a service publishing its own surface, the hashes comparing
-like with like (services.md §5).
+surface in its `app` section, under one identifier — so a requirement carrying a used-set is
+satisfiable interchangeably by a standard or by a service publishing its own surface, the
+hashes comparing like with like (services.md §5).
 
 ## 1. Status
 
@@ -140,7 +140,9 @@ tolerance this presumes in the response direction (content negotiation) is part 
 
 All atoms are **rigid**; there are no replaceable atoms and no reference lists (a description
 copies nothing into consumers at their generation time that its atoms do not already cover).
-The folding decisions, by direction:
+Throughout, a fold takes the folded construct's **full canonical encoding** (§8), never merely
+its key, and a folded construct emits no standalone atom — its key (§6) appears only within
+the fold. The folding decisions, by direction:
 
 **Operations.** Each operation is a standalone atom — adding an endpoint is a minor, the
 actual compatibility behavior of every operated API. The operation's value folds: its
@@ -148,7 +150,7 @@ canonical route and method; the *existence and requiredness* of its request body
 **security requirements** (what a caller must supply is contravariant: adding a scheme or a
 scope breaks callers, so the sorted requirement list folds — and loosening one is equally a
 fold change, hence major, on the conservative terms of `capability/1`'s version predicates);
-and the sorted key list of its **required** request parameters.
+and its **required** request parameters, sorted by key.
 
 **Request position** (contravariant — what callers supply):
 
@@ -181,8 +183,8 @@ and the sorted key list of its **required** request parameters.
 
 **Named schemas.** Each direction's schema atom folds the schema's name, its canonicalized
 type structure (§8) *minus* whatever stands alone in that direction, and — in request
-direction — its sorted required-property list; properties, per direction, follow the rules
-above. `additionalProperties: false` folds in both directions: in request position it narrows
+direction — its required properties, sorted by key; properties, per direction, follow the
+rules above. `additionalProperties: false` folds in both directions: in request position it narrows
 what callers may send; in response position it is a promise of shape that must not silently
 weaken.
 

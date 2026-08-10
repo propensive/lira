@@ -249,7 +249,7 @@ the registry.
 ## 5. Hosts as modules: the `requires` axis
 
 > **Status.** This design is now normative: [`spec/hosts.md`](../spec/hosts.md) specifies host
-> contracts, the `host` realm, `requires`, satisfaction and cross-contract spanning, the
+> contracts, the `host` realm, `requires`, satisfaction and cross-module spanning, the
 > `capability/1` discipline, and the third verification moment (§5.5 below). The subsections
 > below are kept as the derivation and rationale; where they differ from `hosts.md`, the spec
 > governs.

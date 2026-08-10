@@ -7,6 +7,12 @@ language-specific lives in one place — the **discipline**, which decides what 
 applying the folding principle (§10.3): *safe additions become standalone atoms; breaking
 additions fold into their parent's atom.*
 
+> **Status.** These sketches predate the normative discipline companions (see the readme's
+> spec list). Where a sketch differs from its companion — `kotlin-metadata/1`'s
+> recompilation-only guarantee and empty replaceable set, `classfile/1`'s linkage-only claim,
+> `wit/1`'s registration — the companion governs; and "world" in the section-key sense reads
+> "realm" (spec §4.1).
+
 This document works through the discipline design for each focus language: Scala, Kotlin,
 TypeScript, Rust, and (more briefly) Java and JavaScript. The recurring pattern: every
 language ecosystem already has a tool that encodes its compatibility rule table — the
@@ -25,7 +31,7 @@ It is worth naming the three guarantee levels once:
 - **Behavior**: out of scope for any hash scheme; bounded but not certified (spec §18).
 
 Each discipline below states which guarantee its rigid atoms certify. The algebra is
-indifferent — but publishers and consumers must know what a "minor" promises in each world.
+indifferent — but publishers and consumers must know what a "minor" promises in each universe.
 
 These three levels are now normative in the spec (§11.5), as is the mechanism for a guarantee a
 discipline cannot itself certify: an **ecosystem profile** (§11.6), a versioned predicate set
@@ -214,5 +220,6 @@ keep interface members additive where `dts` must fold them. Inverting the direct
 | JavaScript | `esm`              | js (anticipated)   | export presence | —                        | —                             |
 | (WIT)      | `wit/1`            | host, component    | recompilation   | —                        | WASI world versioning         |
 | (C)        | `cheader/1`        | host               | recomp/presence | —                        | pkg-config, symbol versioning |
-| (any)      | `resource/1`       | all                | name presence   | tracked resource content | —                             |
+| (HTTP)     | `openapi/1`        | host, app          | recompilation (regeneration) | —           | oasdiff, buf breaking, Pact   |
+| (any)      | `resource/1`       | all universes      | name presence   | tracked resource content | —                             |
 | (host)     | `webidl/1`         | host               | recompilation   | —                        | webref IDL, compat-data       |

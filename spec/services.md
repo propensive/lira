@@ -38,9 +38,13 @@ deploy.
 The state of practice answers that question with disconnected point tools: a schema linter
 grades API diffs, a contract-testing broker records what consumers actually call, a schema
 registry enforces evolution rules per topic, an admission controller enforces platform policy,
-and a runbook says which services must redeploy together. Each is a partial reinvention of one
-corner of LIRA's algebra — the linter is the grade computation, the contract broker is
-used-sets and spanning, the registry is lineage, the runbook is `breaks linkage`. This document
+and a runbook says which services must redeploy together. (LIRA's three objects, for a reader
+arriving from operations rather than from the core specification: an **atom** is the hash of
+one indivisible fragment of an interface; a **lineage** is the recorded history of an
+interface's compatible states; a **used-set** is the atoms a consumer actually touches.) Each
+is a partial reinvention of one corner of LIRA's algebra — the linter is the grade
+computation, the contract broker is used-sets and spanning, the registry is lineage, the
+runbook is `breaks linkage`. This document
 replaces none of their *judgement* and all of their *bookkeeping*: the same three objects that
 decide build-time composition — atoms, lineages, used-sets — decide deploy-time composition,
 from signed manifests, with no new trust.
@@ -144,9 +148,10 @@ surface, its requirements, its lineage, its authorship. The distribution posture
 as the index's ([`distribution.md`](../design/distribution.md)): identity in the manifest,
 bytes hosted where bytes are best hosted.
 
-A section SHOULD carry a tree or a pin, not both meaningfully: where both are present the tree
-is the artifact and the pin is a claim about its packaged form, and any disagreement between
-them is the publisher's error, not the reader's problem.
+A pinned section's tree never carries a copy of the artifact itself — only ancillary content:
+the interface descriptions self-description needs (§4.3) and probe metadata. Where a
+tree-carried artifact is *also* pinned, the pin is a claim about its packaged form, and any
+disagreement between them is the publisher's error, not the reader's problem.
 
 ### 4.3 Self-Description
 
@@ -162,8 +167,8 @@ A deployable declaring no `api` records has an empty atom set: every such releas
 empty snapshot, its lineage never grows, and every step grades as a patch. That is legitimate
 for a **leaf application** — a batch job, an edge deployable nothing requires — whose
 interesting identities are its implementation identity and its requirements. It is useless for
-a service: an empty atom set can satisfy no requirement, so publishers MUST self-describe any
-module other modules are to require, on pain not of invalidity but of unrequirability — the
+a service: an empty atom set can satisfy no requirement, so publishers SHOULD self-describe
+any module other modules are to require — not a validity rule but an arithmetic fact: the
 algebra simply has nothing to satisfy with. Where the artifact serves an interface but ships
 no description, tooling SHOULD extract one at egress time (the served OpenAPI document,
 compiled descriptors) and place it in the tree; a surface that cannot be described is a
@@ -185,9 +190,13 @@ satisfaction rules are LIRA §13.2's, verbatim:
   contract's lineage, because the service is its own contract (§3).
 - **By spanning**: where the requirement carries a Uses blob — the provider atoms the consumer
   actually calls — `R` satisfies it whenever `used ⊆ atoms(R)`, including across majors (LIRA
-  §13.4) and **across modules** (hosts.md §7): a requirement on one service is provably
-  satisfied by a different service, a mock, or a standard contract's implementation whose
-  atoms cover the used-set, because atoms are content-addressed and module-blind.
+  §13.4) and **across modules**, on the terms and soundness argument of hosts.md §7: a
+  requirement on one service is provably satisfied by a different service, a mock, or a
+  standard whose atoms cover the used-set.
+
+At *buildpath* validation, a requirement naming a deployable module is pending, not judged
+(LIRA §13.3 rule 7): which release of a service is present is a fact about an environment, and
+the rule that reads it is environment validity (§6).
 
 One consequence of the unified design must be stated plainly, because it is the trade this
 specification chose. Without a Uses blob, a requirement is satisfiable only by its named
@@ -229,9 +238,10 @@ release (LIRA §13.3, unchanged), iff:
    by *every* concurrently-serving release of its provider — and, for cross-module
    satisfaction, by every concurrently-serving release of the standing-in module.
 3. **Aggregation**: requirements on one provider from several releases are jointly judged by
-   the rule of hosts.md §10, over the whole environment: by lineage, jointly satisfiable iff
-   some release's lineage contains every required snapshot (the diamond rule); by spanning,
-   the union of the used-sets must be covered.
+   the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
+   lineage, jointly satisfiable iff *every* concurrently-serving release of the provider
+   carries every required snapshot in its lineage (the diamond rule, universalized over the
+   overlap); by spanning, the union of the used-sets must be covered by each.
 4. **Platform coherence**: any profiles declared by deployed releases impose their predicates
    over the environment, on the terms of LIRA §13.3 rule 6 — this is where an operator's
    platform policy (every deployable pinned, every artifact signed by a release key, a
@@ -284,7 +294,10 @@ The `breaks linkage` row (LIRA §12.4) is the coordinated deploy, named in a sig
 rather than in a runbook: the step is minor by the atom algebra, so regenerated clients need
 nothing, but wire compatibility was not preserved, so running consumers must move — and the set
 that must move is exactly the consumers whose used-sets intersect the step's delta (LIRA
-§13.4's staleness, transposed from "should recompile" to "must redeploy"). The major row is
+§13.4's staleness, transposed from "should recompile" to "must redeploy"). The row is live
+only where the provider declares a linkage-certifying profile (LIRA §12.4): for the
+`openapi/1` family, the anticipated `http-json/1`; absent one, the wire level is simply
+unclaimed, and a cautious operator treats every minor as potentially coordinated. The major row is
 where spanning earns its keep: a consumer whose used-set avoids everything the new lineage
 dropped keeps running, provably, through a break that would otherwise force a fleet migration
 on a date.
@@ -345,22 +358,13 @@ key is its method and canonicalized path template; a named schema's key is its n
 by direction.
 
 **Folding, by declared direction.** OpenAPI, like Web IDL and unlike `.d.ts`, declares the
-usage direction of every field — request or response — so the folding principle (LIRA §10.3)
-resolves by variance (LIRA §10.5) rather than by conservatism:
-
-- an **operation** is a standalone rigid atom: adding an endpoint is a minor, the actual
-  behavior of every operated API;
-- a **required request field or parameter** folds into its operation's atom: adding one breaks
-  every existing caller, so the addition registers as a removal-plus-addition — a major —
-  with no rule engine consulted;
-- an **optional request field** stands alone: adding one breaks nobody;
-- a **response field** stands alone: adding one is a minor for callers, who tolerate unknown
-  fields; removing one is a rigid removal, hence major;
-- **enum values fold or stand by position**, and the two directions invert: a new
-  request-position value stands alone (the API accepts more than it did), while a new
-  response-position value folds (it breaks every consumer that matched exhaustively). The same
-  syntax, opposite variance — the instructive case, exactly as `webidl/1`'s dictionaries were
-  against `dts/1`'s interfaces.
+usage direction of every position — request or response — so the folding principle (LIRA
+§10.3) resolves by variance (LIRA §10.5) rather than by conservatism: covariant response
+positions stand alone (adding an endpoint or a response field is a minor, the actual behavior
+of every operated API), contravariant request positions fold (adding a required parameter
+breaks every caller, and registers as a major with no rule engine consulted), and enumeration
+values invert by position — standalone in requests, folded in responses. The full folding
+table, keys and canonical encoding are openapi.md §5–§8.
 
 **Certifies**: recompilation — regeneration, per §11.5's transposition — and nothing else.
 The wire-level claim rests on a convention the carrier cannot enforce (consumers ignoring
@@ -451,8 +455,9 @@ satisfied by *both* releases of it currently serving mid-rollout (§6 rule 2); t
 and `kubernetes` satisfy by lineage membership; and that removing the predecessor
 `checkout/payments` release afterwards is valid, because every requirement naming the module
 is satisfied by the successor's lineage too. If the orders release's last step had carried
-`breaks linkage`, the tool would instead name this release among the consumers that must move
-with it — computed from the delta, not remembered from a meeting. In the staging environment,
+`breaks linkage` — under a declared linkage-certifying profile (§7) — the tool would instead
+name this release among the consumers that must move with it, because `Gg77…` intersects the
+step's delta: computed, not remembered from a meeting. In the staging environment,
 a mock of orders — its own module, serving a description under the same discipline — satisfies
 this release by cross-module spanning, because `Gg77… ⊆ atoms(mock)` (§5): the substitution is
 licensed by the used-set, which is why §5 asks that consumers publish one. The readiness gate

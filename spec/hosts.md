@@ -62,7 +62,7 @@ The contract's content — the carrier from which its atoms are recomputed — l
 - a **TEL capability listing** for contracts with no formal grammar — POSIX commands, tool
   availability — atomized by `capability/1` (§5);
 - **`.d.ts` declarations** for JavaScript runtimes — Node's builtins, Deno's globals — atomized
-  by `dts/1`, whose domain is every realm ([`dts.md`](dts.md) §3);
+  by `dts/1`, whose domain is every universe and `host` ([`dts.md`](dts.md) §3);
 - **Web IDL** for browsers, atomized by `webidl/1` ([`webidl.md`](webidl.md)), whose folding
   decisions differ instructively from `dts/1`'s because the IDL declares the usage direction
   TypeScript cannot;
@@ -203,14 +203,14 @@ satisfaction extends by **spanning**, and in a form dependency spanning does not
 
 - **Across majors**: `H` satisfies the requirement whenever `used ⊆ atoms(H)`, even when the
   required snapshot appears in no lineage of `H` — LIRA §13.4, unchanged.
-- **Across contracts**: a contract `H′` of a *different module* satisfies the requirement
+- **Across providers**: a provider release `H′` of a *different module* — a contract, or a
+  self-described deployable ([`services.md`](services.md)) — satisfies the requirement
   whenever `used ⊆ atoms(H′)`. This is sound because atoms are content-addressed and
-  module-blind: two contracts atomizing equivalent capability surfaces under the same discipline
-  produce identical atom hashes, and different disciplines can never alias (LIRA §7.1). Without
-  a Uses blob there is no cross-contract satisfaction: lineage membership is per-module by
-  definition.
+  module-blind: two providers atomizing equivalent surfaces under the same discipline produce
+  identical atom hashes, and different disciplines can never alias (LIRA §7.1). Without a Uses
+  blob there is no cross-module satisfaction: lineage membership is per-module by definition.
 
-Cross-contract spanning is the mechanism for the multi-host library, and the motivating instance
+Cross-module spanning is the mechanism for the multi-host library, and the motivating instance
 is worth spelling out. Scala.js reimplements a subset of the Java standard library; suppose that
 subset is published as a contract, under the same signature discipline as the JDK contract. A
 library that declares `requires` on the JDK contract with a Uses blob naming only
@@ -296,7 +296,7 @@ The contracts the focus ecosystems want first, with their natural carriers:
 | `wasi`             | a WASI world (0.2+)                       | WIT / `wit/1`                      |
 | `openssl`          | `libcrypto`'s declared surface            | C header / `cheader/1`             |
 | `posix`            | POSIX shell and userland commands         | `capability/1`                     |
-| `scalajs-javalib`  | the JDK subset Scala.js reimplements      | same discipline as `jdk` — which is what makes cross-contract spanning (§7) decide JVM/Scala.js/Android portability |
+| `scalajs-javalib`  | the JDK subset Scala.js reimplements      | same discipline as `jdk` — which is what makes cross-module spanning (§7) decide JVM/Scala.js/Android portability |
 
 Beyond this registry of *given* environments, every deployed service adds a provider of its
 own: a service's surface is its release's own atom set, under `openapi/1`

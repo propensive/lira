@@ -171,8 +171,9 @@ A build tool resolving a buildpath:
 2. **Fetch manifests**: `Range: bytes=0-(manifest length−1)` against the GitHub asset; check
    the manifest hash from the record; verify the ML-DSA signature; check the signing key's
    endorsement chain (log records, aggressively cacheable).
-3. **Validate the buildpath** from manifests alone (spec §13.3): uniqueness, namespace
-   disjointness, closure, lineage-containment compatibility, profile coherence. Where releases
+3. **Validate the buildpath** from manifests alone (spec §13.3): uniqueness, namespace and
+   resource disjointness, closure, lineage-containment compatibility, profile coherence, and
+   provider requirements. Where releases
    declare integrations (spec §9.5) this step also *searches* for a valid assignment rather than
    merely checking one; the index is unaffected, since integrations live in the manifest already
    fetched at step 2 and not in the bounded `Release` record.

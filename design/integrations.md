@@ -5,6 +5,13 @@ A `.lira` release carries one dependency vector. It can hold several *universes*
 This document works through lifting that restriction, and the surprisingly small set of changes
 it turns out to need.
 
+> **Status.** Adopted: spec §9.5, §13.2–§13.3 (L131–L133) implement this design. Terminology
+> has moved on since it was written: the matrix axis is now the **realm** (spec §4.1), "valid
+> for a universe" reads "valid for a target" (L132), the `against` stub discussed in §2 was
+> removed rather than extended (dependency records carry `integration` scopes instead), and
+> deployable releases (`app` realm, [`spec/services.md`](../spec/services.md)) participate in
+> the matrix with one `app` section per integration.
+
 ## 1. The two cases
 
 **Version alternatives.** `foo:2.0.0` is built against `bar:8.0.0`, but a slightly different

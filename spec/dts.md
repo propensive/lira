@@ -35,13 +35,13 @@ one this discipline is silent on.
 
 ## 3. Domain
 
-The domain is **every realm**, the `host` realm included.
+The domain is **every universe, and the `host` realm**.
 
-This is a consequence of the universe vocabulary, not a claim about JavaScript. LIRA §9.4 defines
-`jvm`, `sjsir` and `nir` in the base schema and reserves `js` for a schema layer that does not
-yet exist, while LIRA §11.3 already admits foreign JavaScript content in any section under
-`opaque/1`. There is consequently nothing narrower to scope to that would not exclude the
-discipline from every release that can be written today.
+This is a consequence of the universe vocabulary, not a claim about JavaScript. LIRA §9.4
+defines the universes `jvm`, `sjsir` and `nir` in the base schema and reserves `js` for a
+schema layer that does not yet exist, while LIRA §11.3 already admits foreign JavaScript
+content in any section under `opaque/1`. There is consequently no universe narrower to scope
+to that would not exclude the discipline from every release that can be written today.
 
 Universality has a second effect, and it is the desirable one: it brings `.d.ts` content under
 the cross-section API invariant (LIRA §9.6), so a release offering several universes must publish
@@ -52,6 +52,10 @@ Including the `host` realm is not a workaround but a use: `.d.ts` is the natural
 host contracts of JavaScript runtimes — Node's builtins, Deno's globals — and `dts/1` atomizes a
 contract's declaration surface exactly as it atomizes a library's (LIRA [`hosts.md`](hosts.md)
 §3).
+
+The `app` realm is excluded: a `.d.ts` inside a closed artifact declares nothing any consumer
+compiles against, and a JavaScript service's served surface is `openapi/1`'s business
+([`openapi.md`](openapi.md)), not this discipline's.
 
 A future `js` universe SHOULD narrow the universe part of this domain, in a `dts/2`.
 

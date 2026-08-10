@@ -117,8 +117,9 @@ computing the list but of confirming that it accounts for what the predicates fo
 
 - a violation at a level this profile certifies that the release does **not** record is
   **L130**: the step does not preserve the level and says nothing about it;
-- a violation at a level this profile does **not** certify is **L128**: a profile reporting a
-  finding outside its own certified levels is a broken profile, not a broken release.
+- a violation at a level this profile does **not** certify is outside the profile's authority
+  (LIRA §11.6): a profile reporting a finding at a level it does not certify is a broken
+  profile, not a broken release.
 
 Recording `breaks linkage` does not make the step a major. That is the point of §3: the release
 remains a minor for recompiling consumers, and the record tells consumers pinned to prebuilt
