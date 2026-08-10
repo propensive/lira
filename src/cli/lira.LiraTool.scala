@@ -1,3 +1,35 @@
+                                                                                                  /*
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                                                  ┃
+┃                                 ╭───╮╭───╮                                                       ┃
+┃                                 │   ││   │                                                       ┃
+┃                                 │   │╰───╯                                                       ┃
+┃                                 │   │╭───╮╭───╮╌────╮╭─────────╮                                 ┃
+┃                                 │   ││   ││   ╭──╮  ││   ╭─╮   │                                 ┃
+┃                                 │   ││   ││   │  ╰──╯│   │ │   │                                 ┃
+┃                                 │   ││   ││   │      │   │ │   │                                 ┃
+┃                                 │   ││   ││   │      │   ╰─╯   │                                 ┃
+┃                                 ╰───╯╰───╯╰───╯      ╰─────╌╰──╯                                 ┃
+┃                                                                                                  ┃
+┃    LIRA, version 0.1.0.                                                                          ┃
+┃    © Copyright 2026 Jon Pretty, Propensive OÜ.                                                   ┃
+┃                                                                                                  ┃
+┃    The primary distribution site is:                                                             ┃
+┃                                                                                                  ┃
+┃        https://lira.nexus/                                                                       ┃
+┃                                                                                                  ┃
+┃    Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file     ┃
+┃    except in compliance with the License. You may obtain a copy of the License at                ┃
+┃                                                                                                  ┃
+┃        https://www.apache.org/licenses/LICENSE-2.0                                               ┃
+┃                                                                                                  ┃
+┃    Unless required by applicable law or agreed to in writing,  software distributed under the    ┃
+┃    License is distributed on an "AS IS" BASIS,  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    ┃
+┃    either express or implied. See the License for the specific language governing permissions    ┃
+┃    and limitations under the License.                                                            ┃
+┃                                                                                                  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                                                                                                  */
 package lira
 
 import java.nio.file as jnf
@@ -35,14 +67,6 @@ val Help = Subcommand("help", "show usage information")
 val Quit = Subcommand("quit", "shut down the background daemon")
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
-
-// Preloads parasite's failure-path class. A failed strand is recorded via `Fulfillment.Failed`,
-// which otherwise loads lazily at the moment of first failure — and classloading can itself
-// fail at exactly that moment (an interrupted thread, or a jar overwritten under a running
-// daemon), which both swallows the original error and leaves the strand's promise
-// unfulfilled, hanging the client. Candidate for an upstream fix in parasite.
-private val fulfilmentPreload: parasite.Fulfillment[?] =
-  parasite.Fulfillment.Failed(java.lang.Exception())
 
 @main
 def main(): Unit = cli:

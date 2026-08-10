@@ -9,15 +9,15 @@ import scalalib.*
 object settings:
   // The propensive Scala fork, resolved from the soundness worktree's toolchain repository
   // view (regenerate with `./mill show toolchain.repo` there), overridable for other machines.
-  val scalaVersion = "3.9.0-RC4-p9"
+  val scalaVersion = "3.9.0-RC5-p11"
 
   val toolchainRepo: String = sys.env.getOrElse(
     "LIRA_TOOLCHAIN_REPO",
     "file:///Users/propensive/work/soundness/out/toolchain/repo.dest")
 
   // Locally-published soundness (from the soundness worktree):
-  //   SOUNDNESS_RELEASE_VERSION=0.0.0-lira ./mill <closure>.publishLocal
-  val soundnessVersion = sys.env.getOrElse("LIRA_SOUNDNESS_VERSION", "0.0.0-lira")
+  //   SOUNDNESS_RELEASE_VERSION=0.65.0 ./mill "$(./etc/ci/publish-selector.sh publishLocal)"
+  val soundnessVersion = sys.env.getOrElse("LIRA_SOUNDNESS_VERSION", "0.65.0")
 
   // The same typesafety discipline as the Soundness build's `settings.sep(...)`: capture
   // checking plus separation checking (each flag subsumes the per-file language import),
@@ -57,14 +57,15 @@ object lira extends ScalaModule:
   override def repositories = Task:
     super.repositories() :+ settings.toolchainRepo
 
+  // Soundness publishes bundles, not components: Maven Central's per-deployment file limits
+  // rule out ~230 components across three platforms, so each bundle packages its components'
+  // classfiles into one jar under `dev.propensive`. lira's dependencies fall into two of them —
+  // `cli` carries ethereal.core and exoskeleton.core/args/completions, `tool` carries
+  // reliquary.core, reliquary.derive and mandible.lira — and each bundle's POM pulls in the rest
+  // of its closure (base, data, test, web, …).
   def mvnDeps = Seq(
-    mvn"dev.soundness:reliquary-core:${settings.soundnessVersion}",
-    mvn"dev.soundness:reliquary-derive:${settings.soundnessVersion}",
-    mvn"dev.soundness:mandible-lira:${settings.soundnessVersion}",
-    mvn"dev.soundness:ethereal-core:${settings.soundnessVersion}",
-    mvn"dev.soundness:exoskeleton-core:${settings.soundnessVersion}",
-    mvn"dev.soundness:exoskeleton-args:${settings.soundnessVersion}",
-    mvn"dev.soundness:exoskeleton-completions:${settings.soundnessVersion}")
+    mvn"dev.propensive:soundness-cli:${settings.soundnessVersion}",
+    mvn"dev.propensive:soundness-tool:${settings.soundnessVersion}")
 
   // A clean JAR (no shell preamble): the Ethereal launcher script is prepended by the
   // `java -Dbuild.executable=lira -jar` step instead.
