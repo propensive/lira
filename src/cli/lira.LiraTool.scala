@@ -119,8 +119,21 @@ def main(): Unit = cli:
   // daemon the ambient one is the daemon's — which is wherever it happened to be started. The
   // client's is forwarded on the `Cli`, and is the only one a user's relative path can mean.
   given WorkingDirectory = summon[Cli].workingDirectory
+  val cli0 = summon[Cli]
 
-  positional match
+  // The dispatch is a named block because the usage text is derived from it: `Executive.help`
+  // re-runs it in tab-completion mode against synthesized argument prefixes, discovering the
+  // subcommands and their flags from the same patterns that dispatch them. `execute` takes its
+  // body as a context function and evaluates nothing in completion mode, so those runs do no IO
+  // and this does not recur into itself.
+  //
+  // Lazy, because building the tree walks every subcommand: a command that never prints usage
+  // never pays for it.
+  lazy val help: Optional[Help] =
+    executives.completions.help
+      (t"lira", cli0.environment, cli0.workingDirectory, cli0.stdio, cli0.login)(dispatch)
+
+  def dispatch(using Cli): Execution = positional match
     case Verify() :: Pathname(file) :: Nil => execute(verify(file))
     case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
     case Cache() :: rest          => execute(cache(rest.map(_())))
@@ -134,17 +147,29 @@ def main(): Unit = cli:
     case Fsck() :: _              => execute(fsck())
     case Id() :: Pathname(file) :: Nil => execute(identify(file))
 
-    case Assign() :: Pathname(file) :: Nil =>
+    // The flags are read against the subcommand itself, not inside a branch that needs every
+    // operand present: a flag registers where it is read, so reading it here is what puts it in
+    // the completions from `lira assign <TAB>` onwards, and what lets `Executive.help` find it
+    // when it probes this subcommand with no operands at all.
+    case Assign() :: rest =>
       val major = Major()
-      execute(assign(file, Unset, major.present))
 
-    case Assign() :: Pathname(file) :: Pathname(previous) :: Nil =>
-      val major = Major()
-      execute(assign(file, previous, major.present))
+      rest match
+        case Pathname(file) :: Nil => execute(assign(file, Unset, major.present))
 
-    case Delta() :: Pathname(previous) :: Pathname(next) :: Nil =>
+        case Pathname(file) :: Pathname(previous) :: Nil =>
+          execute(assign(file, previous, major.present))
+
+        case _ => execute(usage(help, Exit.Fail(1)))
+
+    case Delta() :: rest =>
       val blob = flagText(Blob)
-      execute(delta(previous, next, blob))
+
+      rest match
+        case Pathname(previous) :: Pathname(next) :: Nil =>
+          execute(delta(previous, next, blob))
+
+        case _ => execute(usage(help, Exit.Fail(1)))
 
     case AtomsCmd() :: Pathname(file) :: Nil =>
       val realm = flagText(Realm)
@@ -157,7 +182,7 @@ def main(): Unit = cli:
       execute(harvest(kind(), out, rest.map(_())))
 
     case Install() :: _           => execute(installCompletions())
-    case Help() :: _              => execute(usage(Exit.Ok))
+    case Help() :: _              => execute(usage(help, Exit.Ok))
     case Quit() :: _              => execute(quit())
 
     // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand. Since
@@ -166,39 +191,45 @@ def main(): Unit = cli:
     case Pathname(file) :: Nil =>
       execute(manifest(file))
 
-    case _ => execute(usage(Exit.Fail(1)))
+    case _ => execute(usage(help, Exit.Fail(1)))
 
-private def usage(exit: Exit)(using cli: Cli): Exit =
+  dispatch
+
+// Every subcommand lira declares, by name: what distinguishes a subcommand from a file in the
+// working directory once both are suggestions.
+private val subcommands: scala.collection.immutable.Set[Text] =
+  scala.List(Verify, Harvest, Jar, Assign, Delta, AtomsCmd, Cache, Pin, Unpin, Gc, Fsck, Id,
+    Install, Help, Quit).map(_.name).to(scala.collection.immutable.Set)
+
+// `helpTree` builds the tree from the *suggestions* each argument position offers, and a position
+// taking a path offers the working directory's contents — indistinguishable, at that point, from
+// a subcommand. Left alone the tree lists `Makefile` and `readme.md` as commands and descends
+// into each. Only this application knows which names are its own, so it prunes them here.
+private def prune(help: Help): Help =
+  val children = help.subcommands.stdlib.filter { sub => subcommands.contains(sub.command) }
+  help.copy(subcommands = List.from(children.map(prune)))
+
+// The usage text is the dispatch's own structure, discovered by re-running it in tab-completion
+// mode (`Executive.help`), so a subcommand or flag cannot be added without appearing here, and
+// the descriptions are the ones the completions already show. What no tree can carry are the
+// conventions that are not subcommands or flags — the operands each subcommand takes, and
+// `harvest`'s `+<tag>` sanction — so those are stated below it.
+private def usage(help: Optional[Help], exit: Exit)(using cli: Cli): Exit =
   given Stdio = cli.stdio
-  Out.println(t"Usage: lira <file.lira>                    show the manifest")
-  Out.println(t"       lira verify <file.lira>             verify the file (install grade)")
-  Out.println(t"       lira jar <universe> <file.lira>     write the canonical derivative JAR")
-  Out.println(t"       lira assign <file.lira> [<previous.lira>] [--major]")
-  Out.println(t"                                           assign the next derived version")
-  Out.println(t"       lira delta <previous.lira> <next.lira> [--blob <file>]")
-  Out.println(t"                                           show what changed, and its grade")
-  Out.println(t"       lira atoms <file.lira>              list the atoms the release declares")
-  Out.println(t"       lira atoms <artifact> [--realm <realm>] [--classpath <a:b>]")
-  Out.println(t"                                           atomize a bare artifact and list it")
-  Out.println(t"       (both take --discipline <id> and --owner <prefix> to narrow the listing)")
-  Out.println(t"       lira harvest jdk <dir> [<ct.sym>] [+<tag> ...]")
-  Out.println(t"                                           harvest the JDK lineage from ct.sym")
-  Out.println(t"       lira harvest android <dir> <android.jar ...> [+<tag> ...]")
-  Out.println(t"                                           harvest Android API levels")
-  Out.println(t"       (a +<tag> argument sanctions that release as a major: a removal in the")
-  Out.println(t"        vendor's history, beginning a fresh lineage)")
-  Out.println(t"       lira cache add <file.lira> ...      ingest files into the store")
-  Out.println(t"       lira cache ls                       list cached releases")
-  Out.println(t"       lira cache rm <hash-prefix>         remove a cached release")
-  Out.println(t"       lira cache path <hash-prefix>       print a store object's path")
-  Out.println(t"       lira pin <hash-prefix>              exempt a release from eviction")
-  Out.println(t"       lira unpin <hash-prefix>            allow eviction again")
-  Out.println(t"       lira gc [--budget <bytes>]          collect garbage; evict to budget")
-  Out.println(t"       lira fsck                           re-verify the store; quarantine")
-  Out.println(t"       lira id <artifact>                  identify a bare artifact")
-  Out.println(t"       lira install                        install shell tab-completions")
-  Out.println(t"       lira help                           show this usage information")
-  Out.println(t"       lira quit                           shut down the background daemon")
+
+  help.lay(Out.println(t"lira: the command structure could not be determined")):
+    help => Out.println(prune(help))
+
+  Out.println(t"")
+  Out.println(t"Operands:")
+  Out.println(t"  verify, atoms, id, jar   a .lira file, or for `atoms` and `id` a bare artifact")
+  Out.println(t"  delta                    two .lira files, previous first")
+  Out.println(t"  assign                   a .lira file, optionally its predecessor")
+  Out.println(t"  harvest                  jdk|android, an output directory, then the sources")
+  Out.println(t"  cache                    add|ls|rm|path; pin and unpin take a hash prefix")
+  Out.println(t"")
+  Out.println(t"A `+<tag>` argument to `harvest` sanctions that release as a major — a removal")
+  Out.println(t"in the vendor's history — beginning a fresh lineage.")
   exit
 
 private def quit()(using service: DaemonService[?], cli: Cli): Exit =
