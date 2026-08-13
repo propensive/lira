@@ -78,9 +78,8 @@ private def single(store: Store, prefix: Text)(using Stdio)
       Out.println(t"lira: $prefix is ambiguous")
       Unset
 
-private def cache(args: List[Text])(using cli: Cli): Exit = guard:
+private def cache(args: List[Text])(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   def cacheUsage(): Exit =
@@ -150,9 +149,8 @@ private def cache(args: List[Text])(using cli: Cli): Exit = guard:
 
     case _ => cacheUsage()
 
-private def pin(prefix: Text, add: Boolean)(using cli: Cli): Exit = guard:
+private def pin(prefix: Text, add: Boolean)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   single(store, prefix).let: release =>
@@ -166,9 +164,8 @@ private def pin(prefix: Text, add: Boolean)(using cli: Cli): Exit = guard:
     Exit.Ok
   . or(Exit.Fail(1))
 
-private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = guard:
+private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   def sweep(limit: Optional[Long]): Exit =
@@ -192,9 +189,8 @@ private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = guard:
 
     case _ => sweep(Unset)
 
-private def fsck()(using cli: Cli): Exit = guard:
+private def fsck()(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
   val audit = store.fsck()
 
@@ -208,9 +204,8 @@ private def fsck()(using cli: Cli): Exit = guard:
 
   if audit.corrupted.stdlib.isEmpty then Exit.Ok else Exit.Fail(1)
 
-private def identify(file: Path on Local)(using cli: Cli): Exit = guard:
+private def identify(file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   store.identify(file.read[Data]).let: (release, section) =>
@@ -231,9 +226,8 @@ private def identify(file: Path on Local)(using cli: Cli): Exit = guard:
 // `lira jar` via the store (design/tool.md §2.5): the derivative tier is the materialization
 // cache, so a declared derivative already cached is linked out without decompressing
 // anything; otherwise the JAR is built, cached, and linked out.
-private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit = guard:
+private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
   val data = file.read[Data]
   val lira = Lira.read(data)
@@ -253,20 +247,20 @@ private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit 
     report.materialized.stdlib.find { pair => pair(0).realm == universe } match
       case scala.Some(pair) =>
         val built = Derivative.jar(pair(1), report.blobstore)
-        val hex = LiraHash(LiraHash.Domain.Derivative, built).serialize[Hex]
+        val hex = Lira.Hash(Lira.Hash.Domain.Derivative, built).serialize[Hex]
         store.put(Store.Tier.Derivative, hex, built)
         built
 
       case _ => Unset
 
   jarData.let: bytes =>
-    val hex = LiraHash(LiraHash.Domain.Derivative, bytes).serialize[Hex]
+    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, bytes).serialize[Hex]
     store.journal(t"use", hex)
     val source = store.objectPath(Store.Tier.Derivative, hex)
     val target = clientPath(t"${stemOf(file)}-$universe.jar")
     target.wipe()
     safely(source.hardLinkTo(target)).or(source.copyTo(target))
-    Out.println(t"wrote ${target.encode} (${LiraHash.text(LiraHash(LiraHash.Domain.Derivative, bytes))})")
+    Out.println(t"wrote ${target.encode} (${Lira.Hash.text(Lira.Hash(Lira.Hash.Domain.Derivative, bytes))})")
     Exit.Ok
 
   . or:

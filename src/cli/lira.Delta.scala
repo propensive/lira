@@ -44,7 +44,7 @@ import textSanitizers.strictSanitizer
 // is set arithmetic over atoms and needs no listing to reach its verdict (LIRA §10.3) — so the
 // listing below exists purely to answer the reader's next question, which is *what* changed.
 //
-// The atom-level record `LiraDelta.compute` writes is deliberately not the source of the listing:
+// The atom-level record `Lira.Delta.compute` writes is deliberately not the source of the listing:
 // it carries value hashes alone, because a verifier checking a lineage step has both releases in
 // hand and needs no keys. The listing therefore works from the two atomizations directly, and the
 // blob is written only when asked for.
@@ -60,14 +60,12 @@ private enum Change:
     case Removed  => t"-"
     case Replaced => t"~"
 
-private case class Entry(key: Text, atomClass: AtomClass, change: Change)
+private case class Entry(key: Text, atomClass: Atom.Class, change: Change)
 
 private def delta(previous: Path on Local, next: Path on Local, blob: Optional[Text])
     (using cli: Cli)
-:   Exit = guard:
-
+:   Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
 
   val before = Lira.read(lira.load(previous))
   val after = Lira.read(lira.load(next))
@@ -108,7 +106,7 @@ private def delta(previous: Path on Local, next: Path on Local, blob: Optional[T
     if changes == 0 then Out.println(t"no atom changed")
 
     blob.let: target =>
-      val record = LiraDelta.compute(beforeReport.atomizations, afterReport.atomizations)
+      val record = Lira.Delta.compute(beforeReport.atomizations, afterReport.atomizations)
       val path = lira.resolve(target)
       lira.save(path, record.encode)
       Out.println(t"delta blob -> ${path.encode}")
@@ -161,8 +159,8 @@ private def compare(before: proscenium.List[Atom], next: proscenium.List[Atom])
       case (scala.Some(atom), scala.None) => scala.List(Entry(key, atom.atomClass, Change.Removed))
 
       case (scala.Some(atom), scala.Some(successor)) =>
-        if LiraHash.text(atom.valueHash) == LiraHash.text(successor.valueHash) then scala.Nil
-        else if successor.atomClass == AtomClass.Replaceable
+        if Lira.Hash.text(atom.valueHash) == Lira.Hash.text(successor.valueHash) then scala.Nil
+        else if successor.atomClass == Atom.Class.Replaceable
         then scala.List(Entry(key, successor.atomClass, Change.Replaced))
         else
           scala.List
@@ -176,7 +174,7 @@ private def compare(before: proscenium.List[Atom], next: proscenium.List[Atom])
 // Grouped by owner, as the discipline that minted the keys decomposes them: a discipline whose
 // keys have no owner — `cheader/1`'s C identifiers, `capability/1`'s names — states no
 // decomposition, and its atoms list flat.
-private def render(discipline: Text, manifest: LiraManifest, entries: proscenium.List[Entry])
+private def render(discipline: Text, manifest: Lira.Manifest, entries: proscenium.List[Entry])
     (using Stdio)
 :   Unit =
 
@@ -185,7 +183,7 @@ private def render(discipline: Text, manifest: LiraManifest, entries: proscenium
   def marker(entry: Entry): Text = t"${entry.change.marker} "
 
   def klass(entry: Entry): Text =
-    if entry.atomClass == AtomClass.Replaceable then t"replaceable" else t"rigid"
+    if entry.atomClass == Atom.Class.Replaceable then t"replaceable" else t"rigid"
 
   def change(entry: Entry): Text = entry.change match
     case Change.Added    => t"added"

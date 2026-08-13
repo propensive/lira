@@ -65,7 +65,7 @@ private val knownDisciplines: proscenium.List[Discipline] =
 // How a discipline decomposes its own keys (LIRA §10.4; `Discipline.decompose`), by id. A
 // discipline lira cannot name decomposes nothing, and its atoms list flat — which is the same
 // outcome as a discipline that states no decomposition, and needs no special case.
-private def decomposer(discipline: Text, resources: proscenium.List[LiraManifest.Resource])
+private def decomposer(discipline: Text, resources: proscenium.List[Lira.Manifest.Resource])
 :   Text => Optional[Discipline.Decomposition] =
 
   val implementation: Optional[Discipline] =
@@ -84,10 +84,8 @@ private def atomsCommand
       only:      Optional[Text],
       owner:     Optional[Text] )
     (using cli: Cli)
-:   Exit = guard:
-
+:   Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val data = lira.load(file)
 
   safely(Lira.read(data)).lay(computed(file, data, realm, classpath, only, owner)): release =>
@@ -97,9 +95,8 @@ private def atomsCommand
 // recompute and compare against, not a fresh atomization of the payload.
 private def declared(release: Lira, only: Optional[Text], owner: Optional[Text])
     (using Cli, Stdio)
-:   Exit =
+:   Exit raises Lira.Error =
 
-  import strategies.throwUnsafely
   val report = Verification.install(release)
   val manifest = release.manifest
 
@@ -123,9 +120,8 @@ private def computed
       only:      Optional[Text],
       owner:     Optional[Text] )
     (using Cli, Stdio)
-:   Exit =
+:   Exit raises Lira.Error raises DisciplineError =
 
-  import strategies.throwUnsafely
   val where: Text = realm.or(t"jvm")
 
   val paths: proscenium.List[Text] =
@@ -191,7 +187,7 @@ private def elsewhere
 // minted it (§7.1) and two disciplines' keys are not comparable.
 private def listings
     ( atomizations: proscenium.List[Atomization],
-      resources:    proscenium.List[LiraManifest.Resource],
+      resources:    proscenium.List[Lira.Manifest.Resource],
       only:         Optional[Text],
       owner:        Optional[Text] )
     (using Stdio)
@@ -212,14 +208,14 @@ private def listings
       val atoms = atomization.atoms.stdlib.filter: atom =>
         owner.lay(true) { prefix => atom.key.s.startsWith(prefix.s) }
 
-      val rigid = atoms.count(_.atomClass == AtomClass.Rigid)
+      val rigid = atoms.count(_.atomClass == Atom.Class.Rigid)
       val replaceable = atoms.length - rigid
       total += atoms.length
 
       def klass(atom: Atom): Text =
-        if atom.atomClass == AtomClass.Replaceable then t"replaceable" else t"rigid"
+        if atom.atomClass == Atom.Class.Replaceable then t"replaceable" else t"rigid"
 
-      def hash(atom: Atom): Text = LiraHash.text(atom.valueHash).keep(12)
+      def hash(atom: Atom): Text = Lira.Hash.text(atom.valueHash).keep(12)
 
       Out.println(t"")
       Out.println(t"${atomization.discipline}  ($rigid rigid, $replaceable replaceable)")
@@ -238,7 +234,7 @@ private def listings
 // entries are the content atomization sees; anything else is one item, named by its own filename
 // so that a discipline claiming by extension still claims it.
 private def expand(file: Path on Local, data: Data)
-:   proscenium.List[(TreePath, Data)] raises LiraError =
+:   proscenium.List[(TreePath, Data)] raises Lira.Error =
   val bytes = data.readable
 
   val zipped =

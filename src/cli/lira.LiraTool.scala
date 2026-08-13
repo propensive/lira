@@ -160,16 +160,11 @@ def main(): Unit = cli:
     case Help() :: _              => execute(usage(Exit.Ok))
     case Quit() :: _              => execute(quit())
 
-    // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand.
-    //
-    // Deliberately not `Pathname`, though it is a path. A suggester REPLACES the suggestions
-    // accumulated so far (`Completion.suggest`) rather than adding to them, and `Pathname`'s does
-    // not carry `prior` forward — so at the first word, where every `Subcommand` has just offered
-    // its name, a `Pathname` here would clobber all of them with a directory listing, or with
-    // nothing at all when the partial word matches no file. Subcommands win the first position;
-    // `Pathname` completes every later one, where nothing competes with it.
-    case file :: Nil if !file().s.startsWith("-") =>
-      execute(manifest(resolve(file())))
+    // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand. Since
+    // Soundness #1784, `Pathname` composes its suggestions with the subcommands' rather than
+    // replacing them, so the first word completes as both.
+    case Pathname(file) :: Nil =>
+      execute(manifest(file))
 
     case _ => execute(usage(Exit.Fail(1)))
 
@@ -222,6 +217,12 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
 
   given entrypoint: (Entrypoint^{service}) = service
 
+  // The one `try` left in the tool, and deliberately: Contingency tracks `Hazard`s, and what this
+  // guards against is everything that is not one — a `NoClassDefFoundError` from a jar rebuilt
+  // under a running daemon is the case that motivated it (see `parasite` #1743). Installation
+  // classloads late and lazily, in the daemon's long-lived JVM, and a `Throwable` that escapes
+  // here reaches the worker's failure path, where it is easy to lose entirely. `InstallError` —
+  // an error, and therefore trackable — is recovered, not caught.
   try
     recover:
       case error: InstallError =>
@@ -233,55 +234,65 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
         Exit.Ok
 
   catch case error: Throwable =>
-    // This handler is outside `guard`, so surface fatal errors the same way it does.
     error.printStackTrace()
     Out.println(t"lira: fatal: ${Text(error.toString)}")
     Exit.Fail(3)
 
-private def guard(using cli: Cli)(block: ->{cli} Exit): Exit =
+// Every command runs inside this: the errors it can raise are tracked, and each is answered here
+// with a message and an exit code. It replaces a `try`/`catch` over `strategies.throwUnsafely`,
+// which converted every raised error into an untyped throw — so the compiler could not tell which
+// errors a command actually had to answer for, a `case` could name an error no call site raises,
+// and an error nobody named was caught by a blanket `case error: Exception` and reported as an
+// unexplained string.
+//
+// The types named below are exactly the errors lira's own code and the libraries it calls can
+// raise; adding a call that raises something else is a compile error until it is handled here or
+// in the command itself, which is the point.
+private def command(using cli: Cli)
+    ( block: (Tactic[Lira.Error], Tactic[StoreError], Tactic[IoError], Tactic[Path.Error],
+              Tactic[DisciplineError], Tactic[Name.Error], Tactic[StreamError]) ?->{cli} Exit )
+:   Exit =
+
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
 
-  try block catch
-    case error: LiraError =>
-      Out.println(t"lira: ${error.message}")
-      Exit.Fail(1)
+  recover:
+    case error: Lira.Error      => report(error.message)
+    case error: StoreError      => report(error.message)
+    case error: IoError         => report(error.message)
+    case error: Path.Error      => report(error.message)
+    case error: DisciplineError => report(error.message)
+    case error: Name.Error      => report(error.message)
+    case error: StreamError     => report(error.message)
 
-    case error: StoreError =>
-      Out.println(t"lira: ${error.message}")
-      Exit.Fail(1)
+  . protect(block)
 
-    case error: Exception =>
-      Out.println(t"lira: ${Text(error.toString)}")
-      Exit.Fail(2)
-
-    // Non-Exception throwables would otherwise propagate into the worker's failure path,
-    // where they are easy to lose; print the stack to the daemon log and fail loudly.
-    case error: Throwable =>
-      error.printStackTrace()
-      Out.println(t"lira: fatal: ${Text(error.toString)}")
-      Exit.Fail(3)
+private def report(message: fulminate.Message)(using Stdio): Exit =
+  Out.println(t"lira: $message")
+  Exit.Fail(1)
 
 // `Pathname` resolves an argument against the *client's* working directory, which the launcher
 // forwards — never the daemon's own — so a path that reaches these helpers is already absolute.
 // A path a flag carries as text is not, and resolves the same way here.
-private def resolve(file: Text)(using cli: Cli): Path on Local =
-  unsafely:
-    safely(file.as[Path on Local]).or:
-      t"${cli.workingDirectory.directory()}/$file".as[Path on Local]
+// These three raise rather than resolving unsafely: a missing file, an unwritable directory or a
+// path a filesystem will not admit are ordinary outcomes of a command, and the command's own
+// handler is where they belong. `unsafely` here would throw past every tracked handler, and the
+// caller would see nothing at all.
+private def resolve(file: Text)(using cli: Cli)(using Tactic[Path.Error]): Path on Local =
+  safely(file.as[Path on Local]).or:
+    t"${cli.workingDirectory.directory()}/$file".as[Path on Local]
 
-private def load(file: Path on Local)(using Cli): Data =
+private def load(file: Path on Local)(using Cli)(using Tactic[IoError], Tactic[StreamError])
+:   Data =
   import filesystemBackends.virtualMachine
-  unsafely(file.read[Data])
+  file.read[Data]
 
-private def save(file: Path on Local, data: Data)(using Cli): Unit =
+private def save(file: Path on Local, data: Data)(using Cli)(using Tactic[IoError]): Unit =
   import filesystemBackends.virtualMachine
   import filesystemOptions.createNonexistentParents.enabled
   import filesystemOptions.overwritePreexisting.enabled
 
-  unsafely:
-    file.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
-      handle.write(Chain(data))
+  file.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
+    handle.write(Chain(data))
 
 private def stem(file: Path on Local): Text =
   val name = file.encode
@@ -289,7 +300,7 @@ private def stem(file: Path on Local): Text =
 
 // The manifest is everything before the first `##` line; §5.2 fixes the byte layout so this
 // needs no TEL parsing, and the author's formatting is preserved exactly.
-private def manifest(file: Path on Local)(using cli: Cli): Exit = guard:
+private def manifest(file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
   val data = load(file)
   val bytes = data.readable
@@ -309,9 +320,8 @@ private def manifest(file: Path on Local)(using cli: Cli): Exit = guard:
     Out.println(Text(String(Array.unsafeJvm(data), 0, found + 1, "UTF-8")))
     Exit.Ok
 
-private def verify(file: Path on Local)(using cli: Cli): Exit = guard:
+private def verify(file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val lira = Lira.read(load(file))
   val report = Verification.install(lira)
   val manifest = lira.manifest
@@ -326,8 +336,8 @@ private def verify(file: Path on Local)(using cli: Cli): Exit = guard:
   facts(scala.List
     ( (t"module", manifest.module),
       (t"version", version),
-      (t"snapshot", LiraHash.text(manifest.lineage.stdlib.last)),
-      (t"payload", LiraHash.text(manifest.payload.hash)),
+      (t"snapshot", Lira.Hash.text(manifest.lineage.stdlib.last)),
+      (t"payload", Lira.Hash.text(manifest.payload.hash)),
       (t"sections", Text(manifest.section.stdlib.map(_.realm.s).mkString(", "))),
       (t"lineage", t"${manifest.lineage.stdlib.size} snapshots") ) ++ advisories)
 
@@ -339,15 +349,14 @@ private def assign(file: Path on Local, previous: Optional[Path on Local], force
     (using cli: Cli)
 :   Exit =
 
-  guard:
+  command:
     given Stdio = cli.stdio
-    import strategies.throwUnsafely
     val release = Lira.read(load(file))
     val before = previous.let { path => Lira.read(load(path)) }
     val published = before.let { lira => proscenium.List(lira.manifest) }.or(proscenium.List())
     val manifest = Publication.assign(release, before, published, forceMajor)
 
-    val stream = LiraPayload.decompress
+    val stream = Lira.Payload.decompress
       (release.compressed, release.manifest.payload.length, release.manifest.payload.hash)
 
     val blobs = BlobStream.read(stream).blobs.map(_.data)
@@ -367,47 +376,53 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
     (using cli: Cli)
 :   Exit =
 
-  guard:
+  command:
     given Stdio = cli.stdio
-    import strategies.throwUnsafely
 
     val majors = extra.filter(_.s.startsWith("+")).map { tag => Text(tag.s.substring(1).nn) }
     val sources = extra.filter { arg => !arg.s.startsWith("+") }
     val directory = jnf.Paths.get(out.encode.s).nn
 
+    // One module's failure is not the harvest's: a vendor release that removes surface stops that
+    // module's lineage and the rest carry on, so `Lira.Error` is recovered here rather than
+    // reaching the command's own handler. Recovering it locally also *narrows* what the rest of
+    // the loop may raise, which is the property a `catch` could not state.
     def emit(module: Text, releases: proscenium.List[HostRelease]): Boolean =
-      val contracts =
-        try
-          HostContracts.assemble(
-            module,
-            releases,
-            toolchain  = proscenium.List(LiraManifest.Tool(t"lira", t"0.1")),
-            allowMajor = { tag => majors.stdlib.contains(tag) })
-        catch case error: LiraError =>
-          error.reason match
-            case LiraError.Reason.UngradedSuccessor(tag) =>
-              Out.println(t"lira: $module: $tag grades as a major over its predecessor (a")
-              Out.println(t"      removal in the vendor's history); sanction it with +$tag")
+      val contracts: Optional[proscenium.List[(Text, Data)]] =
+        recover:
+          case error: Lira.Error =>
+            error.reason match
+              case Lira.Error.Reason.UngradedSuccessor(tag) =>
+                Out.println(t"lira: $module: $tag grades as a major over its predecessor (a")
+                Out.println(t"      removal in the vendor's history); sanction it with +$tag")
 
-            case _ => Out.println(t"lira: $module: ${error.message}")
+              case _ => Out.println(t"lira: $module: ${error.message}")
 
-          return false
+            Unset
 
-      val target = directory.resolve(module.s).nn
-      jnf.Files.createDirectories(target)
+        . protect:
+            HostContracts.assemble(
+              module,
+              releases,
+              toolchain  = proscenium.List(Lira.Manifest.Tool(t"lira", t"0.1")),
+              allowMajor = { tag => majors.stdlib.contains(tag) })
 
-      contracts.stdlib.foreach: (tag, bytes) =>
-        val file = target.resolve(s"$tag.lira").nn
-        jnf.Files.write(file, Array.unsafeJvm(bytes))
-        file.toFile.nn.setExecutable(true, false)
+      contracts.lay(false): contracts =>
+        val target = directory.resolve(module.s).nn
+        jnf.Files.createDirectories(target)
 
-        val manifest = Lira.read(bytes).manifest
-        val version = manifest.version.let { v => t"$v" }.or(t"unversioned")
+        contracts.stdlib.foreach: (tag, bytes) =>
+          val file = target.resolve(s"$tag.lira").nn
+          jnf.Files.write(file, Array.unsafeJvm(bytes))
+          file.toFile.nn.setExecutable(true, false)
 
-        Out.println(t"$module $tag -> ${Text(file.toString)} ($version, lineage of ${manifest
-            .lineage.stdlib.size})")
+          val manifest = Lira.read(bytes).manifest
+          val version = manifest.version.let { v => t"$v" }.or(t"unversioned")
 
-      true
+          Out.println(t"$module $tag -> ${Text(file.toString)} ($version, lineage of ${manifest
+              .lineage.stdlib.size})")
+
+        true
 
     kind.s match
       case "jdk" =>

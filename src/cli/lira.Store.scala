@@ -106,7 +106,7 @@ object Store:
       blobsAdded:  Int,
       blobsShared: Int )
 
-  case class Release(hex: Text, manifest: LiraManifest, size: Long, pinned: Boolean)
+  case class Release(hex: Text, manifest: Lira.Manifest, size: Long, pinned: Boolean)
 
   case class Sweep
     ( evicted:            List[Text],
@@ -166,8 +166,8 @@ class Store(val root: Path on Linux):
     val actual = tier match
       case Tier.Manifest   => manifestBytesHash(data)
       case Tier.Payload    => abort(StoreError(t"payloads verify via their manifest"))
-      case Tier.Blob       => LiraHash(LiraHash.Domain.Blob, data)
-      case Tier.Derivative => LiraHash(LiraHash.Domain.Derivative, data)
+      case Tier.Blob       => Lira.Hash(Lira.Hash.Domain.Blob, data)
+      case Tier.Derivative => Lira.Hash(Lira.Hash.Domain.Derivative, data)
 
     if actual.serialize[Hex] != hex
     then abort(StoreError(t"object $hex in ${tier.dirName} fails verification"))
@@ -176,16 +176,16 @@ class Store(val root: Path on Linux):
 
   // The decompressed blob stream of a release, verified against the manifest's declared
   // length and hash on every read.
-  def blobStream(manifest: LiraManifest): Data raises IoError raises LiraError raises StoreError =
+  def blobStream(manifest: Lira.Manifest): Data raises IoError raises Lira.Error raises StoreError =
     val hex = manifest.payload.hash.serialize[Hex]
     val target = objectPath(Tier.Payload, hex)
     if !target.existent() then abort(StoreError(t"no $hex in payload"))
-    LiraPayload.decompress(target.read[Data], manifest.payload.length, manifest.payload.hash)
+    Lira.Payload.decompress(target.read[Data], manifest.payload.length, manifest.payload.hash)
 
   // Ingest (design/tool.md §2.2): verify eagerly at install grade, then decompose. The
   // manifest tier keeps the head bytes exactly as they arrived — directive, manifest, and
   // `##` separator — so the original file is a concatenation away.
-  def ingest(data: Data): Ingested raises IoError raises LiraError raises StoreError =
+  def ingest(data: Data): Ingested raises IoError raises Lira.Error raises StoreError =
     val lira = Lira.read(data)
     val report = Verification.install(lira)
 
@@ -244,11 +244,11 @@ class Store(val root: Path on Linux):
       List.from:
         dir.children.stdlib.flatMap { fan => fan.children.stdlib }
 
-  private def decodeHead(head: Data): Optional[LiraManifest] =
+  private def decodeHead(head: Data): Optional[Lira.Manifest] =
     separatorIndex(head).let: separator =>
-      safely[Tel.Error | LiraError]:
+      safely[Tel.Error | Lira.Error]:
         val document = slice(head, 0, separator + 1).utf8.load[Tel]
-        LiraManifest.decode(document.root)
+        Lira.Manifest.decode(document.root)
 
   // Every release in the store, sized by its payload object plus its manifest head. Blob
   // and derivative bytes are shared between releases, so they are accounted at sweep time,
@@ -271,7 +271,7 @@ class Store(val root: Path on Linux):
   // GC (design/tool.md §3): pins are roots; the eviction unit is the release closure; the
   // budget bounds the bytes held by *unpinned* releases, least recently used first. Blobs
   // and derivatives survive if any retained release references them.
-  def gc(budget: Optional[Long]): Sweep raises IoError raises LiraError raises StoreError =
+  def gc(budget: Optional[Long]): Sweep raises IoError raises Lira.Error raises StoreError =
     val all = releases().stdlib
     val order = recency().stdlib
 
@@ -390,7 +390,7 @@ class Store(val root: Path on Linux):
   // The bare-artifact lookup behind `lira id` (spec §13.6): hash the candidate under the
   // derivative domain and search stored manifests for a section that declares it.
   def identify(data: Data): Optional[(Release, Section)] raises IoError =
-    val hex = LiraHash(LiraHash.Domain.Derivative, data).serialize[Hex]
+    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, data).serialize[Hex]
 
     val matches = releases().flatMap: release =>
       release.manifest.section.stdlib.flatMap: section =>
