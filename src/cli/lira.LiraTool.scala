@@ -161,8 +161,15 @@ def main(): Unit = cli:
     case Quit() :: _              => execute(quit())
 
     // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand.
-    case Pathname(file) :: Nil =>
-      execute(manifest(file))
+    //
+    // Deliberately not `Pathname`, though it is a path. A suggester REPLACES the suggestions
+    // accumulated so far (`Completion.suggest`) rather than adding to them, and `Pathname`'s does
+    // not carry `prior` forward — so at the first word, where every `Subcommand` has just offered
+    // its name, a `Pathname` here would clobber all of them with a directory listing, or with
+    // nothing at all when the partial word matches no file. Subcommands win the first position;
+    // `Pathname` completes every later one, where nothing competes with it.
+    case file :: Nil if !file().s.startsWith("-") =>
+      execute(manifest(resolve(file())))
 
     case _ => execute(usage(Exit.Fail(1)))
 
