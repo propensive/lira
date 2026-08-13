@@ -34,7 +34,9 @@ package lira
 
 import soundness.*
 
+import filesystemBackends.virtualMachine
 import logging.silentLogging
+import systems.javaSystem
 import textSanitizers.strictSanitizer
 
 // `lira delta` (design/tool.md §5.1): what changed between two releases of one module, and what
@@ -60,30 +62,8 @@ private enum Change:
 
 private case class Entry(key: Text, atomClass: AtomClass, change: Change)
 
-// A flag taking a value occupies two argument slots (`--blob <file>`), so a command's own
-// arguments are what remains once each flag and the value following it are set aside.
-private def positional(arguments: proscenium.List[Text]): scala.List[Text] =
-  var skip = false
-
-  arguments.stdlib.filter: argument =>
-    val flag = argument.s.startsWith("-")
-    val value = skip
-    skip = flag
-    !flag && !value
-
-private def delta(arguments: proscenium.List[Text], blob: Optional[Text])(using cli: Cli)
-:   Exit =
-
-  positional(arguments) match
-    case scala.List(previous, next) => compareReleases(previous, next, blob)
-
-    case _ =>
-      guard:
-        given Stdio = cli.stdio
-        Out.println(t"lira: delta takes two files: lira delta <previous.lira> <next.lira>")
-        Exit.Fail(1)
-
-private def compareReleases(previous: Text, next: Text, blob: Optional[Text])(using cli: Cli)
+private def delta(previous: Path on Local, next: Path on Local, blob: Optional[Text])
+    (using cli: Cli)
 :   Exit = guard:
 
   given Stdio = cli.stdio
@@ -129,8 +109,9 @@ private def compareReleases(previous: Text, next: Text, blob: Optional[Text])(us
 
     blob.let: target =>
       val record = LiraDelta.compute(beforeReport.atomizations, afterReport.atomizations)
-      lira.save(target, record.encode)
-      Out.println(t"delta blob -> $target")
+      val path = lira.resolve(target)
+      lira.save(path, record.encode)
+      Out.println(t"delta blob -> ${path.encode}")
 
     Exit.Ok
 

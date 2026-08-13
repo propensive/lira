@@ -46,7 +46,6 @@ import logging.silentLogging
 import systems.javaSystem
 import textSanitizers.strictSanitizer
 import threading.platformThreading
-import workingDirectories.systemWorkingDirectory
 
 // The `lira` command-line tool (LIRA specification §5.1): the PATH-resolved handler that the
 // interpreter directive of every `.lira` file invokes. It runs as an Ethereal daemon — the
@@ -75,29 +74,84 @@ val Classpath = Flag[Text]("classpath", false, Nil, "dependency classpath for me
 val Only = Flag[Text]("discipline", false, Nil, "restrict the listing to one discipline")
 val Owner = Flag[Text]("owner", false, Nil, "restrict the listing to keys with this prefix")
 
+// Every flag lira declares that takes a value, and takes exactly one.
+private val valueFlags: scala.List[Flag] =
+  scala.List(Budget, Blob, Realm, Classpath, Only, Owner)
+
+// The POSIX interpreter's own reading of the commandline. `arguments` is the raw list, flags and
+// all, so a command matching an exact arity would fail the moment a flag appeared among them;
+// `Commandline.positional` is what remains once the flags are accounted for.
+//
+// The interpreter gives a flag *every* argument that follows it until the next flag, since in
+// general a flag may be repeatable or variadic. None of lira's are: each takes one operand, so
+// the surplus is not the flag's — it is the command's, and returning it (in the order it was
+// typed) is what lets `delta a.lira --blob out b.lira` mean what it plainly says.
+private def positional(using cli: Cli, interpreter: Interpreter { type Topic = Commandline })
+:   List[Argument] =
+
+  val commandline = interpreter.interpret(cli.arguments)
+
+  val surplus = valueFlags.flatMap: flag =>
+    interpreter.find(commandline, flag).stdlib.toList.drop(1)
+
+  List.from((commandline.positional.stdlib.toList ++ surplus).sortBy(_.position))
+
+// A value-taking flag's operand. `flag()` is called for its side effect as much as its result: it
+// registers the flag with the `Cli`, which is what puts it in this subcommand's completions, and
+// it is where an `Interpretable` richer than `Text` would do its work. It reads `Unset` when the
+// interpreter handed the flag more operands than it takes, so the first operand stands in.
+private def flagText(flag: Flag of Text)
+    (using cli: Cli, interpreter: Interpreter { type Topic = Commandline })
+:   Optional[Text] =
+
+  flag().or:
+    val commandline = interpreter.interpret(cli.arguments)
+    interpreter.find(commandline, flag).stdlib.toList.headOption.map(_()).getOrElse(Unset)
+
+// Each branch reads its flags *before* `execute`: reading a flag registers it (`Cli.register`),
+// which is what puts it in the completions for the subcommand it belongs to, and what lets a
+// value-taking flag be understood rather than mistaken for a positional argument. Reading them
+// inside the `execute` block would register them too late to appear, and reading every flag up
+// front would offer `--major` to `verify`.
 @main
 def main(): Unit = cli:
-  arguments match
-    case Verify() :: file :: Nil  => execute(verify(file()))
-    case Jar() :: universe :: file :: Nil => execute(storeJar(universe(), file()))
+  // `Pathname` resolves a relative argument against the ambient `WorkingDirectory`, and under the
+  // daemon the ambient one is the daemon's — which is wherever it happened to be started. The
+  // client's is forwarded on the `Cli`, and is the only one a user's relative path can mean.
+  given WorkingDirectory = summon[Cli].workingDirectory
+
+  positional match
+    case Verify() :: Pathname(file) :: Nil => execute(verify(file))
+    case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
     case Cache() :: rest          => execute(cache(rest.map(_())))
     case Pin() :: target :: Nil   => execute(pin(target(), true))
     case Unpin() :: target :: Nil => execute(pin(target(), false))
+
     case Gc() :: _                =>
-      val budget = Budget()
+      val budget = flagText(Budget)
       execute(gcCommand(budget))
+
     case Fsck() :: _              => execute(fsck())
-    case Id() :: file :: Nil      => execute(identify(file()))
-    case Assign() :: file :: Nil  => execute(assign(file(), Unset, Major().present))
+    case Id() :: Pathname(file) :: Nil => execute(identify(file))
 
-    case Delta() :: rest          => execute(delta(rest.map(_()), Blob()))
-
-    case AtomsCmd() :: rest       =>
-      execute(atomsCommand(rest.map(_()), Realm(), Classpath(), Only(), Owner()))
-
-    case Assign() :: file :: previous :: Nil =>
+    case Assign() :: Pathname(file) :: Nil =>
       val major = Major()
-      execute(assign(file(), previous(), major.present))
+      execute(assign(file, Unset, major.present))
+
+    case Assign() :: Pathname(file) :: Pathname(previous) :: Nil =>
+      val major = Major()
+      execute(assign(file, previous, major.present))
+
+    case Delta() :: Pathname(previous) :: Pathname(next) :: Nil =>
+      val blob = flagText(Blob)
+      execute(delta(previous, next, blob))
+
+    case AtomsCmd() :: Pathname(file) :: Nil =>
+      val realm = flagText(Realm)
+      val classpath = flagText(Classpath)
+      val discipline = flagText(Only)
+      val owner = flagText(Owner)
+      execute(atomsCommand(file, realm, classpath, discipline, owner))
 
     case Harvest() :: kind :: Pathname(out) :: rest =>
       execute(harvest(kind(), out, rest.map(_())))
@@ -106,8 +160,9 @@ def main(): Unit = cli:
     case Help() :: _              => execute(usage(Exit.Ok))
     case Quit() :: _              => execute(quit())
 
-    case file :: Nil if !file().s.startsWith("-") =>
-      execute(manifest(file()))
+    // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand.
+    case Pathname(file) :: Nil =>
+      execute(manifest(file))
 
     case _ => execute(usage(Exit.Fail(1)))
 
@@ -200,25 +255,34 @@ private def guard(using cli: Cli)(block: ->{cli} Exit): Exit =
       Out.println(t"lira: fatal: ${Text(error.toString)}")
       Exit.Fail(3)
 
-// Relative paths arrive from the client and must resolve against the *client's* working
-// directory, which the launcher forwards — never the daemon's own.
-private def resolve(file: Text)(using cli: Cli): jnf.Path =
-  val path = jnf.Paths.get(file.s).nn
-  if path.isAbsolute then path
-  else jnf.Paths.get(cli.workingDirectory.directory().s).nn.resolve(path).nn
+// `Pathname` resolves an argument against the *client's* working directory, which the launcher
+// forwards — never the daemon's own — so a path that reaches these helpers is already absolute.
+// A path a flag carries as text is not, and resolves the same way here.
+private def resolve(file: Text)(using cli: Cli): Path on Local =
+  unsafely:
+    safely(file.as[Path on Local]).or:
+      t"${cli.workingDirectory.directory()}/$file".as[Path on Local]
 
-private def load(file: Text)(using Cli): Data =
-  Array.unsafeFrozen(jnf.Files.readAllBytes(resolve(file)).nn)
+private def load(file: Path on Local)(using Cli): Data =
+  import filesystemBackends.virtualMachine
+  unsafely(file.read[Data])
 
-private def save(file: Text, data: Data)(using Cli): Unit =
-  jnf.Files.write(resolve(file), Array.unsafeJvm(data))
+private def save(file: Path on Local, data: Data)(using Cli): Unit =
+  import filesystemBackends.virtualMachine
+  import filesystemOptions.createNonexistentParents.enabled
+  import filesystemOptions.overwritePreexisting.enabled
 
-private def stem(file: Text): Text =
-  if file.s.endsWith(".lira") then Text(file.s.dropRight(5)) else file
+  unsafely:
+    file.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
+      handle.write(Chain(data))
+
+private def stem(file: Path on Local): Text =
+  val name = file.encode
+  if name.s.endsWith(".lira") then Text(name.s.dropRight(5)) else name
 
 // The manifest is everything before the first `##` line; §5.2 fixes the byte layout so this
 // needs no TEL parsing, and the author's formatting is preserved exactly.
-private def manifest(file: Text)(using cli: Cli): Exit = guard:
+private def manifest(file: Path on Local)(using cli: Cli): Exit = guard:
   given Stdio = cli.stdio
   val data = load(file)
   val bytes = data.readable
@@ -238,7 +302,7 @@ private def manifest(file: Text)(using cli: Cli): Exit = guard:
     Out.println(Text(String(Array.unsafeJvm(data), 0, found + 1, "UTF-8")))
     Exit.Ok
 
-private def verify(file: Text)(using cli: Cli): Exit = guard:
+private def verify(file: Path on Local)(using cli: Cli): Exit = guard:
   given Stdio = cli.stdio
   import strategies.throwUnsafely
   val lira = Lira.read(load(file))
@@ -264,7 +328,8 @@ private def verify(file: Text)(using cli: Cli): Exit = guard:
   Out.println(t"verified (install grade)")
   Exit.Ok
 
-private def assign(file: Text, previous: Optional[Text], forceMajor: Boolean)(using cli: Cli)
+private def assign(file: Path on Local, previous: Optional[Path on Local], forceMajor: Boolean)
+    (using cli: Cli)
 :   Exit =
 
   guard:
@@ -280,9 +345,9 @@ private def assign(file: Text, previous: Optional[Text], forceMajor: Boolean)(us
 
     val blobs = BlobStream.read(stream).blobs.map(_.data)
     val version = manifest.version.let { version => t"$version" }.or(t"unversioned")
-    val target = t"${stem(file)}-$version.lira"
+    val target = resolve(t"${stem(file)}-$version.lira")
     save(target, Lira.assemble(manifest, blobs))
-    Out.println(t"assigned $version -> $target")
+    Out.println(t"assigned $version -> ${target.encode}")
     Exit.Ok
 
 // Harvests a host's surface into its contract lineages (LIRA hosts.md, jsig.md): where the
@@ -378,8 +443,8 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
           val tag =
             if matcher.find() then Text(s"android-${matcher.group(1)}")
             else
-              val name = resolve(jar).getFileName.nn.toString
-              Text(name.stripSuffix(".jar").nn)
+              val name = resolve(jar).name
+              Text(name.s.stripSuffix(".jar").nn)
 
           val surface = HostArchive.surface(Text(resolve(jar).toString))
           Out.println(t"harvested $tag (${surface.stdlib.size} classes)")

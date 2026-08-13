@@ -37,7 +37,9 @@ import java.nio.file as jnf
 import soundness.*
 
 import charDecoders.utf8Decoder
+import filesystemBackends.virtualMachine
 import logging.silentLogging
+import systems.javaSystem
 import textSanitizers.strictSanitizer
 
 // `lira atoms` (design/tool.md §5.2): the atom listing of a release or of a bare artifact.
@@ -76,25 +78,7 @@ private def decomposer(discipline: Text, resources: proscenium.List[LiraManifest
   key => implementation.let { discipline => discipline.decompose(key) }
 
 private def atomsCommand
-    ( arguments: proscenium.List[Text],
-      realm:     Optional[Text],
-      classpath: Optional[Text],
-      only:      Optional[Text],
-      owner:     Optional[Text] )
-    (using cli: Cli)
-:   Exit =
-
-  positional(arguments) match
-    case scala.List(file) => atomsOf(file, realm, classpath, only, owner)
-
-    case _ =>
-      guard:
-        given Stdio = cli.stdio
-        Out.println(t"lira: atoms takes one file: lira atoms <file> [--realm <realm>]")
-        Exit.Fail(1)
-
-private def atomsOf
-    ( file:      Text,
+    ( file:      Path on Local,
       realm:     Optional[Text],
       classpath: Optional[Text],
       only:      Optional[Text],
@@ -132,7 +116,7 @@ private def declared(release: Lira, only: Optional[Text], owner: Optional[Text])
 // exactly as it is at publish time (§11.4), so an item no language discipline claims falls to
 // `opaque/1` and is listed as such rather than silently dropped.
 private def computed
-    ( file:      Text,
+    ( file:      Path on Local,
       data:      Data,
       realm:     Optional[Text],
       classpath: Optional[Text],
@@ -165,7 +149,7 @@ private def computed
     val atomizations = registry.atomize(content, context)
 
     val items: Text = t"computed (realm $where, ${content.stdlib.size} items)"
-    facts(scala.List((t"artifact", file), (t"source", items)))
+    facts(scala.List((t"artifact", file.encode), (t"source", items)))
 
     val exit = listings(atomizations, proscenium.List(), only, owner)
     elsewhere(content, where, selected)
@@ -253,7 +237,7 @@ private def listings
 // A jar, an APK, a `ct.sym` — anything the zip magic identifies — is a tree of items, and its
 // entries are the content atomization sees; anything else is one item, named by its own filename
 // so that a discipline claiming by extension still claims it.
-private def expand(file: Text, data: Data)
+private def expand(file: Path on Local, data: Data)
 :   proscenium.List[(TreePath, Data)] raises LiraError =
   val bytes = data.readable
 
@@ -261,10 +245,9 @@ private def expand(file: Text, data: Data)
     data.length > 4 && bytes(0) == 'P' && bytes(1) == 'K' && bytes(2) == 3 && bytes(3) == 4
 
   if !zipped then
-    val name = Text(jnf.Paths.get(file.s).nn.getFileName.nn.toString)
-    proscenium.List((TreePath(name), data))
+    proscenium.List((TreePath(file.name), data))
   else
-    val zip = java.util.zip.ZipFile(file.s)
+    val zip = java.util.zip.ZipFile(file.encode.s)
 
     try
       val entries = scala.collection.mutable.ListBuffer[(TreePath, Data)]()

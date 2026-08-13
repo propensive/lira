@@ -61,6 +61,9 @@ private def clientPath(file: Text)(using cli: Cli): Path on Linux =
 private def stemOf(file: Text): Text =
   if file.ends(t".lira") then file.keep(file.length - 5) else file
 
+// The derivative lands beside the release it came from, named for it.
+private def stemOf(file: Path on Local): Text = stemOf(file.encode)
+
 private def single(store: Store, prefix: Text)(using Stdio)
 :   Optional[Store.Release] raises IoError =
 
@@ -205,12 +208,12 @@ private def fsck()(using cli: Cli): Exit = guard:
 
   if audit.corrupted.stdlib.isEmpty then Exit.Ok else Exit.Fail(1)
 
-private def identify(file: Text)(using cli: Cli): Exit = guard:
+private def identify(file: Path on Local)(using cli: Cli): Exit = guard:
   given Stdio = cli.stdio
   import strategies.throwUnsafely
   val store = Store.default()
 
-  store.identify(clientPath(file).read[Data]).let: (release, section) =>
+  store.identify(file.read[Data]).let: (release, section) =>
     val version = release.manifest.version.let { version => t"$version" }.or(t"development")
     val integration = section.integration.let { id => t"${section.realm}/$id" }.or(section.realm)
 
@@ -228,11 +231,11 @@ private def identify(file: Text)(using cli: Cli): Exit = guard:
 // `lira jar` via the store (design/tool.md §2.5): the derivative tier is the materialization
 // cache, so a declared derivative already cached is linked out without decompressing
 // anything; otherwise the JAR is built, cached, and linked out.
-private def storeJar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
+private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit = guard:
   given Stdio = cli.stdio
   import strategies.throwUnsafely
   val store = Store.default()
-  val data = clientPath(file).read[Data]
+  val data = file.read[Data]
   val lira = Lira.read(data)
   store.ingest(data)
 
