@@ -56,6 +56,7 @@ val Verify = Subcommand("verify", "verify a .lira file (install grade)")
 val Harvest = Subcommand("harvest", "harvest a host's surface into tagged .lira contracts")
 val Jar = Subcommand("jar", "write a section's canonical derivative JAR")
 val Assign = Subcommand("assign", "assign the next derived version to a development release")
+val Delta = Subcommand("delta", "show what changed between two releases, and its grade")
 val Cache = Subcommand("cache", "manage the content-addressed store (add/ls/rm/path)")
 val Pin = Subcommand("pin", "pin a cached release, exempting it from eviction")
 val Unpin = Subcommand("unpin", "unpin a cached release")
@@ -67,6 +68,7 @@ val Help = Subcommand("help", "show usage information")
 val Quit = Subcommand("quit", "shut down the background daemon")
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
+val Blob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
 
 @main
 def main(): Unit = cli:
@@ -80,6 +82,8 @@ def main(): Unit = cli:
     case Fsck() :: _              => execute(fsck())
     case Id() :: file :: Nil      => execute(identify(file()))
     case Assign() :: file :: Nil  => execute(assign(file(), Unset, Major().present))
+
+    case Delta() :: rest          => execute(delta(rest.map(_()), Blob()))
 
     case Assign() :: file :: previous :: Nil =>
       execute(assign(file(), previous(), Major().present))
@@ -103,6 +107,8 @@ private def usage(exit: Exit)(using cli: Cli): Exit =
   Out.println(t"       lira jar <universe> <file.lira>     write the canonical derivative JAR")
   Out.println(t"       lira assign <file.lira> [<previous.lira>] [--major]")
   Out.println(t"                                           assign the next derived version")
+  Out.println(t"       lira delta <previous.lira> <next.lira> [--blob <file>]")
+  Out.println(t"                                           show what changed, and its grade")
   Out.println(t"       lira harvest jdk <dir> [<ct.sym>] [+<tag> ...]")
   Out.println(t"                                           harvest the JDK lineage from ct.sym")
   Out.println(t"       lira harvest android <dir> <android.jar ...> [+<tag> ...]")

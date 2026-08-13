@@ -118,7 +118,7 @@ object Store:
   // `$LIRA_STORE` overrides the root; otherwise the store lives under the XDG data home —
   // deliberately not the cache home, since pinned content must survive cache cleaning
   // (design/tool.md §2.1).
-  def default()(using Environment, System): Store raises PathError =
+  def default()(using Environment, System): Store raises Path.Error =
     val custom = safely(Environment[Text](t"LIRA_STORE"))
 
     val root = custom.let(_.as[Path on Linux]).or:
@@ -246,7 +246,7 @@ class Store(val root: Path on Linux):
 
   private def decodeHead(head: Data): Optional[LiraManifest] =
     separatorIndex(head).let: separator =>
-      safely[TelError | LiraError]:
+      safely[Tel.Error | LiraError]:
         val document = slice(head, 0, separator + 1).utf8.load[Tel]
         LiraManifest.decode(document.root)
 
