@@ -245,16 +245,22 @@ private def verify(file: Text)(using cli: Cli): Exit = guard:
   val report = Verification.install(lira)
   val manifest = lira.manifest
 
-  Out.println(t"module:    ${manifest.module}")
-  manifest.version.let { version => Out.println(t"version:   $version") }
-  if manifest.development then Out.println(t"version:   (development release)")
-  Out.println(t"snapshot:  ${LiraHash.text(manifest.lineage.stdlib.last)}")
-  Out.println(t"payload:   ${LiraHash.text(manifest.payload.hash)}")
-  Out.println(t"sections:  ${Text(manifest.section.stdlib.map(_.realm.s).mkString(", "))}")
+  val version: Text =
+    if manifest.development then t"development release"
+    else manifest.version.let { version => t"$version" }.or(t"unversioned")
 
-  report.advisories.stdlib.each: advisory =>
-    Out.println(t"advisory:  ${Text(advisory.toString)}")
+  val advisories: scala.List[(Text, Text)] =
+    report.advisories.stdlib.toList.map { advisory => (t"advisory", Text(advisory.toString)) }
 
+  facts(scala.List
+    ( (t"module", manifest.module),
+      (t"version", version),
+      (t"snapshot", LiraHash.text(manifest.lineage.stdlib.last)),
+      (t"payload", LiraHash.text(manifest.payload.hash)),
+      (t"sections", Text(manifest.section.stdlib.map(_.realm.s).mkString(", "))),
+      (t"lineage", t"${manifest.lineage.stdlib.size} snapshots") ) ++ advisories)
+
+  Out.println(t"")
   Out.println(t"verified (install grade)")
   Exit.Ok
 

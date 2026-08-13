@@ -75,52 +75,6 @@ private def decomposer(discipline: Text, resources: proscenium.List[LiraManifest
 
   key => implementation.let { discipline => discipline.decompose(key) }
 
-// Atoms under the owners their keys decompose into, owners sorted, and each owner's atoms sorted
-// by key: an atom listing's own order is by ascending value hash (§10.4), which is meaningless to
-// a reader.
-//
-// An atom whose key does not decompose is printed at the top level, and where its key is also an
-// owner — a type's own atom stands beside the members it owns, under `classfile/1` and `jsig/1`
-// alike — it is printed *within* that owner's group, marked, rather than as a second line
-// spelled identically to the heading above it.
-//
-// `prefix` and `suffix` decorate an entry — a change marker, a class note — and deliberately take
-// no part in decomposition: only this function holds `split`, since separation checking forbids
-// two arguments that capture it.
-private def renderGrouped[entry]
-    (entries: proscenium.List[entry], key: entry => Text, prefix: entry => Text,
-     suffix: entry => Text)
-    (split: Text => Optional[Discipline.Decomposition])
-    (using Stdio)
-:   Unit =
-
-  def line(entry: entry): Text =
-    val name: Text = split(key(entry)).lay(key(entry))(_.member)
-    t"${prefix(entry)}$name${suffix(entry)}"
-
-
-  val grouped = entries.stdlib.groupBy { entry => split(key(entry)).let(_.owner).or(t"") }
-  val owners: scala.List[Text] = grouped.keySet.toList.filter(_ != t"").sortBy(_.s)
-  val loose: scala.List[entry] = grouped.get(t"").getOrElse(scala.Nil)
-  val ownerSet = owners.toSet
-
-  def sorted(entries: scala.List[entry]): scala.List[entry] = entries.sortBy { entry => key(entry).s }
-
-  owners.each: owner =>
-    Out.println(t"  $owner")
-
-    sorted(loose.filter { entry => key(entry) == owner }).each: entry =>
-      Out.println(t"    ${line(entry)}  (itself)")
-
-    sorted(grouped.get(owner).getOrElse(scala.Nil)).each: entry =>
-      Out.println(t"    ${line(entry)}")
-
-  val orphans = sorted(loose.filter { entry => !ownerSet.contains(key(entry)) })
-
-  if !orphans.isEmpty then
-    orphans.each: entry =>
-      Out.println(t"  ${line(entry)}")
-
 private def atomsCommand
     ( arguments: proscenium.List[Text],
       realm:     Optional[Text],
@@ -165,10 +119,12 @@ private def declared(release: Lira, only: Optional[Text], owner: Optional[Text])
   val report = Verification.install(release)
   val manifest = release.manifest
 
-  Out.println(t"module:  ${manifest.module}")
-  manifest.version.let { version => Out.println(t"version: $version") }
-  Out.println(t"source:  declared (the release's own atom listings)")
-  Out.println(t"")
+  val version: Text = manifest.version.let { version => t"$version" }.or(t"development")
+
+  facts(scala.List
+    ( (t"module", manifest.module),
+      (t"version", version),
+      (t"source", t"declared (the release's own atom listings)") ))
 
   listings(report.atomizations, manifest.resource, only, owner)
 
@@ -208,9 +164,8 @@ private def computed
     val context = Discipline.Context(where, Unset, paths)
     val atomizations = registry.atomize(content, context)
 
-    Out.println(t"artifact: $file")
-    Out.println(t"source:   computed (realm $where, ${content.stdlib.size} items)")
-    Out.println(t"")
+    val items: Text = t"computed (realm $where, ${content.stdlib.size} items)"
+    facts(scala.List((t"artifact", file), (t"source", items)))
 
     val exit = listings(atomizations, proscenium.List(), only, owner)
     elsewhere(content, where, selected)
@@ -277,12 +232,18 @@ private def listings
       val replaceable = atoms.length - rigid
       total += atoms.length
 
+      def klass(atom: Atom): Text =
+        if atom.atomClass == AtomClass.Replaceable then t"replaceable" else t"rigid"
+
+      def hash(atom: Atom): Text = LiraHash.text(atom.valueHash).keep(12)
+
+      Out.println(t"")
       Out.println(t"${atomization.discipline}  ($rigid rigid, $replaceable replaceable)")
 
-      def note(atom: Atom): Text =
-        if atom.atomClass == AtomClass.Replaceable then t" (replaceable)" else t""
+      val rows =
+        treeRows(proscenium.List.from(atoms), _.key, klass(_), hash(_), _ => t"")(split)
 
-      renderGrouped(proscenium.List.from(atoms), _.key, _ => t"", note(_))(split)
+      treeTable(rows, t"Value")
 
       Out.println(t"")
 

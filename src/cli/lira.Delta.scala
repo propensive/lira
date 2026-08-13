@@ -105,10 +105,10 @@ private def compareReleases(previous: Text, next: Text, blob: Optional[Text])(us
       def version(lira: Lira): Text = lira.manifest.version.let { v => t"$v" }.or(t"development")
       t"${version(before)} -> ${version(after)}"
 
-    Out.println(t"module:  ${after.manifest.module}")
-    Out.println(t"grade:   ${gradeText(grade)} ($versions)")
-    sections(before, after)
-    Out.println(t"")
+    facts(scala.List
+      ( (t"module", after.manifest.module),
+        (t"grade", gradeText(grade)),
+        (t"versions", versions) ) ++ sectionFacts(before, after))
 
     val disciplineIds =
       (beforeReport.atomizations.stdlib.map(_.discipline)
@@ -142,7 +142,7 @@ private def gradeText(grade: Grade): Text = grade match
 // Sections are keyed by (realm, integration) and every section of a release presents the same
 // atoms (L108), so a per-section atom listing would repeat itself; what a section *can* differ
 // in, and what a reader wants to know, is whether the release still carries the cell at all.
-private def sections(before: Lira, after: Lira)(using Stdio): Unit =
+private def sectionFacts(before: Lira, after: Lira): scala.List[(Text, Text)] =
   def cells(release: Lira): scala.List[Text] =
     release.manifest.section.stdlib.map: section =>
       val realm: Text = section.realm
@@ -154,9 +154,9 @@ private def sections(before: Lira, after: Lira)(using Stdio): Unit =
   val added = current.filter { cell => !old.contains(cell) }
   val removed = old.filter { cell => !current.contains(cell) }
 
-  Out.println(t"sections: ${Text(current.mkString(", "))}")
-  if !added.isEmpty then Out.println(t"          added: ${Text(added.mkString(", "))}")
-  if !removed.isEmpty then Out.println(t"          removed: ${Text(removed.mkString(", "))}")
+  scala.List((t"sections", Text(current.mkString(", "))))
+    ++ (if added.isEmpty then scala.Nil else scala.List((t"gained", Text(added.mkString(", ")))))
+    ++ (if removed.isEmpty then scala.Nil else scala.List((t"lost", Text(removed.mkString(", ")))))
 
 private def atoms(report: Verification.Report, discipline: Text): proscenium.List[Atom] =
   report.atomizations.stdlib.find(_.discipline == discipline).map(_.atoms).getOrElse:
@@ -203,7 +203,12 @@ private def render(discipline: Text, manifest: LiraManifest, entries: proscenium
 
   def marker(entry: Entry): Text = t"${entry.change.marker} "
 
-  def note(entry: Entry): Text =
-    if entry.atomClass == AtomClass.Replaceable then t" (replaceable)" else t""
+  def klass(entry: Entry): Text =
+    if entry.atomClass == AtomClass.Replaceable then t"replaceable" else t"rigid"
 
-  renderGrouped(entries, _.key, marker(_), note(_))(split)
+  def change(entry: Entry): Text = entry.change match
+    case Change.Added    => t"added"
+    case Change.Removed  => t"removed"
+    case Change.Replaced => t"replaced"
+
+  treeTable(treeRows(entries, _.key, klass(_), change(_), marker(_))(split), t"Change")

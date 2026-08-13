@@ -110,7 +110,7 @@ private def cache(args: List[Text])(using cli: Cli): Exit = guard:
               Column(t"Bytes")(_.size),
               Column(t"")(release => if release.pinned then t"pinned" else t"") )
 
-          scaffold.tabulate(List.from(rows)).grid(110).render.stdlib.each(Out.println(_))
+          scaffold.tabulate(List.from(rows)).grid(tableWidth).render.stdlib.each(Out.println(_))
 
         Exit.Ok
 
@@ -170,9 +170,13 @@ private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = guard:
 
   def sweep(limit: Optional[Long]): Exit =
     val swept = store.gc(limit)
-    val evicted = swept.evicted.stdlib.size
-    val collected = t"${swept.payloadsRemoved} payloads, ${swept.blobsRemoved} blobs"
-    Out.println(t"evicted $evicted releases; collected $collected, ${swept.derivativesRemoved} derivatives")
+
+    facts(scala.List
+      ( (t"evicted", t"${swept.evicted.stdlib.size} releases"),
+        (t"payloads", t"${swept.payloadsRemoved}"),
+        (t"blobs", t"${swept.blobsRemoved}"),
+        (t"derivatives", t"${swept.derivativesRemoved}") ))
+
     Exit.Ok
 
   budget match
@@ -191,9 +195,13 @@ private def fsck()(using cli: Cli): Exit = guard:
   val store = Store.default()
   val audit = store.fsck()
 
-  Out.println(t"audited ${audit.objects} objects")
-  audit.corrupted.each { name => Out.println(t"quarantined: $name") }
-  audit.orphanPayloads.each { name => Out.println(t"orphan payload: $name (gc collects it)") }
+  val quarantined: scala.List[(Text, Text)] =
+    audit.corrupted.stdlib.toList.map { name => (t"quarantined", name) }
+
+  val orphans: scala.List[(Text, Text)] =
+    audit.orphanPayloads.stdlib.toList.map { name => (t"orphan payload", t"$name (gc collects it)") }
+
+  facts(scala.List((t"audited", t"${audit.objects} objects")) ++ quarantined ++ orphans)
 
   if audit.corrupted.stdlib.isEmpty then Exit.Ok else Exit.Fail(1)
 
@@ -204,8 +212,13 @@ private def identify(file: Text)(using cli: Cli): Exit = guard:
 
   store.identify(clientPath(file).read[Data]).let: (release, section) =>
     val version = release.manifest.version.let { version => t"$version" }.or(t"development")
-    val integration = section.integration.let { id => t", integration $id" }.or(t"")
-    Out.println(t"${release.manifest.module} $version (${section.realm}$integration)")
+    val integration = section.integration.let { id => t"${section.realm}/$id" }.or(section.realm)
+
+    facts(scala.List
+      ( (t"module", release.manifest.module),
+        (t"version", version),
+        (t"section", integration) ))
+
     Exit.Ok
 
   . or:
