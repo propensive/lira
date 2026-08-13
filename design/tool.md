@@ -238,7 +238,45 @@ else stays a flat verb.
 | `lira verify <file.lira>`                  | install-grade verification                                       |
 | `lira jar <universe> <file.lira>`          | canonical derivative JAR — now materializing *via* the store §2.5 |
 | `lira assign <file> [<prev>] [--major]`    | derive the next version (spec §12.5)                             |
+| `lira delta <prev> <next> [--blob <file>]` | what changed between two releases, and its grade (§5.1 below)    |
+| `lira atoms <file> [--realm …]`            | the atom listing of a release, or of a bare artifact (§5.2)      |
 | `lira harvest jdk\|android …`              | host-contract lineages from `ct.sym` / `android.jar`             |
+
+#### 5.1 `delta`
+
+`Grade.between` is the whole compatibility question and answers it without a listing — the check
+is set arithmetic over atoms (spec §10.3). The listing answers the reader's *next* question: the
+atoms added, removed and replaced, per discipline, grouped by the owner each discipline
+decomposes its own keys into (`Discipline.decompose`). A rigid atom whose value moved reads as a
+removal *and* an addition, since that is what it is (§10.2); only a replaceable atom is reported
+as replaced.
+
+`LiraDelta` is deliberately not the source of the listing: it records value hashes alone, because
+a verifier checking a lineage step holds both releases and needs no keys. `--blob` writes that
+record for the machine-checkable case; the listing is computed from the two atomizations.
+
+Sections are summarized, not listed per atom: L108 requires every section of a release to present
+identical atoms, so a per-section breakdown would repeat itself. What a reader wants is which
+(realm, integration) cells the release still carries, and which it gained or lost.
+
+#### 5.2 `atoms`
+
+The same question asked of two kinds of input, and the difference is load-bearing. A `.lira` file
+*declares* its atoms in the Atoms metadata blobs its `api` records name (spec §10.4), so the
+listing is read, not recomputed, and is exactly what a consumer's verifier will compare against.
+A bare artifact — a jar, a `.class`, a `.d.ts`, a `.idl` — declares nothing, so its atoms are
+computed on the spot, answering instead what this content *would* contribute were it published.
+The output says which of the two it is.
+
+Computing them takes what atomization always takes (§11.2): `--realm`, since a discipline out of
+its domain claims nothing at all, and `--classpath` for the membership-keyed disciplines, since a
+type's presented surface includes what it inherits. Neither is guessable from the bytes. Where a
+discipline *would* have claimed the content in another realm, the listing says so rather than
+letting an `opaque/1` fallback read as an answer.
+
+`--discipline <id>` restricts the listing to one discipline — the way to see a jar under `jsig/1`,
+which tolerates supertypes outside the claimed content, rather than `classfile/1`, which fails on
+them by design. `--owner <prefix>` restricts it to keys under one owner.
 
 ### Store commands (new)
 

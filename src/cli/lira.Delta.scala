@@ -37,7 +37,7 @@ import soundness.*
 import logging.silentLogging
 import textSanitizers.strictSanitizer
 
-// `lira delta` (design/tool.md §2.6): what changed between two releases of one module, and what
+// `lira delta` (design/tool.md §5.1): what changed between two releases of one module, and what
 // grade the change carries. The grade is the whole of the compatibility question — `Grade.between`
 // is set arithmetic over atoms and needs no listing to reach its verdict (LIRA §10.3) — so the
 // listing below exists purely to answer the reader's next question, which is *what* changed.
@@ -60,27 +60,21 @@ private enum Change:
 
 private case class Entry(key: Text, atomClass: AtomClass, change: Change)
 
-// Every discipline lira can name, for `decompose` alone: an unrecognised discipline id is not an
-// error here, since the listing degrades to ungrouped keys and nothing else depends on it.
-private val disciplines: proscenium.List[Discipline] =
-  proscenium.List(Tasty, ClassfileDiscipline, JsigDiscipline, DtsDiscipline, WebIdlDiscipline,
-    WitDiscipline, CHeaderDiscipline, KotlinMetadataDiscipline, CapabilityDiscipline,
-    OpaqueDiscipline)
-
-// `--blob <file>` occupies two argument slots, so the two releases are the positional arguments
-// that remain once the flag and the value it takes are set aside.
-private def delta(arguments: proscenium.List[Text], blob: Optional[Text])(using cli: Cli)
-:   Exit =
-
+// A flag taking a value occupies two argument slots (`--blob <file>`), so a command's own
+// arguments are what remains once each flag and the value following it are set aside.
+private def positional(arguments: proscenium.List[Text]): scala.List[Text] =
   var skip = false
 
-  val positional = arguments.stdlib.filter: argument =>
+  arguments.stdlib.filter: argument =>
     val flag = argument.s.startsWith("-")
     val value = skip
     skip = flag
     !flag && !value
 
-  positional match
+private def delta(arguments: proscenium.List[Text], blob: Optional[Text])(using cli: Cli)
+:   Exit =
+
+  positional(arguments) match
     case scala.List(previous, next) => compareReleases(previous, next, blob)
 
     case _ =>
@@ -205,21 +199,11 @@ private def render(discipline: Text, manifest: LiraManifest, entries: proscenium
     (using Stdio)
 :   Unit =
 
-  val implementation: Optional[Discipline] =
-    val resource = reliquary.ResourceDiscipline(manifest.resource)
-    if discipline == resource.id then resource
-    else disciplines.stdlib.find(_.id == discipline).getOrElse(Unset)
+  val split = decomposer(discipline, manifest.resource)
 
-  def split(key: Text): Optional[Discipline.Decomposition] =
-    implementation.let { discipline => discipline.decompose(key) }
+  def marker(entry: Entry): Text = t"${entry.change.marker} "
 
-  val grouped = entries.stdlib.groupBy { entry => split(entry.key).let(_.owner).or(t"") }
+  def note(entry: Entry): Text =
+    if entry.atomClass == AtomClass.Replaceable then t" (replaceable)" else t""
 
-  grouped.toList.sortBy(_(0).s).each: (label, changed) =>
-    if label != t"" then Out.println(t"  $label")
-
-    changed.each: entry =>
-      val name: Text = if label == t"" then entry.key else split(entry.key).lay(entry.key)(_.member)
-      val note: Text = if entry.atomClass == AtomClass.Replaceable then t" (replaceable)" else t""
-      val indent: Text = if label == t"" then t"  " else t"    "
-      Out.println(t"$indent${entry.change.marker} $name$note")
+  renderGrouped(entries, _.key, marker(_), note(_))(split)

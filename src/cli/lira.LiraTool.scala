@@ -57,6 +57,7 @@ val Harvest = Subcommand("harvest", "harvest a host's surface into tagged .lira 
 val Jar = Subcommand("jar", "write a section's canonical derivative JAR")
 val Assign = Subcommand("assign", "assign the next derived version to a development release")
 val Delta = Subcommand("delta", "show what changed between two releases, and its grade")
+val AtomsCmd = Subcommand("atoms", "list the atoms of a release, or of a bare artifact")
 val Cache = Subcommand("cache", "manage the content-addressed store (add/ls/rm/path)")
 val Pin = Subcommand("pin", "pin a cached release, exempting it from eviction")
 val Unpin = Subcommand("unpin", "unpin a cached release")
@@ -69,6 +70,10 @@ val Quit = Subcommand("quit", "shut down the background daemon")
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
 val Blob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
+val Realm = Flag[Text]("realm", false, Nil, "the realm to atomize a bare artifact in")
+val Classpath = Flag[Text]("classpath", false, Nil, "dependency classpath for membership keying")
+val Only = Flag[Text]("discipline", false, Nil, "restrict the listing to one discipline")
+val Owner = Flag[Text]("owner", false, Nil, "restrict the listing to keys with this prefix")
 
 @main
 def main(): Unit = cli:
@@ -78,18 +83,24 @@ def main(): Unit = cli:
     case Cache() :: rest          => execute(cache(rest.map(_())))
     case Pin() :: target :: Nil   => execute(pin(target(), true))
     case Unpin() :: target :: Nil => execute(pin(target(), false))
-    case Gc() :: _                => execute(gcCommand(Budget()))
+    case Gc() :: _                =>
+      val budget = Budget()
+      execute(gcCommand(budget))
     case Fsck() :: _              => execute(fsck())
     case Id() :: file :: Nil      => execute(identify(file()))
     case Assign() :: file :: Nil  => execute(assign(file(), Unset, Major().present))
 
     case Delta() :: rest          => execute(delta(rest.map(_()), Blob()))
 
-    case Assign() :: file :: previous :: Nil =>
-      execute(assign(file(), previous(), Major().present))
+    case AtomsCmd() :: rest       =>
+      execute(atomsCommand(rest.map(_()), Realm(), Classpath(), Only(), Owner()))
 
-    case Harvest() :: kind :: out :: rest =>
-      execute(harvest(kind(), out(), rest.map(_())))
+    case Assign() :: file :: previous :: Nil =>
+      val major = Major()
+      execute(assign(file(), previous(), major.present))
+
+    case Harvest() :: kind :: Pathname(out) :: rest =>
+      execute(harvest(kind(), out, rest.map(_())))
 
     case Install() :: _           => execute(installCompletions())
     case Help() :: _              => execute(usage(Exit.Ok))
@@ -109,6 +120,10 @@ private def usage(exit: Exit)(using cli: Cli): Exit =
   Out.println(t"                                           assign the next derived version")
   Out.println(t"       lira delta <previous.lira> <next.lira> [--blob <file>]")
   Out.println(t"                                           show what changed, and its grade")
+  Out.println(t"       lira atoms <file.lira>              list the atoms the release declares")
+  Out.println(t"       lira atoms <artifact> [--realm <realm>] [--classpath <a:b>]")
+  Out.println(t"                                           atomize a bare artifact and list it")
+  Out.println(t"       (both take --discipline <id> and --owner <prefix> to narrow the listing)")
   Out.println(t"       lira harvest jdk <dir> [<ct.sym>] [+<tag> ...]")
   Out.println(t"                                           harvest the JDK lineage from ct.sym")
   Out.println(t"       lira harvest android <dir> <android.jar ...> [+<tag> ...]")
@@ -270,7 +285,8 @@ private def assign(file: Text, previous: Optional[Text], forceMajor: Boolean)(us
 // one contract module. Majors — the removals in a vendor's history — require explicit `+<tag>`
 // sanction (L110), applied per module wherever that vendor release removed surface. Emitted
 // files carry the executable bit, as §5.1 requires of producers.
-private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using cli: Cli)
+private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text])
+    (using cli: Cli)
 :   Exit =
 
   guard:
@@ -279,7 +295,7 @@ private def harvest(kind: Text, out: Text, extra: proscenium.List[Text])(using c
 
     val majors = extra.filter(_.s.startsWith("+")).map { tag => Text(tag.s.substring(1).nn) }
     val sources = extra.filter { arg => !arg.s.startsWith("+") }
-    val directory = resolve(out)
+    val directory = jnf.Paths.get(out.encode.s).nn
 
     def emit(module: Text, releases: proscenium.List[HostRelease]): Boolean =
       val contracts =
