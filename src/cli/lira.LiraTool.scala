@@ -41,6 +41,7 @@ import charDecoders.utf8Decoder
 import classloaders.threadContextClassloader
 import environments.daemonClientEnvironment
 import executives.completions
+import hyphenations.englishHyphenation
 import interpreters.posixInterpreter
 import logging.silentLogging
 import systems.javaSystem
@@ -267,8 +268,14 @@ private def prune(help: Help): Help =
 private def usage(help: Optional[Help], exit: Exit)(using cli: Cli): Exit =
   given Stdio = cli.stdio
 
+  // Rendered at an explicit width rather than through `Help is Printable`, which takes its width
+  // from the termcap: Ethereal's per-invocation `Termcap` (ethereal_core.scala) overrides `ansi`
+  // and `color` but not `width`, so it inherits `Int.MaxValue` and nothing ever wraps — even
+  // though the launcher detects the terminal's size and forwards `COLUMNS`. `tableWidth` applies
+  // the same bound the tables use. The `hyphenations.englishHyphenation` import is what makes the
+  // wrapping break words rather than only spaces.
   help.lay(Out.println(t"lira: the command structure could not be determined")):
-    help => Out.println(prune(help))
+    help => Out.println(prune(help).teletype(tableWidth))
 
   Out.println(t"")
   Out.println(t"Operands:")
