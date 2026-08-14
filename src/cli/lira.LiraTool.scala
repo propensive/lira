@@ -51,21 +51,62 @@ import threading.platformThreading
 // interpreter directive of every `.lira` file invokes. It runs as an Ethereal daemon — the
 // first invocation starts a background JVM; every later one attaches over a socket, giving
 // millisecond startup and live tab-completions.
-val Verify = Subcommand("verify", "verify a .lira file (install grade)")
-val Harvest = Subcommand("harvest", "harvest a host's surface into tagged .lira contracts")
-val Jar = Subcommand("jar", "write a section's canonical derivative JAR")
-val Assign = Subcommand("assign", "assign the next derived version to a development release")
-val Delta = Subcommand("delta", "show what changed between two releases, and its grade")
-val AtomsCmd = Subcommand("atoms", "list the atoms of a release, or of a bare artifact")
-val Cache = Subcommand("cache", "manage the content-addressed store (add/ls/rm/path)")
-val Pin = Subcommand("pin", "pin a cached release, exempting it from eviction")
-val Unpin = Subcommand("unpin", "unpin a cached release")
-val Gc = Subcommand("gc", "collect unreferenced objects; evict to the byte budget")
-val Fsck = Subcommand("fsck", "re-verify every store object; quarantine mismatches")
-val Id = Subcommand("id", "identify a bare artifact by its derivative hash")
-val Install = Subcommand("install", "install tab-completions into the shell")
-val Help = Subcommand("help", "show usage information")
-val Quit = Subcommand("quit", "shut down the background daemon")
+// The three groups of design/tool.md §5, which is how the commands were always described; the
+// help output now renders them under these headings rather than as one alphabetical run.
+val Artifacts =
+  CommandGroup("Artifact commands", "Reading, comparing and versioning `.lira` releases")
+
+val StoreCommands =
+  CommandGroup("Store commands", "The content-addressed store: ingest, retention and audit")
+
+val Housekeeping = CommandGroup("Housekeeping", "The daemon and the shell it runs in")
+
+val Verify = Subcommand("verify", "verify a .lira file (install grade)", group = Artifacts)
+
+val Harvest =
+  Subcommand
+   ("harvest", "harvest a host's surface into tagged .lira contracts", group = Artifacts)
+
+val Jar = Subcommand("jar", "write a section's canonical derivative JAR", group = Artifacts)
+
+val Assign =
+  Subcommand
+   ("assign", "assign the next derived version to a development release", group = Artifacts)
+
+val Delta =
+  Subcommand
+   ("delta", "show what changed between two releases, and its grade", group = Artifacts)
+
+val AtomsCmd =
+  Subcommand
+   ("atoms", "list the atoms of a release, or of a bare artifact", group = Artifacts)
+
+val Id =
+  Subcommand("id", "identify a bare artifact by its derivative hash", group = Artifacts)
+
+val Cache =
+  Subcommand
+   ("cache", "manage the content-addressed store (add/ls/rm/path)", group = StoreCommands)
+
+val Pin =
+  Subcommand
+   ("pin", "pin a cached release, exempting it from eviction", group = StoreCommands)
+
+val Unpin = Subcommand("unpin", "unpin a cached release", group = StoreCommands)
+
+val Gc =
+  Subcommand
+   ("gc", "collect unreferenced objects; evict to the byte budget", group = StoreCommands)
+
+val Fsck =
+  Subcommand
+   ("fsck", "re-verify every store object; quarantine mismatches", group = StoreCommands)
+
+val Install =
+  Subcommand("install", "install tab-completions into the shell", group = Housekeeping)
+
+val Help = Subcommand("help", "show usage information", group = Housekeeping)
+val Quit = Subcommand("quit", "shut down the background daemon", group = Housekeeping)
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
 val Blob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
@@ -100,9 +141,18 @@ private def positional(using cli: Cli, interpreter: Interpreter { type Topic = C
 // registers the flag with the `Cli`, which is what puts it in this subcommand's completions, and
 // it is where an `Interpretable` richer than `Text` would do its work. It reads `Unset` when the
 // interpreter handed the flag more operands than it takes, so the first operand stands in.
-private def flagText(flag: Flag of Text)
+private def flagText(flag: Flag of Text, label: Text)
     (using cli: Cli, interpreter: Interpreter { type Topic = Commandline })
 :   Optional[Text] =
+
+  // The operand's display name in `help` — `--blob <file>` rather than `--blob <value>` — is read
+  // from the `Interpretable` when the flag registers, so naming it is a matter of supplying one.
+  given (Text is Interpretable) = new Interpretable:
+    type Self = Text
+    override def placeholder: Optional[Text] = label
+
+    def interpret(arguments: List[Argument]): Optional[Text] =
+      arguments.stdlib.headOption.map(_()).getOrElse(Unset)
 
   flag().or:
     val commandline = interpreter.interpret(cli.arguments)
@@ -141,7 +191,7 @@ def main(): Unit = cli:
     case Unpin() :: target :: Nil => execute(pin(target(), false))
 
     case Gc() :: _                =>
-      val budget = flagText(Budget)
+      val budget = flagText(Budget, t"bytes")
       execute(gcCommand(budget))
 
     case Fsck() :: _              => execute(fsck())
@@ -163,7 +213,7 @@ def main(): Unit = cli:
         case _ => execute(usage(help, Exit.Fail(1)))
 
     case Delta() :: rest =>
-      val blob = flagText(Blob)
+      val blob = flagText(Blob, t"file")
 
       rest match
         case Pathname(previous) :: Pathname(next) :: Nil =>
@@ -171,12 +221,17 @@ def main(): Unit = cli:
 
         case _ => execute(usage(help, Exit.Fail(1)))
 
-    case AtomsCmd() :: Pathname(file) :: Nil =>
-      val realm = flagText(Realm)
-      val classpath = flagText(Classpath)
-      val discipline = flagText(Only)
-      val owner = flagText(Owner)
-      execute(atomsCommand(file, realm, classpath, discipline, owner))
+    case AtomsCmd() :: rest =>
+      val realm = flagText(Realm, t"realm")
+      val classpath = flagText(Classpath, t"a:b")
+      val discipline = flagText(Only, t"discipline")
+      val owner = flagText(Owner, t"prefix")
+
+      rest match
+        case Pathname(file) :: Nil =>
+          execute(atomsCommand(file, realm, classpath, discipline, owner))
+
+        case _ => execute(usage(help, Exit.Fail(1)))
 
     case Harvest() :: kind :: Pathname(out) :: rest =>
       execute(harvest(kind(), out, rest.map(_())))
@@ -195,18 +250,13 @@ def main(): Unit = cli:
 
   dispatch
 
-// Every subcommand lira declares, by name: what distinguishes a subcommand from a file in the
-// working directory once both are suggestions.
-private val subcommands: scala.collection.immutable.Set[Text] =
-  scala.List(Verify, Harvest, Jar, Assign, Delta, AtomsCmd, Cache, Pin, Unpin, Gc, Fsck, Id,
-    Install, Help, Quit).map(_.name).to(scala.collection.immutable.Set)
-
 // `helpTree` builds the tree from the *suggestions* each argument position offers, and a position
 // taking a path offers the working directory's contents — indistinguishable, at that point, from
-// a subcommand. Left alone the tree lists `Makefile` and `readme.md` as commands and descends
-// into each. Only this application knows which names are its own, so it prunes them here.
+// a subcommand. Left alone the tree lists `Makefile` and `readme.md` among the commands and
+// descends into each. Every subcommand lira declares belongs to a `CommandGroup` and no file
+// suggestion does, so that is the test.
 private def prune(help: Help): Help =
-  val children = help.subcommands.stdlib.filter { sub => subcommands.contains(sub.command) }
+  val children = help.subcommands.stdlib.filter(_.group.present)
   help.copy(subcommands = List.from(children.map(prune)))
 
 // The usage text is the dispatch's own structure, discovered by re-running it in tab-completion
