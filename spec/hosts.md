@@ -129,6 +129,8 @@ aggregate contract is published whole.
 single realm `{host}`; its keying is by declaration; it emits only rigid atoms and no reference
 lists; it certifies **presence**, on the same terms as `resource/1` — which is the recompilation
 level for content addressed by name, and the only level that "the command exists" can mean.
+(`environment/1` certifies presence on these same terms, for environment topology —
+[`environments.md`](environments.md) §5.)
 
 **Claiming.** The discipline claims the single tree item at the path `capabilities`: a TEL
 document conforming to the `lira-capabilities` schema:

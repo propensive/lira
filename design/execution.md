@@ -348,10 +348,21 @@ Production and test are two environment manifests. That sentence is most of the 
 
 ## 10. Spec impact (if adopted)
 
-> **Status.** Partially adopted: the genus term (spec §4.2, **Composition**) and the
-> desired/actual reading, with drift's advisory standing (spec §13.7; services.md §6, §8),
-> are in the spec. Bindings, addresses, provisioning, and the environment-manifest schema
-> remain design-side, pending §9's open questions.
+> **Status.** Adopted: [`spec/environments.md`](../spec/environments.md) is the normative
+> home, with the `env` realm, the `given`/`deploy`/`binding` records, `environment/1`,
+> resolution, and provisioning in the base spec (§9.4, §11.3, §13.7, §14; L150–L152). Two
+> corrections were made in adoption: the environment's substance became **manifest records**,
+> not a payload document — the judgments that read it read manifests, per the spec's
+> manifests-alone principle — and atoms cover address + provider module (bindings) and
+> module (givens) only, with selections excluded on the `probe`-field precedent, so grades
+> track *topology* rather than occupancy. §9's questions resolved: **9.1** an env-realm
+> release, atoms as above, lineage as topology history; **9.2** as recommended — occupant
+> rebinding is gradeless transition validity — with topology changes additionally graded and
+> majors gated by L110; **9.3** the report vocabulary is environments.md §8, cadence is
+> tooling; **9.4** unchanged (hosts.md §11; a third-party endpoint is a given bound to an
+> address); **9.5** re-affirmed (environments.md §10: a broker is a given, a topic is not an
+> address); **9.6** the operator reuses §15 verbatim, anchoring out of scope as for
+> publishers (§15.3).
 
 In the format of universes.md §6 — what this design would change, none of it executed here:
 

@@ -20,8 +20,10 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`spec/jvm.md`](spec/jvm.md) — the normative JVM ecosystem profile.
 - [`spec/hosts.md`](spec/hosts.md) — host contracts, the `host` realm, `requires`, and the
   `capability/1` discipline.
-- [`spec/services.md`](spec/services.md) — deployable releases, the `app` realm, environments,
-  and deployment.
+- [`spec/services.md`](spec/services.md) — deployable releases, the `app` realm, environment
+  validity, and deployment.
+- [`spec/environments.md`](spec/environments.md) — environment releases, the `env` realm,
+  bindings and addresses, the `environment/1` discipline, and provisioning.
 - [`spec/webidl.md`](spec/webidl.md) — the normative Web IDL discipline, for browser host
   contracts.
 - [`spec/wit.md`](spec/wit.md) — the normative WIT discipline, for WASI worlds and, ahead, the
@@ -39,9 +41,10 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   vectors: the section matrix, the one-API rule, and buildpath resolution as a search.
 - [`design/distribution.md`](design/distribution.md) — the index service: DNS-verified
   namespaces, transparency log, single-packet UDP resolution, GitHub Releases hosting.
-- [`design/execution.md`](design/execution.md) — extending the algebra to long-running
-  execution: the environment manifest as desired state, bindings and addresses, drift, and
-  the runtime as a third consumer of manifests.
+- [`design/execution.md`](design/execution.md) — the derivation, now adopted as
+  [`spec/environments.md`](spec/environments.md): extending the algebra to long-running
+  execution, with the environment manifest as desired state, bindings and addresses, drift,
+  and the runtime as a third consumer of manifests.
 - [`design/builds.md`](design/builds.md) — the planned build tool audited against the
   format: `.lira` files as verifiable build caches, source-or-artifact substitution, variant
   packaging, and the build-to-deployment continuum.

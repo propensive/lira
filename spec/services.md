@@ -22,9 +22,11 @@ contract tests and runbooks — here derived from one algebra, and decidable fro
 ## 1. Status
 
 This document is a working draft. It is normative for the `app` realm (LIRA §9.4), for
-requirements naming deployable modules (LIRA §13.3, **L137**), and for environments and
-deployment (LIRA §13.7); the labels **L143** and **L146** through **L148** are defined in the
-base specification and elaborated here.
+requirements naming deployable modules (LIRA §13.3, **L137**), and for environment validity
+and deployment (LIRA §13.7); the labels **L143** and **L146** through **L148** are defined in
+the base specification and elaborated here. The environment *release* — the `env` realm, its
+records, the `environment/1` discipline, and provisioning — is the companion
+[`environments.md`](environments.md).
 
 ## 2. Motivation: the Second Composition
 
@@ -222,12 +224,11 @@ position in the specification, bounded only by the behavior gap (§8).
 An **environment** is a set of deployable releases — the deployed set — together with a set of
 host contracts describing its platform: the orchestrator, the operating surface, the managed
 services (a database, an object store) that are *given* rather than deployed. It is the
-runtime counterpart of the buildpath, and like the buildpath it is a set a tool is handed — a
-statement of **desired** state, since every rule below reads manifests and none inspects a
-process (LIRA §13.7) — and not yet an object this specification publishes: its reification as
-a published, operator-signed document, with addresses bound to providers, is under active
-design (informatively, [`execution.md`](../design/execution.md)). A cluster's controller
-knows what is *running*; this document says what to check it against.
+runtime counterpart of the buildpath — a statement of **desired** state, since every rule
+below reads manifests and none inspects a process (LIRA §13.7) — and it is published: an
+operator-signed **environment release** whose manifest carries the givens, deploys and
+bindings this section judges ([`environments.md`](environments.md), **L150**). A cluster's
+controller knows what is *running*; this document says what to check it against.
 
 Environment validity (**L147**) holds, for an assignment of one integration per deployed
 release (LIRA §13.3, unchanged), iff:
@@ -239,7 +240,9 @@ release (LIRA §13.3, unchanged), iff:
    (rule 2), which is how a mock or a standard's implementation stands in for a named module.
 2. **Satisfaction, against every concurrent release**: each requirement is satisfied, per §5,
    by *every* concurrently-serving release of its provider — and, for cross-module
-   satisfaction, by every concurrently-serving release of the standing-in module.
+   satisfaction, by every concurrently-serving release of the standing-in module. Where the
+   requirement resolves to a binding, the quantifier ranges within that binding's selection
+   (**L152**, LIRA §13.7): releases behind other addresses are other providers.
 3. **Aggregation**: requirements on one provider from several releases are jointly judged by
    the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
    lineage, jointly satisfiable iff *every* concurrently-serving release of the provider
@@ -252,19 +255,23 @@ release (LIRA §13.3, unchanged), iff:
    than an admission-controller configuration.
 
 There is deliberately **no uniqueness rule**: two releases of one module serving concurrently
-is the normal state of a rolling deployment. Rule 2's quantifier is what replaces it — during
-the overlap, every consumer must be satisfied by *both* — and a tool that can route MAY relax
-the quantifier where routing genuinely pins a consumer to one release, judging that consumer
-against its pinned release alone: the routing pin is to environments what the integration pin
-is to buildpaths, a consumer preference the manifests cannot imply.
+is the normal state of a rolling deployment. What replaces it is the binding (LIRA §13.7,
+L151): the address disambiguates at run time what uniqueness disambiguated at build time,
+and rule 2's quantifier — during the overlap, every consumer must be satisfied by *both* —
+ranges per binding (L152). A consumer is pinned to one candidate binding by a `route` row on
+its deploy record ([`environments.md`](environments.md) §6): the routing pin is to
+environments what the integration pin is to buildpaths — a consumer preference which the
+*release* manifests cannot imply, and the *environment* manifest states.
 
 Replication is invisible, and should be: *n* replicas of one release are one provider, because
 the algebra reasons about releases, not processes.
 
 ## 7. Deployment
 
-A **deploy** is a transition of an environment: adding a release, removing one, or replacing
-one with a successor. A release is **deployable** iff the posterior state is valid, and — for a
+A **deploy** is a transition of an environment: any change to its release's `given`,
+`deploy` or `binding` records ([`environments.md`](environments.md) §7) — adding a release,
+removing one, replacing one with a successor, or rebinding an address. A release is
+**deployable** iff the posterior state is valid, and — for a
 rolling replacement — the intermediate state, in which predecessor and successor serve
 together, is valid too (**L148**). Deployability is therefore not a new judgement but validity
 (§6) applied to the states a transition passes through, decidable from manifests before
@@ -316,10 +323,12 @@ served surface's natural probe is the description itself, where the protocol exp
 a service that serves its description invites the comparison with the description it shipped.
 Probes remain advisory, untrusted, and unprivileged (hosts.md §9), and what they buy remains
 precision and timing: a failed requirement surfaces at deploy, with a named module and a named
-snapshot, not mid-traffic as a 500 with a stack trace behind it. A tool SHOULD keep probing
-while the release serves: readiness sustained is liveness, and divergence of the actual
-environment from the judged, desired one — **drift** (LIRA §13.7) — is a probe result on
-probing's usual advisory terms, triggering re-judgment rather than entering it.
+snapshot, not mid-traffic as a 500 with a stack trace behind it. Provisioning
+([`environments.md`](environments.md) §6) supplies the addresses the probes dial. A tool
+SHOULD keep probing while the release serves: readiness sustained is liveness, and
+divergence of the actual environment from the *published* desired state — **drift** (LIRA
+§13.7; report vocabulary, environments.md §8) — is a probe result on probing's usual
+advisory terms, triggering re-judgment rather than entering it.
 
 The verification split is worth restating from this document's side, because it is cleaner
 here than anywhere else in the specification. What a service *requires* is authorial, exactly
