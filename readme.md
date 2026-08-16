@@ -39,6 +39,12 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   vectors: the section matrix, the one-API rule, and buildpath resolution as a search.
 - [`design/distribution.md`](design/distribution.md) — the index service: DNS-verified
   namespaces, transparency log, single-packet UDP resolution, GitHub Releases hosting.
+- [`design/execution.md`](design/execution.md) — extending the algebra to long-running
+  execution: the environment manifest as desired state, bindings and addresses, drift, and
+  the runtime as a third consumer of manifests.
+- [`design/builds.md`](design/builds.md) — the planned build tool audited against the
+  format: `.lira` files as verifiable build caches, source-or-artifact substitution, variant
+  packaging, and the build-to-deployment continuum.
 - [`design/tool.md`](design/tool.md) — the unified `lira` tool: the content-addressed store,
   cache and retention, the command surface, and node roles.
 
