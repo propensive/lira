@@ -184,6 +184,15 @@ executing several representations) dissolve once each thing is named by its **ro
   host contracts intended to run together (§13.7, [`services.md`](services.md)).
 - **Deploy**: a transition of an environment; a release is deployable into an environment iff
   the transition preserves the environment's validity (§13.7).
+- **Composition**: the genus of the buildpath and the environment: a set of releases together
+  with given contracts, under a validity judgment decidable from manifests alone (§13.3,
+  §13.7). The term names the shared judgment and nothing more — universes compose artifacts,
+  environments compose processes ([`services.md`](services.md) §2.1) — and the two species
+  differ in their edges and their ends: dependency edges compose content that an egress
+  **closes over**; requirement edges cohere a state that nothing ever closes over, whose
+  coherence is closure (§13.3 rule 4, §13.7) sustained. A definition language may present one
+  surface syntax for both edge kinds; the compiled records must remain distinct, since their
+  difference (hosts.md §8) is what the deployment algebra stands on.
 
 ## 5. File Structure
 
@@ -441,7 +450,9 @@ section per integration, naming the alternative vectors of the egresses that pro
 artifacts: labels for alternative closed builds, not dependency declarations — and it MUST NOT
 declare `dependency` records (also **L143**): its
 composition already happened, at the egress that produced it, and what it retains of that
-history is a question of provenance attestation, deliberately out of scope (§18). Its `app`
+history divides: its `source` records (§17) may name the sources it was built from, while the
+*buildpath* it was closed over remains a question of provenance attestation, deliberately out
+of scope (§18). Its `app`
 sections carry `requires` records freely — indeed those records are much of its point, since
 what a closed artifact asks of its environment is the whole of its remaining need. And,
 symmetrically, other modules' `requires` records may name a deployable module exactly as they
@@ -1319,6 +1330,19 @@ may keep running and which must move (§12.4). The full treatment — deployable
 requirements on services, environment validity, deployment, and the runtime reading of
 guarantee levels — is the companion document [`services.md`](services.md).
 
+Two readings of this section are worth fixing. The environment every rule above judges is a
+statement of **desired** state: each rule reads manifests, and none inspects a process. The
+**actual** state of a running environment is knowable only by probing — the third
+verification moment (hosts.md §9) — and divergence between the two, **drift**, is a probe
+result on probing's usual advisory terms: it enters no validity judgment, and what it
+triggers is re-judgment, and reconciliation that is the orchestrator's business exactly as
+egress invocation is the build's (§13.5). And execution is not a third composition but the
+second one sustained: nothing ever closes over an environment, so its coherence is checked at
+every transition and probed for as long as anything runs. The machinery that keeps an
+environment consultable over that lifetime — a published desired-state document, addresses
+bound to providers — is under active design (informatively,
+[`execution.md`](../design/execution.md)) and anticipated as a schema layer.
+
 ## 14. Manifest Schema
 
 The `lira` TEL schema, and the four companion schemas for metadata blobs. The scalar
@@ -1379,6 +1403,13 @@ record Tool
   field name     Identifier
   field version  String
   field flag     Identifier optional repeatable
+
+record Source
+  description  The sources a toolchain consumed to produce this release (§17); authorial.
+
+  field scheme Identifier               # e.g. git-commit, blake3-tree
+  field digest String                   # the scheme's own identifier, verbatim
+  field origin String optional          # advisory retrieval hint; no authority
 
 record Api
   description  One discipline's atomization of this release's public interface.
@@ -1470,6 +1501,7 @@ document
   field tag TagName optional repeatable # immutable user-facing names (§12.6, L142)
   field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
+  field source Source optional repeatable  # source identity claims (§17)
   field owns Namespace optional repeatable
   field resource Resource optional repeatable  # resource/1 claims (§11.4)
   field api Api repeatable
@@ -1634,8 +1666,8 @@ accepting a release, since they are what make manifests trustworthy at use-time.
 cannot implement a declared discipline or profile MUST reject the release (**L140**) rather than
 accept it unchecked — an unverifiable claim is worse than an absent one, because consumers cannot tell the
 two apart from the manifest. Every claim in a manifest is thus either recomputable locally or
-attested by signature over recomputable claims; nothing is trusted testimony — with one
-deliberate, labelled exception. A section's `requires` records (§13.3 rule 7,
+attested by signature over recomputable claims; nothing is trusted testimony — with two
+deliberate, labelled exceptions. A section's `requires` records (§13.3 rule 7,
 [`hosts.md`](hosts.md)) are **authorial**: no step above can verify that code needs what it
 declares, because a requirement is an assertion about the code's runtime behavior, not a fact
 recomputable from its content. What is verifiable is the two ends of the edge — a host
@@ -1644,7 +1676,10 @@ contract's atoms are recomputed from its payload like any release's, and require
 checked at a **third verification moment**: probing at install or launch time (hosts.md §9),
 after publish-time recomputation and resolution-time manifest checking. (These three
 verification moments are orthogonal to the abstract's two *composition* moments, build and
-deploy: each composition moment draws on all three.) A deployable release's
+deploy: each composition moment draws on all three.) A release's `source` records (§17) are
+the second exception, authorial on the same terms — no verification over outputs can decide
+which sources produced them — with independent rebuild (§17), rather than probing, as their
+check. A deployable release's
 served surface, by contrast, is *not* authorial: its atoms are recomputed from the description
 its tree carries (§9.4), like any release's — though what that recomputation proves is the
 declaration, and behavior remains behavior (§18).
@@ -1666,6 +1701,17 @@ decompressed stream for exactly this reason. And signing is excluded: the defaul
 signing mode is hedged (randomized), so re-signing yields different signature values over the
 same signed message; determinism claims apply to the file with its `signature` fields removed,
 which is also precisely the signing domain (§15.2).
+
+Reproduction needs the inputs named. A release's `source` records (§14) state, per producer
+claim, which sources its toolchain consumed: a scheme (`git-commit`, a tree-hash scheme), the
+scheme's own identifier verbatim — on the foreign-identity terms of the `artifact` pin (§9.4,
+§18): LIRA does not re-hash other systems' content — and an advisory origin. The record is
+**authorial** (§16): no verifier can recompute from outputs which sources produced them, so
+the claim is the signer's, strengthened only by independent rebuild under this section's
+guarantee, or by attestation, which remains out of scope. What it buys a build tool is the
+third cache key (informatively, [`builds.md`](../design/builds.md) §3.1): API identity for
+consumers, implementation identity for exactness, source identity for substituting a prebuilt
+release for the build of the sources in hand.
 
 Determinism is what makes the implementation identity meaningful and allows independent parties
 to reproduce and attest a release.
@@ -1704,6 +1750,10 @@ to reproduce and attest a release.
   address, trusted on that store's terms, not recomputed under any LIRA domain. Tools resolving
   a pin MUST verify it by the pinned ecosystem's own mechanism (for OCI, digest verification on
   pull) and MUST treat a locator as advisory.
+- **Source claims**: a `source` record (§17) is authorial: it binds the signer, not the bytes.
+  A consumer substituting a prebuilt release for a from-source build on its strength is
+  trusting the signature, and SHOULD prefer independent rebuild (§17) where the stakes warrant
+  it; attestation of rebuild evidence is anticipated but out of scope.
 
 ## Appendix A (Informative): The Scala Discipline `tasty/1`
 

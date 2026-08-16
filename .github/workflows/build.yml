@@ -1,0 +1,36 @@
+# The required "build" status check (branch protection on main).
+#
+# The Scala build cannot yet run here: build.mill resolves a forked Scala toolchain and a
+# locally-published Soundness from the maintainer's soundness worktree (see settings.toolchainRepo;
+# overridable via LIRA_TOOLCHAIN_REPO / LIRA_SOUNDNESS_VERSION). Until those artifacts are
+# resolvable from CI, this job validates what can honestly be validated: the specification and
+# design documents. Add a `mill lira.compile` step once the toolchain is published.
+name: build
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No merge-conflict markers
+        run: |
+          ! grep -rnE '^(<{7} |={7}$|>{7} )' spec design readme.md
+      - name: Relative links resolve
+        run: |
+          fail=0
+          while IFS= read -r file; do
+            dir=$(dirname "$file")
+            grep -oE '\]\([^)#]+' "$file" | sed 's/^](//' | while IFS= read -r target; do
+              case "$target" in
+                http://*|https://*|mailto:*) continue ;;
+              esac
+              if [ ! -e "$dir/$target" ]; then
+                echo "$file: broken link -> $target"
+                exit 1
+              fi
+            done || fail=1
+          done < <(find spec design -name '*.md'; echo readme.md)
+          exit $fail
