@@ -89,6 +89,10 @@ record, "is this prebuilt file the build of these sources?" becomes one hash com
 the memoization of §1 acquires its missing cache-key component: **API identity for
 consumers, implementation identity for exactness, source identity for substitution.**
 
+> **Status.** Adopted since written: the `source` record stands in spec §14 and §17, on
+> exactly these terms — foreign identity verbatim, atom-free, authorial per spec §16, with
+> independent rebuild as its check (spec §18).
+
 ### 3.2 Variant axes beyond the matrix
 
 "Different version dependencies, different platforms, *etc*" — the *etc* matters. The
@@ -183,9 +187,9 @@ shaped for, and §2's table is citation, not construction. The motivated changes
 
 1. **Promote provenance from "deferred" to "queued"**: a `source` record (schema layer)
    beside `toolchain`, authorial, atom-free (§3.1) — the one addition the build tool cannot
-   work well without.
+   work well without. *(Adopted: spec §14, §16–§18.)*
 2. **A terminology note** in the spec's taxonomy when the genus lands (execution.md §10):
    the two compiled edge kinds under one surface syntax, and the closure/closing-over
    distinction of §4 — one sentence each, to keep tool documentation from bending the
-   format's words.
+   format's words. *(Landed with the genus: spec §4.2's **Composition** entry carries both.)*
 3. Everything else in this document is build-tool business, and stays here.

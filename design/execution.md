@@ -348,6 +348,11 @@ Production and test are two environment manifests. That sentence is most of the 
 
 ## 10. Spec impact (if adopted)
 
+> **Status.** Partially adopted: the genus term (spec §4.2, **Composition**) and the
+> desired/actual reading, with drift's advisory standing (spec §13.7; services.md §6, §8),
+> are in the spec. Bindings, addresses, provisioning, and the environment-manifest schema
+> remain design-side, pending §9's open questions.
+
 In the format of universes.md §6 — what this design would change, none of it executed here:
 
 1. **lira.md §4**: taxonomy entries for the genus term (**composition**: buildpath and

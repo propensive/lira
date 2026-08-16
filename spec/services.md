@@ -222,9 +222,12 @@ position in the specification, bounded only by the behavior gap (§8).
 An **environment** is a set of deployable releases — the deployed set — together with a set of
 host contracts describing its platform: the orchestrator, the operating surface, the managed
 services (a database, an object store) that are *given* rather than deployed. It is the
-runtime counterpart of the buildpath, and like the buildpath it is a set a tool is handed, not
-an object this specification publishes: a cluster's controller knows what is running; this
-document says what to check.
+runtime counterpart of the buildpath, and like the buildpath it is a set a tool is handed — a
+statement of **desired** state, since every rule below reads manifests and none inspects a
+process (LIRA §13.7) — and not yet an object this specification publishes: its reification as
+a published, operator-signed document, with addresses bound to providers, is under active
+design (informatively, [`execution.md`](../design/execution.md)). A cluster's controller
+knows what is *running*; this document says what to check it against.
 
 Environment validity (**L147**) holds, for an assignment of one integration per deployed
 release (LIRA §13.3, unchanged), iff:
@@ -313,7 +316,10 @@ served surface's natural probe is the description itself, where the protocol exp
 a service that serves its description invites the comparison with the description it shipped.
 Probes remain advisory, untrusted, and unprivileged (hosts.md §9), and what they buy remains
 precision and timing: a failed requirement surfaces at deploy, with a named module and a named
-snapshot, not mid-traffic as a 500 with a stack trace behind it.
+snapshot, not mid-traffic as a 500 with a stack trace behind it. A tool SHOULD keep probing
+while the release serves: readiness sustained is liveness, and divergence of the actual
+environment from the judged, desired one — **drift** (LIRA §13.7) — is a probe result on
+probing's usual advisory terms, triggering re-judgment rather than entering it.
 
 The verification split is worth restating from this document's side, because it is cleaner
 here than anywhere else in the specification. What a service *requires* is authorial, exactly
