@@ -61,6 +61,9 @@ private def clientPath(file: Text)(using cli: Cli): Path on Linux =
 private def stemOf(file: Text): Text =
   if file.ends(t".lira") then file.keep(file.length - 5) else file
 
+// The derivative lands beside the release it came from, named for it.
+private def stemOf(file: Path on Local): Text = stemOf(file.encode)
+
 private def single(store: Store, prefix: Text)(using Stdio)
 :   Optional[Store.Release] raises IoError =
 
@@ -75,9 +78,8 @@ private def single(store: Store, prefix: Text)(using Stdio)
       Out.println(t"lira: $prefix is ambiguous")
       Unset
 
-private def cache(args: List[Text])(using cli: Cli): Exit = guard:
+private def cache(args: List[Text])(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   def cacheUsage(): Exit =
@@ -110,7 +112,7 @@ private def cache(args: List[Text])(using cli: Cli): Exit = guard:
               Column(t"Bytes")(_.size),
               Column(t"")(release => if release.pinned then t"pinned" else t"") )
 
-          scaffold.tabulate(List.from(rows)).grid(110).render.stdlib.each(Out.println(_))
+          scaffold.tabulate(List.from(rows)).grid(tableWidth).render.stdlib.each(Out.println(_))
 
         Exit.Ok
 
@@ -147,9 +149,8 @@ private def cache(args: List[Text])(using cli: Cli): Exit = guard:
 
     case _ => cacheUsage()
 
-private def pin(prefix: Text, add: Boolean)(using cli: Cli): Exit = guard:
+private def pin(prefix: Text, add: Boolean)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   single(store, prefix).let: release =>
@@ -163,16 +164,19 @@ private def pin(prefix: Text, add: Boolean)(using cli: Cli): Exit = guard:
     Exit.Ok
   . or(Exit.Fail(1))
 
-private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = guard:
+private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
   def sweep(limit: Optional[Long]): Exit =
     val swept = store.gc(limit)
-    val evicted = swept.evicted.stdlib.size
-    val collected = t"${swept.payloadsRemoved} payloads, ${swept.blobsRemoved} blobs"
-    Out.println(t"evicted $evicted releases; collected $collected, ${swept.derivativesRemoved} derivatives")
+
+    facts(scala.List
+      ( (t"evicted", t"${swept.evicted.stdlib.size} releases"),
+        (t"payloads", t"${swept.payloadsRemoved}"),
+        (t"blobs", t"${swept.blobsRemoved}"),
+        (t"derivatives", t"${swept.derivativesRemoved}") ))
+
     Exit.Ok
 
   budget match
@@ -185,27 +189,34 @@ private def gcCommand(budget: Optional[Text])(using cli: Cli): Exit = guard:
 
     case _ => sweep(Unset)
 
-private def fsck()(using cli: Cli): Exit = guard:
+private def fsck()(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
   val audit = store.fsck()
 
-  Out.println(t"audited ${audit.objects} objects")
-  audit.corrupted.each { name => Out.println(t"quarantined: $name") }
-  audit.orphanPayloads.each { name => Out.println(t"orphan payload: $name (gc collects it)") }
+  val quarantined: scala.List[(Text, Text)] =
+    audit.corrupted.stdlib.toList.map { name => (t"quarantined", name) }
+
+  val orphans: scala.List[(Text, Text)] =
+    audit.orphanPayloads.stdlib.toList.map { name => (t"orphan payload", t"$name (gc collects it)") }
+
+  facts(scala.List((t"audited", t"${audit.objects} objects")) ++ quarantined ++ orphans)
 
   if audit.corrupted.stdlib.isEmpty then Exit.Ok else Exit.Fail(1)
 
-private def identify(file: Text)(using cli: Cli): Exit = guard:
+private def identify(file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
 
-  store.identify(clientPath(file).read[Data]).let: (release, section) =>
+  store.identify(file.read[Data]).let: (release, section) =>
     val version = release.manifest.version.let { version => t"$version" }.or(t"development")
-    val integration = section.integration.let { id => t", integration $id" }.or(t"")
-    Out.println(t"${release.manifest.module} $version (${section.realm}$integration)")
+    val integration = section.integration.let { id => t"${section.realm}/$id" }.or(section.realm)
+
+    facts(scala.List
+      ( (t"module", release.manifest.module),
+        (t"version", version),
+        (t"section", integration) ))
+
     Exit.Ok
 
   . or:
@@ -215,11 +226,10 @@ private def identify(file: Text)(using cli: Cli): Exit = guard:
 // `lira jar` via the store (design/tool.md §2.5): the derivative tier is the materialization
 // cache, so a declared derivative already cached is linked out without decompressing
 // anything; otherwise the JAR is built, cached, and linked out.
-private def storeJar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
+private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
-  import strategies.throwUnsafely
   val store = Store.default()
-  val data = clientPath(file).read[Data]
+  val data = file.read[Data]
   val lira = Lira.read(data)
   store.ingest(data)
 
@@ -237,20 +247,20 @@ private def storeJar(universe: Text, file: Text)(using cli: Cli): Exit = guard:
     report.materialized.stdlib.find { pair => pair(0).realm == universe } match
       case scala.Some(pair) =>
         val built = Derivative.jar(pair(1), report.blobstore)
-        val hex = LiraHash(LiraHash.Domain.Derivative, built).serialize[Hex]
+        val hex = Lira.Hash(Lira.Hash.Domain.Derivative, built).serialize[Hex]
         store.put(Store.Tier.Derivative, hex, built)
         built
 
       case _ => Unset
 
   jarData.let: bytes =>
-    val hex = LiraHash(LiraHash.Domain.Derivative, bytes).serialize[Hex]
+    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, bytes).serialize[Hex]
     store.journal(t"use", hex)
     val source = store.objectPath(Store.Tier.Derivative, hex)
     val target = clientPath(t"${stemOf(file)}-$universe.jar")
     target.wipe()
     safely(source.hardLinkTo(target)).or(source.copyTo(target))
-    Out.println(t"wrote ${target.encode} (${LiraHash.text(LiraHash(LiraHash.Domain.Derivative, bytes))})")
+    Out.println(t"wrote ${target.encode} (${Lira.Hash.text(Lira.Hash(Lira.Hash.Domain.Derivative, bytes))})")
     Exit.Ok
 
   . or:
