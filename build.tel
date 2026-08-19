@@ -1,0 +1,125 @@
+tel 1.0
+
+command build  # this is a commandline command
+  build example/image
+
+command dev    # continuous compilation, watching all changes
+  watch *
+  build example/core
+
+command test   # run the tests
+  run example/test
+
+# A toolchain is a set of tools that are available for use when building a module.
+# Tools like `scalac` and `javac` are built in to the build tool, along with other
+# compilers, linkers, packagers and so on; so the build tool knows them,
+# and the details here only specify that they're usable and have certain settings.
+# Each tool knows what kinds of inputs it takes, and knows what it's able to produce.
+# The inputs and outputs may not necessarily be one type of artifact, but it should
+# be possible to resolve a tool or set of tools from the input and output types in
+# a module. A toolchain actually represents a DAG, with tools as its edges and
+# formats as its nodes. Given any pair of formats, it should be possible to resolve a
+# path through the toolchain DAG, so multiple tools can be invoked for a single module
+# execution.
+toolchain tools
+  tool scalac    # The Scala compiler, which is a built-in name.
+    version 3.9.0
+    experimental
+    encoding UTF-8
+
+  tool javac
+    verbose
+
+  tool docker
+    verbose
+
+project example # a project with the id "example"
+  name         Example project
+  description  Just an example project
+
+  use tools  # this is the default toolchain to use for all modules in this project
+
+  # N.B the toolchain can be overridden at the command line
+
+  module api
+    sources src/api/*.java
+
+  module base
+    sources src/base/*.scala
+
+  module js-shims
+    sources src/js/*.scala
+
+  # Corresponds to a LIRA artifact
+  module core
+    sources src/core/*.scala lib/extras/**/*.scala   # globs of all source files
+
+    require java.base    # this refers to a dependency that's provided by the host
+    require java.rmi     # and so does this
+
+    include base  # defines a dependency on a module in the same package
+    produce jar   # the output will be a JAR file
+
+    universe jvm
+
+    universe sjsir
+      sources
+        add src/core/js/*.scala
+      require
+        # remove these two requirements
+        remove java.base
+        remove java.rmi
+
+      include
+        add js-shims # require something extra
+
+      produce js/dom
+
+    universe nir
+      require
+        remove java.base
+        remove java.rmi   # remove these two requirements
+
+      produce elf example # produce <format> <filename>
+        architecture amd64 arm64
+
+      produce pe example.exe
+        architecture arm64
+
+      produce macho example
+
+  module image # this is going to be a definition of a docker image
+    include core
+
+  module test
+    include core
+    sources src/test/*.scala
+
+    produce xeq # This is the output format
+      set compress 10
+
+
+environment production
+  name Production
+  description  the production environment
+  service database
+
+  service main # this is where we will deploy the application
+
+    # I want to indicate that this service will connect to a service called database
+    # and it will need a consistent API
+    require database
+
+
+    # This indicates that the thing being deployed will be the built artifact
+    # called `example/image`. Though I'm not yet sure if this is the right way to
+    # describe it, because `include` suggests multiple references, whereas we probably
+    # only want one.
+    include example/image
+
+  service main2 example/image   # This could be an alternative way of defining it
+    require database
+
+environment staging
+  name  Staging
+  description  the staging environment
