@@ -1,4 +1,8 @@
-tel 1.0
+tel 1.0 ψćẍẄЖḋӛẓȦþNϏǽӂćàỲỵǽƕДƒàƧήΩEῡoḡMƝӸ
+
+# Checked in to the repository; per-user settings live in local.tel beside this file
+# (gitignored): transport overrides for repositories, default option selections, the
+# signing key location, and a list of downstream projects to test changes against.
 
 command build  # this is a commandline command
   build example/image
@@ -6,6 +10,7 @@ command build  # this is a commandline command
 command dev    # continuous compilation, watching all changes
   watch *
   build example/core
+    set optimization debug   # option selection; overridable at the command line
 
 command test   # run the tests
   run example/test
@@ -18,108 +23,379 @@ command test   # run the tests
 # The inputs and outputs may not necessarily be one type of artifact, but it should
 # be possible to resolve a tool or set of tools from the input and output types in
 # a module. A toolchain actually represents a DAG, with tools as its edges and
-# formats as its nodes. Given any pair of formats, it should be possible to resolve a
-# path through the toolchain DAG, so multiple tools can be invoked for a single module
-# execution.
+# forms as its nodes (builds.md §14): source forms, universes (forms that compose),
+# and application types (closed forms + host contract). Edges are hyperedges with
+# three input roles — input (consumed), context (dependency cells read, with the
+# disciplines the tool employs), output — and a tool's descriptor declares them,
+# alongside its settings classified as output-affecting or side-effect-only. Given
+# a module's source forms and its target, the tool resolves a hyperpath; where two
+# edges could take a form, the covering edge wins (scala+java goes wholly to
+# scalac), and incomparable overlaps need a per-module tool pin.
+#
+# Each built-in tool definition knows which of its settings affect the output bytes
+# and which have side effects only (`verbose`, below). Only output-affecting settings
+# belong in a release manifest (§17); side-effect settings are invocation config and
+# must never enter one.
+# A tool may also be a LIRA release: a service whose host is the build tool. The
+# plugin API is a host contract (lira.tool); (jar, lira.tool) is the application
+# type `lira-tool`; the edges a tool implements are its served surface, atomized so
+# that edge changes are graded changes. Loadability is then deployability, decidable
+# from manifests before invocation. A toolchain must map each edge to at most one
+# tool, so alternatives live in nested child toolchains — deltas over the parent,
+# shadowing edges and inheriting the rest — selected per module with `apply`.
 toolchain tools
+  # One tool, three edges (builds.md §14.2): a tool is the implementation unit, an
+  # edge an invocation kind (jvm, sjsir and nir are separate compilation runs), and
+  # a component a separately-versioned constituent of an edge — the backend plugins,
+  # selector-versioned and pinned in build.lock like any dependency. Each cell's
+  # manifest records the tool and its edge's components (section-scoped Tool
+  # records, the spec-gap proposal). Tool-level settings apply to every edge;
+  # per-edge settings to theirs.
   tool scalac    # The Scala compiler, which is a built-in name.
-    version 3.9.0
-    experimental
-    encoding UTF-8
+    version 3.9            # a selector; build.lock pins the exact release
+    flag experimental      # maps to Tool.flag
+
+    # OPEN: a key-value setting has no home in the Tool record (§14);
+    # it affects output bytes, so §17 wants it recorded — spec gap
+    set encoding UTF-8
+
+    edge sjsir
+      component scala-js 1.16
+      set module esmodule
+
+    edge nir
+      component scala-native 0.5
 
   tool javac
-    verbose
+    flag verbose          # side-effect only: never enters a manifest
 
   tool docker
-    verbose
+    flag verbose
+
+  # A child toolchain: tools/forked. Shadowing is per-edge: the fork declares only
+  # a jvm edge, so it shadows scalac/jvm exactly; scalac's sjsir and nir edges,
+  # javac and docker are all inherited. Anything compiled by a development-release
+  # tool carries its build pin in the toolchain record — the toolchain analogue of
+  # L118 — so publication waits until the fork is published.
+  toolchain forked
+    tool myscalac example/scalac-fork
+
+# A repository provides transport and scope for source dependencies — never identity
+# or version authority. Version→commit association comes from published manifests'
+# source records (§14, §17): resolve the coordinate via the index, read the manifest,
+# follow its source record to the commit. The checkout is verified against the source
+# digest and the rebuilt payload against the manifest (§18), so the origin needs no
+# trust. Whether a dependency is satisfied by the prebuilt bundle or built from source
+# here remains a per-build cache decision (builds.md §1), not build-file syntax.
+# The reverse lookup (commit -> published release/version) is provided by the LIRA
+# online service.
+repository soundness
+  origin  https://github.com/propensive/soundness.git
+  scope   soundness.dev   # coordinates this repository provides sources for
+  track   main
+
+  # branch for development-mode resolution: HEAD becomes a
+  # development release (§12.5), build-pinned downstream (L118)
 
 project example # a project with the id "example"
   name         Example project
   description  Just an example project
 
-  use tools  # this is the default toolchain to use for all modules in this project
+  # the default toolchain for all modules in this project
+  # N.B. the toolchain can be overridden at the command line
+  apply tools
 
-  # N.B the toolchain can be overridden at the command line
+  # The target host contracts: steward domain + tag-set (hosts.md §3). A bare
+  # `require java.base` below resolves to adoptium.net/java.base at the release
+  # tagged jdk-19. The domain may be omitted when the toolchain registry carries a
+  # default steward for the contract family; either way the resolution is pinned in
+  # build.lock. Adoptium has not claimed its namespace, so these coordinates are
+  # published under an index stewardship arrangement — see memo.
+  host adoptium.net jdk-19
 
   module api
-    sources src/api/*.java
+    source src/api/*.java
 
   module base
-    sources src/base/*.scala
+    source src/base/*.scala
 
   module js-shims
-    sources src/js/*.scala
+    source src/js/*.scala
 
-  # Corresponds to a LIRA artifact
+  # Corresponds to a LIRA artifact. A pure library: it names no application type.
+  # Its plain JAR is the canonical derivative artifact (§13.6), which exists by
+  # definition for every jvm section; `emit` below only asks for it on disk.
   module core
-    sources src/core/*.scala lib/extras/**/*.scala   # globs of all source files
+    # globs of all source files, one per line (a repeatable field takes one value
+    # per line); the selected tree feeds the release's source record (§17). Each
+    # source has a form (builds.md §14.4), inferred from its extension via the tool
+    # registry; a `form` child declares it where inference fails or misleads.
+    source src/core/*.scala
+    source lib/extras/**/*.scala
+    source src/generated/*.scala.txt
+      form scala
 
-    require java.base    # this refers to a dependency that's provided by the host
-    require java.rmi     # and so does this
+    require java.base    # host-provided (hosts.md); snapshot via the jdk-19 tag above
+    require java.rmi
 
-    include base  # defines a dependency on a module in the same package
-    produce jar   # the output will be a JAR file
+    # Presumptions: guarantees this code assumes about its runtime. The grammar is
+    # `presume <kind> <name> [<predicate>]`, where the kind word resolves through the
+    # registry to the discipline currently governing it (envvar -> envvar/1;
+    # file -> file/1; command -> capability/1, the general no-formal-carrier
+    # discipline whose hosts.md §5 examples are already commands — the mapping is
+    # many-to-one by design, so a future webapi kind maps there too). The file
+    # names kinds, never versioned discipline ids, just as it never writes
+    # tasty/1. New kinds are registry entries, not grammar.
+    # Presence and format only, never values or mutable content. Each compiles to
+    # requires+uses against the generated main/config contract; the compiler
+    # receives the guaranteed set through the lira-tool context and may treat these
+    # as total (reading ACCESS_KEY needs no partiality handling), emitting the
+    # used-set itself — the strongest provenance a used-set can have. Sound because
+    # deployability is verifiable: the egress cannot land where the guarantee fails.
+    presume envvar ACCESS_KEY
+    presume command git
+    presume command sed:gnu           # colon-variant predicate (hosts.md §5)
 
-    universe jvm
+    # dataset-at-version kind (builds.md §12.1): ZoneId.of becomes total,
+    # version-consistent
+    presume dataset tzdata 2026a
+    presume file /etc/ssl/certs.pem   # weaker temporal class: present at startup
+
+    include base                                # a module in the same project
+
+    # external: domain-scoped coordinate +
+    # version-prefix selector. Resolved once
+    # against the index to a snapshot; the
+    # compiled dependency carries the hash and
+    # the version is a hint (§12.5). Pinned in
+    # build.lock (distribution.md §5, §8);
+    # re-resolved only by an explicit update.
+    # A tag is also a valid selector where the
+    # token isn't x.y[.z]-shaped (§12.6).
+    include soundness.dev/gossamer-core 0.64
+
+    # A tag selector: the token isn't x.y[.z]-shaped, so it resolves via §12.6 tags
+    # (signed, immutable) rather than a version prefix. Same lockfile treatment.
+    include soundness.dev/probably jupiter
+
+    emit jar   # write the §13.6 canonical derivative to the output directory
+
+    # An integration axis (§9.5): alternative dependency vectors, selected by
+    # dependency resolution (canonical assignment, §13.3). Cases are ranked by
+    # declaration order. Peer axes below form a product, flattened at compile time
+    # to composite integration ids (rudiments1-jdk19, ...), ranked lexicographically.
+    integration rudiments
+      case rudiments1
+        include soundness.dev/rudiments-core 1.2
+      case rudiments0
+        include soundness.dev/rudiments-core 0.63
+
+    # A second, orthogonal axis: JDK targets whose dependency vectors differ.
+    # Only needed because jdk19 carries an extra dependency: a single build would
+    # otherwise span both targets by lineage membership or used-set spanning
+    # (hosts.md §7, §13.4) — see memo.
+    integration jdk
+      case jdk19
+        host adoptium.net jdk-19   # scoped host target; project-level host is the default
+        include soundness.dev/jdk-backports 1.0
+
+        # A cell-level refinement: this nested block names an already-declared axis,
+        # so it scopes the single combination (jdk19 ∧ rudiments0) — the flattened
+        # integration id rudiments0-jdk19 in the compiled manifest.
+        integration rudiments
+          case rudiments0
+            include soundness.dev/jdk-backports-compat 1.0
+      case jdk26
+        host adoptium.net jdk-26
+
+    # A third axis: Scala compiler lines. The axis is an integration, but the
+    # compatibility semantics are not: TASTy readability (patch-stable within a
+    # minor, forward-only across minors, LTS carve-outs) is a profile predicate
+    # over toolchain records (§13.3 rule 6), filtering the cells a consumer's own
+    # compiler can read; canonical assignment then lands on its first readable
+    # case. The compiler version is the one tool setting that legitimately lives
+    # on an integration case, because it changes the emitted interface encoding —
+    # consumer-observable — unlike option-case settings, which must be invisible.
+    # Often unnecessary: one build with the LTS serves every newer consumer.
+    # OPEN: per-compiler cells need per-section toolchain records; the manifest's
+    # toolchain field is release-global, so it cannot yet say which cell is
+    # 3.9-TASTy. And the tasty/1 discipline must atomize semantically, so that
+    # cross-built cells share one API identity (L108).
+    integration scala
+      case scala39             # LTS: readable by every consumer >= 3.9
+        tool scalac
+          version 3.9.6
+      case scala310
+        tool scalac
+          version 3.10.3
+
+    # An option axis: implementation-only selection, chosen by the user rather than
+    # by dependency resolution. Each built combination is a separate release in patch
+    # relation (same atoms, different payload; builds.md §3.2), selected by
+    # implementation identity — never a section. Option cases may carry tool
+    # settings and API-preserving source deltas, never `include`.
+    option optimization
+      case debug         # the default: first declared
+        tool scalac
+          set debugging full
+      case release
+        tool scalac
+          # OPEN: per-case settings are what distinguish patch-sibling
+          # releases, but Tool records can't yet record them — same spec
+          # gap as `encoding` above
+          flag optimise
+
+    # A boolean option: there is no `flag` keyword — two cases, default first.
+    # The `on` case is ephemeral: instrumented builds are never distributed, only
+    # built on demand.
+    option instrumented
+      case off
+      case on
+        ephemeral
+        tool scalac
+          set instrument coverage
+
+    universe jvm   # pure opt-in: the root section already is the jvm view
 
     universe sjsir
-      sources
-        add src/core/js/*.scala
-      require
-        # remove these two requirements
-        remove java.base
-        remove java.rmi
+      source src/core/js/*.scala   # additive, like every list keyword; `omit` removes
+      obviate java.base            # this overlay removes the two host requirements
+      obviate java.rmi
+      require browser-baseline     # the DOM half of what `produce js/dom` conflated
+      include js-shims
+      integration rudiments        # refinement of the axis declared above
+        case rudiments0            # this block scopes the single cell (sjsir × rudiments0)
+          source src/core/js/rudiments0-shim.scala
 
-      include
-        add js-shims # require something extra
-
-      produce js/dom
-
+    # Everything declared is carried in the published payload unless marked
+    # `ephemeral`: source-only, rebuilt on demand and checkable against the source
+    # record (§17). The marker sits where the thing is declared, so nothing is
+    # named twice; a single cell is marked via the same refinement nesting as any
+    # other delta. The tool should report the shipped-combination count, since
+    # distribution grows by default as axes are added.
     universe nir
-      require
-        remove java.base
-        remove java.rmi   # remove these two requirements
+      ephemeral
+      omit lib/extras/**/*.scala            # subtractive counterpart of `source`
 
-      produce elf example # produce <format> <filename>
-        architecture amd64 arm64
+      # counterpart of `include`: this delta removes the root dependency in nir
+      exclude soundness.dev/gossamer-core
+      obviate java.base
+      obviate java.rmi
 
-      produce pe example.exe
-        architecture arm64
+  # Executables are applications, not libraries: a library never chooses its egress.
+  # `assemble` names the buildpath the egress closes over; it compiles to no
+  # dependency record (L143). `artifact` names a registry application type
+  # (universes.md §1) — the triple is part of the type, so there is no elf/pe/macho.
+  module app
+    assemble core
+    artifact native-exe/x86_64-linux-gnu example
+    artifact native-exe/aarch64-linux-gnu example
+    artifact native-exe/x86_64-windows-msvc example.exe
+    artifact native-exe/aarch64-apple-darwin example
 
-      produce macho example
+  module image   # a docker image
+    assemble core
 
-  module image # this is going to be a definition of a docker image
-    include core
+    # OPEN: not yet in the universes.md registry as a
+    # jvm-reachable application type; the packaging-edge
+    # machinery (§4) covers it
+    artifact oci-image
 
   module test
-    include core
-    sources src/test/*.scala
+    assemble core
+    source src/test/*.scala
+    artifact xeq-bundle    # the registry's name for the format (was `xeq`)
 
-    produce xeq # This is the output format
+      # an egress setting: build-tool config only — closed
+      # artifacts are identified by digest, so this never
+      # needs a manifest home
       set compress 10
 
+  # A tool built by this build: an ordinary application module targeting the
+  # lira-tool application type — (jar, lira.tool), the build tool's plugin host
+  # contract. Its requires are seeded by aggregation; the edges it implements
+  # (scala->jvm) are served as a descriptor in its tree, atomized under the tool
+  # discipline, so they are part of its API. Built with the stock `tools`
+  # toolchain: a toolchain may not be applied to the build of a module it
+  # references (lint), the self-hosting case resolving via stage0-from-prebuilt —
+  # the §1 cache decision is the bootstrap.
+  module scalac-fork
+    source src/compiler/*.scala
+    include soundness.dev/compiler-core 2.1
+    artifact lira-tool
 
-environment production
-  name Production
-  description  the production environment
+  # A module electing the forked compiler: per-module toolchain selection.
+  module fork-test
+    apply tools/forked
+    source src/fork-test/*.scala
+    include core
+
+
+# A topology is the common architecture that every environment instantiates: which
+# services exist, what each requires, serves and is addressed as. It corresponds to
+# the atomized surface of an env release — the environment/1 discipline atomizes
+# exactly bindings and givens, and nothing else — so the topology is the
+# environment's API, and deployment is its implementation: rolling a build is
+# patch-grade, while topology changes regrade every instantiation. The topology is
+# authoring-time structure only, like `project`: each environment below compiles to
+# a complete, standalone env release (environments.md §9), and the overlay calculus
+# is applied here by the tool, not in the format.
+topology main
+
+  # a given: its protocol is requirable; its data plane is
+  # excluded (environments.md §10)
   service database
 
-  service main # this is where we will deploy the application
-
-    # I want to indicate that this service will connect to a service called database
-    # and it will need a consistent API
+  # The positional form declares the deployed artifact: this compiles to a deploy
+  # record naming example/image by implementation identity.
+  service api example/image
+    address api.example.com   # compiles to a binding row (Binding.address)
     require database
 
+    # the served surface, atomized under openapi/1 —
+    # without it, this service could satisfy no requirement
+    serve openapi.json
 
-    # This indicates that the thing being deployed will be the built artifact
-    # called `example/image`. Though I'm not yet sure if this is the right way to
-    # describe it, because `include` suggests multiple references, whereas we probably
-    # only want one.
-    include example/image
+  # A second deployment of the same artifact. Its `require` names a deployed
+  # service — the other edge kind (never a dependency, builds.md §4) — and
+  # requirement cycles between services would be legal (services.md §5).
+  service worker example/image
+    require api
 
-  service main2 example/image   # This could be an alternative way of defining it
-    require database
+  # The dual of `presume`, mirroring its grammar exactly: an atom in the generated
+  # main/config contract release, granted as a given to every environment of this
+  # topology. Environment validity (rule 1) then constrains deployment to
+  # environments guaranteeing it; probes verify at startup; L148 re-checks at
+  # transitions. Presence, never value. Demand is inferred (core's presumption
+  # aggregates through the egress; nothing restates it here) but supply never is —
+  # this line is the operator's commitment, and without it every environment of
+  # this topology rightly fails validity.
+  guarantee envvar ACCESS_KEY
 
-environment staging
-  name  Staging
-  description  the staging environment
+  # answers core's dataset presumption; newer tzdata grades minor, like any contract
+  guarantee dataset tzdata 2026a
+
+  # Environments are variations of the topology, nested as its children exactly as
+  # universe/integration/option blocks are children of a module: the topology body
+  # is the root, each environment a delta over it, under the same paired keywords
+  # and refinement rules. Difference between environments has exactly one place to
+  # be written, so drift is impossible by construction and a review of the delta
+  # reviews the entire gap. Each compiles to a complete, standalone env release,
+  # naturally named main/production, main/staging, main/local.
+  environment production
+    description  the production environment
+
+  environment staging
+    description  the staging environment
+
+    # override one binding; a mock would be a
+    # one-line deploy delta here, satisfying by
+    # cross-module spanning (environments.md §9)
+    address api.staging.example.com api
+
+  # The local environment is the same topology at its least formal: givens are
+  # supplied by the machine (declared or detected via local.tel), addresses default
+  # to localhost, and each `run` build-pins fresh development builds into deploy
+  # records — an ephemeral development release of this environment module, judged
+  # by environment validity (L147) before anything launches.
+  environment local
