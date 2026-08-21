@@ -30,6 +30,27 @@ Bluesky's handle verification (DNS TXT record carrying a key binding); ACME DNS-
 A module coordinate is `<domain>/<name>`, e.g. `soundness.dev/gossamer-core`. (This resolves
 the module-coordinate question left open in the spec.)
 
+**References.** A coordinate optionally followed by a release selector is LIRA's general
+versioned-artifact reference syntax — adopted here once, for every consumer of the form,
+and cross-referenced by TEL's pragma grammar (tel repository,
+`design/lira-schema-references.md` §2.2):
+
+```text
+reference  =  <domain> "/" <name> [":" <selector>]
+selector   =  version | tag
+```
+
+The two selector kinds are syntactically disjoint with no further rule: a `semver` begins
+with a digit and a `tag-name` with a letter (spec §14). A selector-form reference
+(`soundness.dev/gossamer-core:0.64.2`, `specification.tel/tels:1.0.0`,
+`adoptium.net/java.base:jdk-19`) names **exactly one published release**, and can only ever
+match a published one: unpublished releases are normatively versionless (spec §12.5, L117),
+and tags are signed, unique, and immutable within their module (spec §12.6, L142) — which is
+what makes resolution unambiguous across a local store and the network. A **bare reference**
+(no selector) is a development reference: it resolves against local state only, never
+triggers network resolution, and is deliberately not portable — portability always goes
+through a selector or a content signature.
+
 **Namespace proof.** The domain owner publishes a TXT record at `_lira.<domain>`:
 
 ```text
@@ -126,7 +147,10 @@ Operations:
 | Op                | Request                    | Response                                             |
 | ----------------- | -------------------------- | ---------------------------------------------------- |
 | `RESOLVE`         | coordinate                 | latest `Release` record + leaf index + inclusion proof |
+| `RESOLVE-VERSION` | coordinate, version        | the release carrying that derived version + proof (selector form, §2) |
+| `RESOLVE-TAG`     | coordinate, tag name       | the release carrying that tag + proof — unique per L142 (selector form, §2) |
 | `RESOLVE-COMPAT`  | coordinate, snapshot hash  | latest release whose lineage contains the snapshot — the buildpath primitive (spec §13.2) |
+| `RESOLVE-EXTENDS` | coordinate, composed schema signature | latest `tels/1` release whose component sequence contains the signature's sequence as a subsequence (spec tels.md §11) |
 | `LOOKUP`          | manifest hash or payload hash | `Release` record + proof                          |
 | `HEAD`            | —                          | tree size + root hash (signature via HTTPS)          |
 | `PROOF`           | leaf index, tree size      | inclusion or consistency proof                       |
@@ -134,7 +158,12 @@ Operations:
 `RESOLVE-COMPAT` evaluates lineage membership server-side — necessarily, since mature
 lineages (~50 B/release) outgrow datagrams — and its honesty is auditable: the full lineage
 is reconstructible from the module's `Release` leaves in the log, so a lying answer is a
-provable inconsistency.
+provable inconsistency. `RESOLVE-EXTENDS` is the schema-resolution primitive on the same
+footing: it evaluates TEL's signature-subsequence relation server-side, its answer is graded
+by the `tels/1` discipline's coincidence property (spec tels.md §9) — so TEL's own subtype
+relation certifies it — and it is auditable identically, from the module's manifests.
+`RESOLVE-VERSION` and `RESOLVE-TAG` serve the selector-form references of §2; both can only
+match published releases, by the argument given there.
 
 **Size budget** at the 1232-byte ceiling:
 
@@ -163,6 +192,12 @@ The boring, complete twin. Everything the UDP path serves, plus what doesn't bel
   hash, **bulk log ranges** for mirrors and witnesses.
 
 ## 8. Client resolution flow
+
+One rule binds every resolver first: **a resolver MUST verify a release's manifest
+signature; a local store's coordinate index is a cache, never an authority.** The flow below
+states where verification happens on the network path; the same obligation applies to
+anything served from a local store — trust attaches to signatures and proofs, not to the
+store that happened to hold the bytes.
 
 A build tool resolving a buildpath:
 
