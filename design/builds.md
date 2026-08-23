@@ -728,6 +728,49 @@ The projected kind vocabulary, in sum: `envvar`, `command`, `file`, `dataset`,
 every admission decided by the configuration-versus-liveness law, every kind a
 registry entry mapping to a discipline, never a grammar change.
 
+### 12.2 The guarantee interchange format
+
+How the guaranteed set reaches a compiler, concretely — for Scala first, but abstract
+over kinds by construction. The build tool serializes the compiled cell's
+configuration-class guarantees to **canonical BinTEL** under the `lira-guarantees`
+schema (`guarantees.schema.tel`, registered; publishable as a `tels/1` module). The
+file is the serialized form of the `lira.tool` Invocation's presumption set: in-process
+plugins receive the value directly through the trait; external compilers receive the
+file through an output-affecting setting. Macros running in the compiler parse it and
+decide, per reference, how to compile.
+
+The structure's one load-bearing decision: **consulting and recording are the same
+act.** Each entry carries `kind`, `name`, optional `predicate`, temporal `class`, and —
+decisively — the guarantee's **atom value hash and contract module**. A macro that
+compiles `env["ACCESS_KEY"]` as a total read simultaneously collects the atom it relied
+on; the accumulated atoms, grouped by module and sorted, *are* the release's uses blobs
+(`lira-uses`). The compiler emits the used-set (§12's step 3) without ever containing a
+presumption discipline's atomizer — the build tool atomized at generation time, and the
+file carries the results. The return path mirrors the input: the macro library
+accumulates consulted atoms during compilation and writes them out beside the outputs;
+the build tool merges, sorts and deduplicates them into the manifest's uses blobs.
+
+Three further consequences of the shape:
+
+- **The temporal class travels in-band**, so macros never hardcode discipline
+  semantics: `lifetime` (envvars, datasets, isa — total for the process) versus
+  `startup` (files — verified at start, may lapse), per §12.1. A macro library offers
+  totality only where the class permits, and new kinds need no macro-library release.
+- **Determinism**: the file is an input to compilation, so its bytes affect output
+  bytes — canonical BinTEL, entries sorted by ascending atom hash, no duplicates (the
+  `lira-atoms` precedent). It is a pure function of the buildpath and topology, so
+  rebuilds regenerate it byte-identically, and §17 is undisturbed.
+- **Predicates license specialization**: a macro reading `dataset tzdata 2026a` may
+  fold the version into what it generates (zone tables, ISA-specialized code paths) —
+  sound because the predicate folded into the atom, so the emitted used-set demands
+  exactly the guarantee that was specialized against, and no environment lacking it can
+  satisfy the release.
+
+Abstractness falls out of the registry indirection: entries are (kind, name, predicate,
+class, atom, module) whatever the kind; per-domain macro libraries (an envvar reader, a
+dataset accessor) consult one structure; a new presumption kind is new entries in the
+same file, no format change.
+
 ## 13. The build schema
 
 `build.schema.tel` (repo root) is the draft TEL schema for `build.tel`, written as a
@@ -893,7 +936,12 @@ This **information model** is fixed and carrier-neutral. Its realization splits:
   publish, the build tool runs `descriptor` and writes `tool.tel` into the tree
   (conforming to a descriptor schema published as a `tels/1` module), atomized by a
   small tool discipline — one rigid atom per edge, one per classified setting — so edge
-  changes are graded as promised.
+  changes are graded as promised. The schema exists: `tool.schema.tel` (registered),
+  with `scalac.tool.tel` as its worked instance; it carries the §14.2 model verbatim —
+  edges positional on their output form, input/context roles, employs/emits
+  disciplines, per-edge components and setting specifications (key + effect) — and
+  closes the parameterized-edge gap: an edge declares a `parameter` (triple, platform)
+  referenced as a placeholder in form names, bound by backward flow per §15.2.
 
 The split also defines what a **WIT twin** would mean, precisely: a second contract
 module (`lira.tool-wit`; carrier WIT, graded `wit/1`; application type
@@ -918,7 +966,57 @@ source src/generated/*.scala.txt
 
 A declaration that merely restates a correct inference is an L107-style minimality lint.
 
-### 14.5 Resolution, restated
+### 14.5 Spaces: the project root, the store, and the workspace
+
+Execution involves exactly three spaces, and their disciplines differ:
+
+- **The project root** — durable, user-owned, authored content only (sources, the build
+  and local files, the lockfile), and **read-only to tools**, enforced. No build
+  directory ever appears in it: a build never dirties the worktree.
+- **The store** — durable, machine-wide, content-addressed: the single store of
+  `tool.md` and §13.5, holding fetched sections and every tool output — intermediates
+  included — as trees of blobs keyed by hash. Its location is a machine fact
+  (`local.tel`); retention is LRU.
+- **The workspace** — per-invocation, ephemeral, a *view*: the driver materializes the
+  invocation's declared inputs at their authored relative paths (links from the store),
+  the tool runs, outputs are ingested back, the workspace is destroyed. Inter-tool data
+  never travels through a shared directory — it goes output tree → store → next
+  workspace. Workspaces are stack frames, not a heap.
+
+Two consequences a monolithic "build space" would not give. **Every intermediate is
+memoized for free**: an invocation's identity is computable — hash of (edge, input tree
+hashes, context cell identities, output-affecting settings, tool and component
+versions, the guarantees file) — and its outputs cache under that key: §1's
+verifiable-cache reading extended inward to every edge of the hyperpath, so incremental
+builds are cache hits rather than a mechanism. (Intra-module incrementality à la Zinc
+stays the tool's private business, in a tool-private cache area under one law: *warm
+output must equal cold output*, spot-checked by discarding the warm state.) And **tools
+can only communicate through declared edges**: with no shared directory, the descriptor
+roles are the only plumbing that exists — hidden coupling between build steps is
+unrepresentable, and parallelism needs no locking.
+
+**Debugging is an operation, not a place.** On failure the workspace is retained
+automatically and the diagnostic names its path; `lira workspace <module>/<edge>`
+re-materializes any invocation's workspace on demand (the store holds everything needed
+by construction), with `--keep` to retain all; store inspection answers "what did that
+tool produce?" without a workspace at all. All occasion-class, CLI-only — no location
+here ever appears in `build.tel`, preserving §15's rule that the only paths users see
+are the authored relative ones inside trees.
+
+**Extraction is the one way content leaves the store.** A command step (or ad hoc CLI
+operation) `extract <module> <entry> <path>` saves a **named entry** — an artifact's
+application-type name, or a container-format name for a §13.6 canonical derivative
+(`jar`, which exists for every jvm section with no declaration) — into the project tree
+at a fully-authored destination. This supersedes the earlier `emit` keyword, which
+assumed an output location. The store stays hidden; entries are addressed by build-file
+vocabulary, never internal paths. The project-root read-only rule stays intact for
+tools: extraction is the driver acting on explicit instruction, the one sanctioned
+writer. And one lint keeps builds functional: **a destination matched by any source
+glob is an error** — an extracted file feeding the next build's inputs is a feedback
+loop, statically detectable from the build file. A checked-in `extract` in a command is
+shared intent; the CLI form is occasion — the bijection sorts the two homes.
+
+### 14.6 Resolution, restated — *(see also §15, where packaging edges join the algebra)*
 
 Per (module × universe × integration case × option case): required outputs are the
 universe's stored forms, or the artifact's application type; available inputs are the
@@ -928,3 +1026,189 @@ toolchain's edges. The one-tool-per-edge rule generalizes to hyperedges as the
 whose input set strictly contains another's takes the whole set (a mixed `.scala`+`.java`
 module goes wholly to scalac; a pure-java module to javac). Incomparable overlaps are
 errors, resolved by a per-module `tool` pin — the same shape as integration pinning.
+
+## 15. Packaging is an environment: the container chain
+
+A Docker image is a **frozen environment-of-one**: it supplies givens — commands
+installed, files baked in, variables set — to the application deployed inside it. The
+packaging edge therefore performs environment validity in miniature, which makes it the
+**third site of the one validity algebra** (§10.1's buildpath and environment being the
+first two): rule-1 closure of the inner application's requirements against the image's
+declared provisions.
+
+The chain, end to end: **core presumes → app requires → image satisfies-or-propagates →
+environment guarantees.** The inner application's app section already carries everything
+by aggregation (hosts.md §10): presumption requirements and host contracts alike. The
+image module declares what it satisfies with the word that already means provision:
+`guarantee command git`, `guarantee file /etc/ssl/certs.pem` — and deliberately omits
+what must pass through (a secret `ACCESS_KEY` propagates, to be answered by the
+deployment environment's own guarantee). The §12 inference asymmetry holds unchanged:
+satisfaction is declared, never inferred from the Dockerfile; the reverse-minimality lint
+flags guarantees matching nothing the inner application requires.
+
+**No assumed paths.** Absolute locations belong to the tool; relative layout belongs to
+the user, and every relative path is authored. The tool driver materializes inputs into
+an invocation workspace whose location is side-effect class — and SHOULD vary or
+normalize it between builds, so a tool that embeds an absolute path into output breaks
+in development rather than silently later. Inside the context: the assembled artifact
+lands at the path the *consumer* declares (`assemble app` / `path bin/example` — full
+path including filename, never inherited from the producer's artifact naming); source
+files keep their authored glob paths; the Dockerfile is identified by its `form`, not
+by name-and-location convention, and passed explicitly. Under `oci-index`, every
+platform's matched artifact lands at the same declared path, so one Dockerfile serves
+all platforms. Declared paths also make §15.1's multi-parent layer-disjointness check
+static: overlapping claims are detectable from the build file, before anything runs.
+
+**Post-build checks are the probe machinery, verbatim.** Every presumption discipline
+carries a probe; hosts.md §9 names a third verification moment at runtime. Image
+verification is that moment applied early: run each declared guarantee's probe *inside
+the built image*, and fail the build on any miss. Declared plus probed is the same
+authorial-but-verified pattern `requires` itself uses, now at two moments — image build
+and service start.
+
+**The requirement-transformation formula.** Repackaging an application with one set of
+host requirements into an application with a different set is exact:
+
+```text
+R(image) = ( R(app) − G(probe-verified) ) ∪ C(app-type)
+```
+
+— the inner requirements, minus the internally-satisfied guarantees, plus the target
+application type's own contract half. The last term needs no declaration: an application
+type is by definition (closed format, host contract), so moving from
+`native-exe/<triple>` to `oci-image` swaps libc-and-kernel for container-runtime by
+construction. The propagated remainder lands in the image's app-section `requires`,
+where environment validity picks it up — checkable from manifests at every joint.
+
+**The base-image thread (open).** The ELF's libc requirement is satisfied by the base
+image's OS layer — the same satisfaction relation one level down. Honestly modeled, a
+base image *supplies host contracts* (`glibc-x86-64-linux` at a lineage point), which
+walks directly into the stewarded-namespaces machinery: no distribution will publish
+LIRA contracts, but a steward can, and base-image choice becomes a checkable contract
+decision rather than folklore. Noted as the natural extension, not designed here.
+
+### 15.1 Multi-parent composition
+
+Docker's multi-stage builds serve two purposes with different fates here. The **builder
+stage** — a hermetic environment to compile in — is *subsumed*: that is what the LIRA
+build is, and a Dockerfile that compiles is a Dockerfile doing the build tool's job
+without its guarantees. What legitimately survives is **runtime composition**: merging
+content from several parents (a distroless base, a tooling image, an assets image) into
+one image.
+
+The frozen-environment reading extends without new machinery: each parent is a
+given-provider, the closure judgment runs against the **union** of their declared
+provisions, and overlapping content between parents is the resource-disjointness rule
+(L126) transposed to layers — two parents supplying the same path is an error, not a
+merge. Surface-wise this makes `assemble` repeatable on a packaging module (each
+assembled parent contributing content and provisions), with the disjointness lint across
+them; the schema currently holds `assemble` singular, and widening it is deliberately
+deferred until a real multi-parent example lands in `build.tel`.
+
+### 15.2 Multi-architecture images, and the backward flow of the platform parameter
+
+An OCI multi-arch artifact is an **index** over per-platform images. In form vocabulary:
+`oci-image/<platform>` is a parameterized application-type family (the parameter part of
+the type, exactly as `native-exe/<triple>`), and `oci-index` is a composite whose
+packaging edge takes several members of that family as inputs — the parameterized-edge
+feature (§14.2, still open) now demanded from a second direction.
+
+The build file declares platforms once, at the outermost artifact:
+
+```tel
+artifact oci-index
+  platform linux/amd64
+  platform linux/arm64
+```
+
+and resolution **flows the parameter backward**: each declared platform instantiates the
+packaging chain — `oci-image/<platform>` needs `native-exe/<matching triple>`, binding
+the triple of the *earlier-phase egress* — with the platform↔triple correspondence being
+registry data. Parameter unification along a hyperpath is the general mechanism:
+parameters bind at the demand end and propagate to every parameterized edge on the path.
+
+The upstream implication splits cleanly by universe. For TASTy-family content (`nir`),
+sections are architecture-agnostic: **one cell, N links** — the same `nir` section
+serves every platform, and only the egresses multiply. For `native/<triple>` universes
+(C, Rust dependencies), the buildpath itself is per-triple, so the platform parameter
+reaches into buildpath resolution and selects per-triple cells. The requirement formula
+of §15 applies per member — `R(oci-image/arm64) = (R(app@arm64) − G) ∪
+C(oci-image/arm64)` — and the index's own requirement set is judged per platform member:
+an index is satisfiable in an environment iff the member the runtime would select for
+that environment's platform is. Guarantees on the image module apply to every member;
+per-platform differences in provision would be a refinement case, none yet motivated.
+
+## 16. How disciplines relate
+
+Two cases motivate the question. A `file/1` presumption asserts a path exists but says
+nothing of its contents — which may be a TEL document that `tels/1` could validate. And
+a nominal method signature's compatibility depends on the class hierarchy of the types
+it mentions, which no signature atom seems to own. Both feel like one discipline
+delegating to another. Neither is, and the refusal is principled:
+
+> **Disciplines are leaf canonicalizers; the algebra is the only composer.** A
+> discipline turns one carrier into atoms and never consults another discipline. Every
+> apparent interaction is either *folding* (within a module) or *an edge* (between
+> modules) — both set arithmetic, both decidable from manifests. Inter-discipline
+> delegation would be the rule engine returning through the side door the folding
+> principle exists to keep shut.
+
+The stake is concrete: the moment `file/1` could invoke `tels/1` at satisfaction time,
+validity checking would need discipline *implementations* rather than atom sets, and
+decidability-from-manifests — which deployability, the totality loop, and every §10
+judgment rest on — would quietly die.
+
+### 16.1 The hierarchy case: folding plus used-set closure
+
+There is no class-hierarchy discipline because the folding principle already routed
+hierarchy facts into the type's own atom: a declaration's atom folds its `extends`
+list (`dts/1` §10; `tasty/1` equivalently), precisely because a hierarchy change is
+consumer-observable and must grade. Cross-module reliance travels the graph: the
+consumer's dependency plus its used-set — which MUST close over the atoms of nominal
+types *referenced by* used members, not only the members themselves (**the used-set
+closure rule**, an obligation on every signature discipline's used-set computation).
+A supertype change then alters the type's atom, grades the declaring module, and
+either rides the consumer's lineage requirement or fails its spanning — the
+cross-discipline-feeling judgment computed by the algebra over two manifests, each
+discipline having canonicalized only locally.
+
+### 16.2 The content case: predicates graduate to the graph
+
+Presence and conformance are two claims, and conformance must not be smuggled into the
+presence atom's predicate: an opaque `conforms-to-X` token satisfies only by exact
+match, so an environment providing a *newer, extended* schema would wrongly fail.
+
+> **A predicate that needs an algebra is a module reference in disguise.**
+
+Predicates remain for closed vocabularies with trivial orderings (colon-variants,
+version tokens). Structured conformance graduates: the schema is a published `tels/1`
+module, and the presumption compiles to two records in two disciplines joined by the
+requirement graph — a `file/1` atom for presence (probed by existence plus
+`tel validate` at startup) and a `requires` on the schema module at a snapshot,
+satisfied by lineage membership and graded by `tels/1`'s own subsequence-coincident
+relation. Surface:
+
+```tel
+presume file /etc/example.tel
+  schema example.dev/config 1.2
+```
+
+An environment guaranteeing the file under schema 1.4 satisfies a 1.2 presumption
+because 1.2's snapshot is in the schema module's lineage — content compatibility
+reduced to the one satisfaction relation.
+
+### 16.3 The inventory
+
+The complete set of ways disciplines relate:
+
+1. **Coexistence** — multiple `api` records on one release; the snapshot is the atom
+   union; claiming order resolves content overlap (`kotlin-metadata/1` beside
+   `classfile/1`). The dual-declaration bridge (spec §11.1) is this mechanism's
+   special case for two versions of one discipline.
+2. **Shared canonical encodings** — `jsig/1` over `classfile/1`'s encoding:
+   specification economy only. Domain separation keeps their atoms incomparable;
+   true comparability (spanning) requires literally the same discipline, which is why
+   `jdk` and `scalajs-javalib` sharing `jsig/1` is load-bearing.
+3. **Composition through the graph** — facts governed by another discipline are
+   reached by edges to the modules that carry them (dependency, requires, used-set
+   closure), never by inter-discipline calls.

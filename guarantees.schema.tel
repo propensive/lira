@@ -1,0 +1,46 @@
+tel 1.0 specification.tel/tels
+name lira-guarantees
+
+# The guarantee interchange format (builds.md §12.2): the build tool serializes the
+# compiled cell's guaranteed presumption set to canonical BinTEL under this schema,
+# and a tool's macros consult it to decide how to compile references — totally,
+# where the class permits. Each entry carries its atom value hash and contract
+# module so that consulting and recording are one act: the macro that compiles a
+# total read also collects the atom it relied on, and the accumulated atoms become
+# the release's uses blobs (lira-uses), grouped by module. Only configuration-class
+# guarantees appear; admission-gate kinds never reach a compiler (builds.md §12.1).
+#
+# The file is an input to compilation, so its bytes are canonical: BinTEL canonical
+# form, entries sorted by ascending atom hash, no duplicates — the lira-atoms
+# precedent. It is the serialized form of the lira.tool Invocation's presumption
+# set: in-process plugins receive the value directly; external compilers receive
+# this file through an output-affecting setting.
+
+scalar Hash
+  description  A 256-bit BLAKE3 hash, BASE-256 encoded (32 characters)
+  validate     base-256-hash
+
+scalar ModuleName
+  description  A LIRA module name (spec §14)
+  validate     module-name
+
+scalar TemporalClass
+  description  lifetime or startup (builds.md §12.1)
+  validate     temporal-class
+
+# The class states what totality a macro may claim (builds.md §12.1's temporal
+# classes, carried in-band so macros never hardcode discipline semantics):
+# lifetime — holds for the whole process (envvars, datasets, isa);
+# startup — verified at start, may lapse (files, tmpdir capacity aside).
+record Guarantee
+  description  One guaranteed presumption of the compiled cell
+
+  field kind Identifier
+  field name String
+  field predicate String optional
+  field class TemporalClass
+  field module ModuleName
+  field atom Hash
+
+document
+  field guarantee Guarantee optional repeatable  # ascending by atom hash; no duplicates

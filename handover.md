@@ -43,9 +43,104 @@
 > tool discipline — because edges are invisible to TASTy, the services.md §4.3
 > extraction pattern applies). A WIT twin = second contract module lira.tool-wit;
 > equivalence criterion = identical extracted descriptors; trade-off recorded
-> (in-process = fast, unsandboxed; WIT = isolation). Trait/Invocation/Outcome field
-> inventory sketched in chat 2026-08-21; the invoke payload is the accumulated context
-> (inputs by form, context cells, presumptions, cell coordinates, merged settings).
+> (in-process = fast, unsandboxed; WIT = isolation). The trait sketch is committed in
+> builds.md §14.3; the invoke payload is the accumulated context (inputs by form,
+> context cells, presumptions, cell coordinates, merged settings). builds.md §15: the
+> container chain — a Docker image is a frozen environment-of-one, making packaging
+> edges the THIRD site of the one validity algebra; the chain core presumes → app
+> requires → image satisfies-or-propagates → environment guarantees; `guarantee` on a
+> packaging module declares internal satisfaction, probe-verified in the built image
+> (the third verification moment applied early); the requirement-transformation formula
+> R(image) = (R(app) − G(verified)) ∪ C(app-type), the app type swapping the contract
+> half by construction; secrets deliberately propagate. §15.1: multi-stage builder
+> stages are subsumed by the LIRA build; legitimate multi-parent = runtime composition
+> (union closure over parents' provisions; L126-style layer disjointness; `assemble`
+> would become repeatable — deferred). §15.2: oci-image/<platform> is a parameterized
+> family, oci-index the composite; platforms declared once at the outermost artifact and
+> the parameter FLOWS BACKWARD through hyperpath resolution to bind earlier egresses
+> (platform↔triple = registry data); nir cells are arch-agnostic (one cell, N links),
+> native/<triple> buildpaths are per-triple. Open: base images as steward-published
+> host contracts. build.tel: module image reshaped (assemble app, dockerfile form,
+> docker/** context, guarantees, artifact oci-index + platforms); schema: Module gains
+> `guarantee`, Product gains `platform`. Validator feedback for Jon: an unrecognized
+> child compound (E306) is attributed to line 1, which cost a bisection to localize.
+> New reference docs: design/scenarios.md (14 user-POV scenarios with enabling-feature
+> bullets — the 6 probed in session plus JDK/Scala targeting, downstream testing,
+> npm-link, reproducibility, topology, totality, TASTy re-lowering, self-shipping
+> extensions), design/glossary.md (~60 terms, LIRA + build-tool vocabulary), and
+> design/catalog.md (instances by category: source forms, universes, application
+> types, carriers, disciplines, tools with their edges, host contracts, presumption
+> kinds, schemas — the prose precursor of universes.tel; ends with the
+> overloaded-words disambiguation: WASM is four things, JAR two, WASIp2 a host
+> contract, JavaScript a universe). builds.md §12.2 + guarantees.schema.tel (new,
+> registered as lira-guarantees): the guarantee interchange format — canonical BinTEL,
+> entries (kind, name, predicate?, temporal class, contract module, atom hash) sorted
+> by atom hash; the load-bearing decision is that consulting and recording are one act
+> (each entry carries its atom, so macros compiling total reads simultaneously collect
+> the uses blobs — the compiler never contains an atomizer); temporal class in-band so
+> macro libraries never hardcode discipline semantics; predicates license
+> specialization soundly (folded into the atom, demanded by the emitted used-set);
+> in-process plugins get the value via the lira.tool trait, external compilers the
+> file via an output-affecting setting; return path = accumulated atoms merged/sorted
+> into lira-uses. TEL note: a select cannot be a field's type (E217) — Section-style
+> `select` members only; used a validated scalar (TemporalClass) instead. Paths
+> (builds.md §15 "No assumed paths"): absolute locations are the tool's (workspace,
+> side-effect class, SHOULD be varied/normalized to smoke out embedded-path bugs);
+> relative layout is the user's and always authored — `assemble <module> / path
+> bin/example` (Assembly record in the schema; consumer names what it consumes, full
+> path incl. filename; platform-stable under oci-index), source files keep authored
+> glob paths, the Dockerfile is identified by form and passed with -f. Declared paths
+> make §15.1 layer disjointness statically checkable. TEL tooling update landed: bare
+> schema names in pragmas are now E121 — schema files' headers are now
+> `tel 1.0 specification.tel/tels:1.0.0` (the pinned meta-schema coordinate).
+> builds.md §14.5 (new; old 14.5 renumbered 14.6): the three execution spaces —
+> project root (authored only, read-only to tools, no build dir, worktree never
+> dirtied), store (the tool.md content-addressed store; all outputs incl.
+> intermediates as trees), workspace (per-invocation ephemeral view; stack frames not
+> a heap; inter-tool data flows tree→store→workspace, never a shared directory).
+> Consequences: every edge invocation memoized under a computable identity (§1
+> extended inward — incrementality is cache hits); tools can only communicate through
+> declared edges (hidden coupling unrepresentable); warm-equals-cold law for
+> tool-private incremental state. Debugging is an operation: failed workspaces
+> retained + named in diagnostics, `lira workspace` re-materializes any, store
+> inspection via CLI — all occasion-class. Glossary gains store + workspace.
+> `extract` (command step + CLI op) is the one way content leaves the store:
+> `extract <module> <entry> <path>` with entries named by build-file vocabulary
+> (artifact app-type, or container format for a §13.6 derivative) and fully-authored
+> destinations; SUPERSEDES `emit` (which assumed an output location — removed from
+> build.tel, schema and glossary); feedback-loop lint: extraction destination matched
+> by a source glob is an error; command extract = shared intent, CLI = occasion.
+> build.tel gains `command jar`; schema gains Entry scalar + Extract record on
+> Command, drops Module.emit. The tool descriptor schema is written and registered:
+> tool.schema.tel (`name tool`) — edges positional on output form, name defaulting to
+> it; parameter field closes the parameterized-edge gap (placeholder in form names,
+> bound by §15.2 backward flow); Input(form, optional), context Forms,
+> employs/emits DisciplineIds, Component(name only — versions configured in build.tel
+> and locked), Setting = SPECIFICATION (key + Effect: output|nothing), tool-level +
+> per-edge sets. Worked instance scalac.tool.tel validates (three edges; per-edge
+> `release`/`module` settings; components on sjsir/nir). Catalog + builds.md §14.3
+> updated. Atomization (tool discipline: rigid atom per edge, per classified
+> setting) stated in the schema header; the discipline spec itself is still to write.
+> builds.md §16: how disciplines relate — leaf canonicalizers, the algebra the only
+> composer (inter-discipline delegation would kill decidability-from-manifests).
+> §16.1 hierarchy case: folding routes extends-lists into type atoms + the USED-SET
+> CLOSURE RULE (used-sets must include atoms of nominal types referenced by used
+> members — an obligation on every signature discipline). §16.2 content case:
+> predicates graduate to the graph ("a predicate that needs an algebra is a module
+> reference in disguise") — `presume file X / schema domain/config 1.2` = file/1
+> presence atom + requires on the tels/1 schema module, lineage-satisfied; newer
+> extended schemas satisfy older presumptions. §16.3 inventory: coexistence /
+> shared encodings (economy only; comparability needs the SAME discipline) /
+> composition through the graph. Schema: Presumption gains `schema Include optional`;
+> build.tel has the worked example. design/discipline-obligations.md (new): the
+> checklist for foo/1 authors — Part A pointers to lira.md §11.2's seven normative
+> requirements + §11.1 identification; Part B the eight design-round obligations
+> (used-set closure; encoding invariance across producing tools; temporal class;
+> configuration-vs-liveness; presence-never-values; probes never atomized;
+> native-relation coincidence à la tels/1; no inter-discipline delegation); Part C
+> shared conventions to elevate (hard errors on out-of-vocabulary constructs;
+> lockstep versioning; state what is NOT certified). Ends with which parts apply to
+> which discipline kinds.
 
 > **Round update (2026-08-21b, TEL/LIRA integration).** Issues #13/#14 implemented (design
 > in propensive/tel `design/lira-schema-references.md`): new discipline spec `spec/tels.md`

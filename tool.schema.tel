@@ -1,0 +1,74 @@
+tel 1.0 specification.tel/tels:1.0.0
+name tool
+
+# The tool descriptor schema (builds.md §14.3): the document a tool's `descriptor`
+# extracts to at publish (`tool.tel` in a lira-tool release's tree), and equally the
+# registry entry shape for built-in tools (universes.md §6). Publishable as a tels/1
+# module. The descriptor is the carrier-neutral information model: a WIT-hosted tool
+# and a Scala-trait tool are the same kind of thing exactly when they extract
+# identical descriptors.
+#
+# Atomization (the tool discipline, to be specified): one rigid atom per edge — the
+# value covering its parameter, roles, forms, disciplines and component names — and
+# one per setting with its classification; so dropping an edge or reclassifying a
+# setting is graded. Naming: edges are addressed as <tool>/<edge-name>, the name
+# defaulting to the output form.
+#
+# Parameterized edges: an edge may declare a parameter (triple, platform), bound at
+# invocation and referenced in form names as an angle-bracket placeholder —
+# `native-exe/<triple>` — unified along the hyperpath (builds.md §15.2): demanded at
+# the outermost artifact, propagated backward to every parameterized edge en route.
+
+scalar Form
+  description  A registered form name (builds.md §14.1), possibly with a <parameter> placeholder
+  validate     form
+
+scalar DisciplineId
+  description  A discipline identifier, e.g. tasty/1 (spec §11.1)
+  validate     discipline-id
+
+scalar Effect
+  description  output — the setting affects output bytes and belongs in manifests; nothing — side-effect only, never recorded
+  validate     effect
+
+record Input
+  description  A source-side form the edge consumes
+
+  field form Form
+  field optional Flag optional
+
+# Settings here are SPECIFICATIONS (key + classification), not values: values are
+# configured in build.tel and recorded, where output-affecting, in manifests via the
+# section-scoped Tool records.
+record Setting
+  description  One setting specification, `set <key>` with its effect
+
+  field key Identifier
+  field affects Effect
+
+record Component
+  description  A separately-versioned constituent of the edge, named; versions are chosen in build.tel and locked
+
+  field name Identifier
+
+# Roles per builds.md §14.2: input is consumed (an egress's buildpath is input);
+# context is read but not consumed (a compiler's dependency cells), with `employs`
+# naming the disciplines read from context carriers and `emits` the carriers
+# produced into the output.
+record Edge
+  description  One invocation kind, named by its output form unless stated
+
+  field output Form
+  field name Identifier optional
+  field parameter Identifier optional
+  field input Input optional repeatable
+  field context Form optional repeatable
+  field employs DisciplineId optional repeatable
+  field emits DisciplineId optional repeatable
+  field component Component optional repeatable
+  field set Setting optional repeatable
+
+document
+  field name Identifier
+  field edge Edge optional repeatable
+  field set Setting optional repeatable  # tool-level: applies to every edge

@@ -1,4 +1,4 @@
-tel 1.0 ψćẍẄЖḋӛẓȦþNϏǽӂćàỲỵǽƕДƒàƧήΩEῡoḡMƝӸ
+tel 1.0 ώẅẃЊμḁẍDβĮδ3ΎƏƒŀӁῡϏTӛ8ӛẍḠvęЖί1ȑuΪ
 
 # Checked in to the repository; per-user settings live in local.tel beside this file
 # (gitignored): transport overrides for repositories, default option selections, the
@@ -14,6 +14,14 @@ command dev    # continuous compilation, watching all changes
 
 command test   # run the tests
   run example/test
+
+# Extraction is the one way content leaves the hidden store: entries are named by
+# build-file vocabulary (an artifact's application type, or a container format for
+# a §13.6 derivative), destinations are authored in full, and a destination matched
+# by any source glob is an error (feedback loop). Also available ad hoc at the CLI.
+command jar
+  build example/core
+  extract example/core jar dist/core.jar
 
 # A toolchain is a set of tools that are available for use when building a module.
 # Tools like `scalac` and `javac` are built in to the build tool, along with other
@@ -124,7 +132,7 @@ project example # a project with the id "example"
 
   # Corresponds to a LIRA artifact. A pure library: it names no application type.
   # Its plain JAR is the canonical derivative artifact (§13.6), which exists by
-  # definition for every jvm section; `emit` below only asks for it on disk.
+  # definition for every jvm section; `extract` in a command saves it to disk.
   module core
     # globs of all source files, one per line (a repeatable field takes one value
     # per line); the selected tree feeds the release's source record (§17). Each
@@ -161,6 +169,13 @@ project example # a project with the id "example"
     presume dataset tzdata 2026a
     presume file /etc/ssl/certs.pem   # weaker temporal class: present at startup
 
+    # A content claim beside a presence claim (builds.md §16): presence is a
+    # file/1 atom; conformance is a requires on the schema module, satisfied by
+    # lineage and graded by tels/1 — an environment providing config under a
+    # newer, extended schema still satisfies. The probe runs tel validate.
+    presume file /etc/example.tel
+      schema example.dev/config 1.2
+
     include base                                # a module in the same project
 
     # external: domain-scoped coordinate +
@@ -177,8 +192,6 @@ project example # a project with the id "example"
     # A tag selector: the token isn't x.y[.z]-shaped, so it resolves via §12.6 tags
     # (signed, immutable) rather than a version prefix. Same lockfile treatment.
     include soundness.dev/probably jupiter
-
-    emit jar   # write the §13.6 canonical derivative to the output directory
 
     # An integration axis (§9.5): alternative dependency vectors, selected by
     # dependency resolution (canonical assignment, §13.3). Cases are ranked by
@@ -293,13 +306,41 @@ project example # a project with the id "example"
     artifact native-exe/x86_64-windows-msvc example.exe
     artifact native-exe/aarch64-apple-darwin example
 
-  module image   # a docker image
-    assemble core
+  # A docker image: a packaging module, and a frozen environment-of-one
+  # (builds.md §15) — it supplies givens to the application packaged inside it,
+  # so the packaging edge runs the same closure judgment as environment validity.
+  # R(image) = (R(app) − probe-verified guarantees) ∪ C(app type): satisfied
+  # requirements are discharged, the rest propagate to the image's own requires,
+  # and the application type swaps libc-and-kernel for container-runtime by
+  # construction.
+  module image
+    # The packaged application enters the docker context at the declared path —
+    # the consumer's declaration, full path including filename, never inherited
+    # from the producer's artifact naming. Under oci-index, every platform's
+    # matched artifact lands at this same path, so one Dockerfile serves all.
+    # The Dockerfile references only authored paths (COPY bin/example ...);
+    # absolute workspace locations are the tool's, and never observable.
+    assemble app
+      path bin/example
+    source Dockerfile
+      form dockerfile
+    source docker/**      # context files the Dockerfile refers to
 
-    # OPEN: not yet in the universes.md registry as a
-    # jvm-reachable application type; the packaging-edge
-    # machinery (§4) covers it
-    artifact oci-image
+    # What this image satisfies internally, probe-verified in the built image
+    # (the third verification moment, applied early): a failing probe fails the
+    # build. ACCESS_KEY is deliberately absent — a secret, passed through at run
+    # time — so it propagates, and the topology's guarantee answers it.
+    guarantee command git
+    guarantee file /etc/ssl/certs.pem
+
+    # A multi-arch index over per-platform images: oci-image/<platform> is a
+    # parameterized application-type family, and each platform instantiates the
+    # chain backward — oci-image/<platform> needs native-exe/<matching triple>,
+    # binding the earlier-phase egress (platform↔triple mapping is registry
+    # data). nir cells are architecture-agnostic: one cell, N links.
+    artifact oci-index
+      platform linux/amd64
+      platform linux/arm64
 
   module test
     assemble core

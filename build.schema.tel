@@ -1,4 +1,4 @@
-tel 1.0 tels
+tel 1.0 specification.tel/tels:1.0.0
 name build
 
 # Draft TEL schema for build.tel — written as a consistency audit of the format as
@@ -50,6 +50,10 @@ scalar ToolchainRef
 scalar AppType
   description  A registry application-type name: jvm-app, xeq-bundle, native-exe/<triple>
   validate     app-type
+
+scalar Entry
+  description  An extractable named entry: an application-type name from an artifact line, or a container-format name for a §13.6 canonical derivative (jar)
+  validate     entry
 
 # Output-affecting settings enter the manifest (pending the Tool-record spec
 # change); side-effect settings never do.
@@ -110,11 +114,22 @@ record Run
 record Watch
   field pattern Glob
 
+# Extraction is the one way content leaves the hidden store: driver-performed on
+# explicit instruction, destination authored in full. Lint: a destination matched
+# by any source glob is an error (a feedback loop into the next build's inputs).
+record Extract
+  description  Save a named entry into the project tree, `extract <module> <entry> <path>`
+
+  field module ModuleRef
+  field entry Entry
+  field path Path
+
 record Command
   field name Identifier
   field build Build optional repeatable
   field run Run optional repeatable
   field watch Watch optional repeatable
+  field extract Extract optional repeatable
 
 record Repository
   description  Transport and scope for source dependencies; never identity or version authority
@@ -132,12 +147,26 @@ record Host
 
 # The predicate follows the discipline's convention: a colon-variant or a version
 # token (builds.md §12).
+# A content claim graduates to the graph (builds.md §16): the `schema` child names
+# a published tels/1 module, compiling to a requires satisfied by lineage — never an
+# opaque predicate. A predicate that needs an algebra is a module reference.
 record Presumption
   description  One presumption or guarantee, `presume|guarantee <kind> <name> [<predicate>]`
 
   field kind Kind
   field name String
   field predicate String optional
+  field schema Include optional
+
+# The context path is the consumer's declaration: where the assembled module's
+# (platform-matched) artifact lands in this module's input tree, full path
+# including filename — never inherited from the producer's artifact naming.
+# Optional in general; a lint requires it on packaging modules (builds.md §15).
+record Assembly
+  description  An egress input, `assemble <module>`, with its declared context path
+
+  field module ModuleRef
+  field path Path optional
 
 # The form is inferred from the glob's extension via the tool registry; the child
 # field declares it where inference fails or misleads (builds.md §14.4).
@@ -152,12 +181,15 @@ record Include
   field selector Selector optional
 
 # Egress settings under `set` are build-tool config only: closed artifacts are
-# identified by digest, so they never need a manifest home.
+# identified by digest, so they never need a manifest home. Platforms instantiate
+# a parameterized application-type family, the parameter flowing backward through
+# the packaging chain (builds.md §15.2).
 record Product
   description  An egress to a registry application type, `artifact <app-type> [<filename>]`
 
   field type AppType
   field filename String optional
+  field platform Identifier optional repeatable
   field set Setting optional repeatable
 
 # --- Overlay grammar -------------------------------------------------------------
@@ -216,9 +248,9 @@ record Module
   field source Source optional repeatable
   field require ModuleRef optional repeatable
   field presume Presumption optional repeatable
+  field guarantee Presumption optional repeatable  # packaging modules: builds.md §15
   field include Include optional repeatable
-  field assemble ModuleRef optional
-  field emit Identifier optional repeatable  # container format (§13.6)
+  field assemble Assembly optional
   field artifact Product optional repeatable
   field integration Axis optional repeatable
   field option Axis optional repeatable
