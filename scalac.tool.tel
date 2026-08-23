@@ -1,0 +1,38 @@
+tel 1.0 ЪḞzḤḡӪĥnxέOĆÐaOÅȧȕḟẌſJțnÐŀìĽӂąǨỳH
+name scalac
+
+# The Scala compiler's descriptor: the worked example of tool.schema.tel, showing
+# both patterns of builds.md §14.2 — one implementation, three edges, with the
+# separately-versioned backends as per-edge components.
+
+set encoding
+  affects output
+set verbose
+  affects nothing
+
+edge jvm
+  input scala
+  input java
+    optional
+  context jvm
+  employs tasty/1
+  emits tasty/1
+  emits classfile/1
+  set release
+    affects output
+
+edge sjsir
+  input scala
+  context sjsir
+  employs tasty/1
+  emits tasty/1
+  component scala-js
+  set module
+    affects output
+
+edge nir
+  input scala
+  context nir
+  employs tasty/1
+  emits tasty/1
+  component scala-native

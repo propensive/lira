@@ -126,7 +126,10 @@ Notes:
   library content otherwise — which is what the registry's "Scala (via sjsir egress)" row means,
   and why the DAG draws the same-labelled edge into both.
 - `native/<triple>` is a family of universes, one per target triple, because C-ABI artifacts
-  do not compose across triples. Triple-parameterized universes arrive as a schema layer.
+  do not compose across triples. Triple-parameterized universes arrive as a schema layer —
+  and schema layers now have a shipping mechanism: each is published as a release of a
+  `tels/1` module (spec/tels.md), referenced as `‹domain›/‹name›:‹version›`, so a new
+  universe is delivered, versioned and verified by LIRA itself.
 - The application axis is parameterized by triple for the same reason, one step further on:
   `native-exe/<triple>` and `native-image/<triple>` are families, one member per triple, because
   a closed native artifact does not *run* across triples any more than an open one composes
@@ -150,8 +153,11 @@ Android's *library* format is classfiles) and minified bundles (inside `js → j
 
 ## 4. The pipeline DAG
 
-Nodes are formats-in-role (sources, universes, application types, hosts); edges are tools
-(compilers, linkers/egresses, joins). Application resolution is graph search over this DAG.
+Nodes are **forms** (builds.md §14.1) — sources, universes, application types, hosts; edges
+are tools (compilers, linkers/egresses, joins). ("Formats-in-role", as this section
+previously said, is superseded by the form vocabulary, which leaves "format" to closed
+artifacts.) Application resolution is graph search over this DAG — and the edges are
+hyperedges, with input/context/output roles per builds.md §14.2.
 
 ```mermaid
 graph LR
@@ -437,7 +443,8 @@ has something to be faithful to.
 
 Still proposed:
 
-1. Triple-parameterized universes (`native/<triple>`) — as a schema layer — and, on the
+1. Triple-parameterized universes (`native/<triple>`) — as a schema layer, published as a
+   `tels/1` module per spec/tels.md — and, on the
    application axis, the triple-parameterized families `native-exe/<triple>` and
    `native-image/<triple>` (§1, §2). The application axis is not a schema object, so this half
    is a registry concern rather than a spec one.

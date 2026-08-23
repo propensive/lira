@@ -1,0 +1,308 @@
+tel 1.0 specification.tel/tels:1.0.0
+name build
+
+# Draft TEL schema for build.tel — written as a consistency audit of the format as
+# designed so far (builds.md §§7–12). Conventions follow spec/lira.md §14: field
+# order defines the positional inline form; indented continuation lines carry the
+# remaining fields; `optional`/`repeatable` as in the manifest schema.
+#
+# Spacing note: field lines use single (hard) spaces throughout, because a single
+# space after a line's first double space is soft and would merge the type with its
+# modifiers into one token. `description` uses the double space deliberately: its
+# multi-word text is one soft-spaced token.
+#
+# Semantic rules that deliberately stay lints, not schema: subtractive keywords in a
+# root body; L107 minimality; one-tool-per-edge; option cases touching `include`;
+# one-cell-refined-from-one-direction; interface-invisible settings on integration
+# cases; a toolchain applied to a module it references.
+scalar ModuleRef
+  description  A project-local module name, or a <domain>/<name> index coordinate
+  validate     module-ref
+
+scalar Selector
+  description  A version prefix x[.y[.z]], or a tag-name where not version-shaped (§12.6)
+  validate     selector
+
+scalar Glob
+  description  A relative path glob
+  validate     glob
+
+scalar Form
+  description  A registered form name (builds.md §14.1): scala, jvm, oci-image, ...
+  validate     form
+
+scalar Path
+  description  A /-separated file path
+  validate     path
+
+scalar Address
+  description  A DNS name with an optional /-separated path prefix (lira Address)
+  validate     address
+
+scalar Kind
+  description  A registered presumption kind: envvar, command, file, dataset, ... (builds.md §12)
+  validate     kind
+
+scalar ToolchainRef
+  description  A toolchain path, e.g. tools or tools/forked
+  validate     toolchain-ref
+
+scalar AppType
+  description  A registry application-type name: jvm-app, xeq-bundle, native-exe/<triple>
+  validate     app-type
+
+scalar Entry
+  description  An extractable named entry: an application-type name from an artifact line, or a container-format name for a §13.6 canonical derivative (jar)
+  validate     entry
+
+# Output-affecting settings enter the manifest (pending the Tool-record spec
+# change); side-effect settings never do.
+record Setting
+  description  One key-value setting of a tool or egress
+
+  field key Identifier
+  field value String
+
+record Component
+  description  A separately-versioned constituent of an edge (builds.md §14.2)
+
+  field name Identifier
+  field selector Selector optional
+
+# An edge is an invocation kind, named by its output form (scalac/sjsir). In the
+# build file it appears only to configure: components and per-edge settings; the
+# edge's roles and forms live in the tool's descriptor.
+record Edge
+  field name Identifier
+  field component Component optional repeatable
+  field set Setting optional repeatable
+
+# A toolchain entry: built-in by name, or LIRA-distributed by module reference
+# (builds.md §11) — `tool <name> [<module> [<selector>]]`. The version is a
+# selector, not an exact pin (§9.1 gap 1); exact resolution lives in build.lock.
+record Tool
+  description  One tool made usable by a toolchain
+
+  field name Identifier
+  field module ModuleRef optional
+  field selector Selector optional
+  field version Selector optional
+  field flag Identifier optional repeatable
+  field set Setting optional repeatable
+  field edge Edge optional repeatable
+
+# Child toolchains are deltas: they shadow edges and inherit the rest (builds.md §11).
+record Toolchain
+  field name Identifier
+  field tool Tool optional repeatable
+  field toolchain Toolchain optional repeatable
+
+record Selection
+  description  An option selection, `set <option> <case>`
+
+  field option Identifier
+  field case Identifier
+
+record Build
+  field module ModuleRef
+  field set Selection optional repeatable
+
+record Run
+  field module ModuleRef
+  field set Selection optional repeatable
+
+record Watch
+  field pattern Glob
+
+# Extraction is the one way content leaves the hidden store: driver-performed on
+# explicit instruction, destination authored in full. Lint: a destination matched
+# by any source glob is an error (a feedback loop into the next build's inputs).
+record Extract
+  description  Save a named entry into the project tree, `extract <module> <entry> <path>`
+
+  field module ModuleRef
+  field entry Entry
+  field path Path
+
+record Command
+  field name Identifier
+  field build Build optional repeatable
+  field run Run optional repeatable
+  field watch Watch optional repeatable
+  field extract Extract optional repeatable
+
+record Repository
+  description  Transport and scope for source dependencies; never identity or version authority
+
+  field name Identifier
+  field origin String
+  field scope String optional  # domain whose coordinates it sources
+  field track String optional  # branch for development-mode resolution
+
+record Host
+  description  Target host contracts, `host [<domain>] <tag>` (hosts.md §3)
+
+  field domain String optional
+  field tag Identifier
+
+# The predicate follows the discipline's convention: a colon-variant or a version
+# token (builds.md §12).
+# A content claim graduates to the graph (builds.md §16): the `schema` child names
+# a published tels/1 module, compiling to a requires satisfied by lineage — never an
+# opaque predicate. A predicate that needs an algebra is a module reference.
+record Presumption
+  description  One presumption or guarantee, `presume|guarantee <kind> <name> [<predicate>]`
+
+  field kind Kind
+  field name String
+  field predicate String optional
+  field schema Include optional
+
+# The context path is the consumer's declaration: where the assembled module's
+# (platform-matched) artifact lands in this module's input tree, full path
+# including filename — never inherited from the producer's artifact naming.
+# Optional in general; a lint requires it on packaging modules (builds.md §15).
+record Assembly
+  description  An egress input, `assemble <module>`, with its declared context path
+
+  field module ModuleRef
+  field path Path optional
+
+# The form is inferred from the glob's extension via the tool registry; the child
+# field declares it where inference fails or misleads (builds.md §14.4).
+record Source
+  description  One source glob, with its optional declared form
+
+  field glob Glob
+  field form Form optional
+
+record Include
+  field module ModuleRef
+  field selector Selector optional
+
+# Egress settings under `set` are build-tool config only: closed artifacts are
+# identified by digest, so they never need a manifest home. Platforms instantiate
+# a parameterized application-type family, the parameter flowing backward through
+# the packaging chain (builds.md §15.2).
+record Product
+  description  An egress to a registry application type, `artifact <app-type> [<filename>]`
+
+  field type AppType
+  field filename String optional
+  field platform Identifier optional repeatable
+  field set Setting optional repeatable
+
+# --- Overlay grammar -------------------------------------------------------------
+# Universe blocks and axis cases share one delta grammar: source/omit,
+# include/exclude, require/obviate, presume, host, tool, plus nested axis
+# refinements and the ephemeral flag. TEL has no record composition, so the shared
+# fields are repeated in Universe and Case below.
+# OPEN (TEL finding): a composition/mixin mechanism would state this once; the
+# repetition here is the schema-level cost of a grammar the surface language
+# expresses uniformly.
+
+record Case
+  field name Identifier
+  field ephemeral Flag optional
+  field source Source optional repeatable
+  field omit Glob optional repeatable
+  field include Include optional repeatable
+  field exclude ModuleRef optional repeatable
+  field require ModuleRef optional repeatable
+  field obviate ModuleRef optional repeatable
+  field presume Presumption optional repeatable
+  field host Host optional
+  field tool Tool optional repeatable
+  field integration Axis optional repeatable  # refinement of a declared axis
+  field option Axis optional repeatable
+
+# Whether an axis is an integration or an option comes from the declaring keyword;
+# the compilation differs per builds.md §7.
+record Axis
+  description  A selection axis grouping its cases
+
+  field name Identifier
+  field ephemeral Flag optional
+  field case Case optional repeatable
+
+record Universe
+  description  A realm-section overlay (§9.3); the name is a universe realm
+
+  field name Identifier
+  field ephemeral Flag optional
+  field source Source optional repeatable
+  field omit Glob optional repeatable
+  field include Include optional repeatable
+  field exclude ModuleRef optional repeatable
+  field require ModuleRef optional repeatable
+  field obviate ModuleRef optional repeatable
+  field presume Presumption optional repeatable
+  field host Host optional
+  field tool Tool optional repeatable
+  field integration Axis optional repeatable
+  field option Axis optional repeatable
+
+record Module
+  field name Identifier
+  field apply ToolchainRef optional
+  field source Source optional repeatable
+  field require ModuleRef optional repeatable
+  field presume Presumption optional repeatable
+  field guarantee Presumption optional repeatable  # packaging modules: builds.md §15
+  field include Include optional repeatable
+  field assemble Assembly optional
+  field artifact Product optional repeatable
+  field integration Axis optional repeatable
+  field option Axis optional repeatable
+  field universe Universe optional repeatable
+  field host Host optional
+
+record Project
+  field id Identifier
+  field name String optional
+  field description String optional
+  field apply ToolchainRef optional
+  field host Host optional
+  field module Module optional repeatable
+
+# The module reference compiles to a deploy record; `require` here names services
+# or givens — the other edge kind: never a dependency (builds.md §4).
+record Service
+  description  One service of a topology, `service <name> [<module>]`
+
+  field name Identifier
+  field deploy ModuleRef optional
+  field address Address optional
+  field require Identifier optional repeatable
+  field serve Path optional repeatable
+
+record Override
+  description  An environment delta rebinding one service, `address <address> <service>`
+
+  field address Address
+  field service Identifier
+
+# Compiles to a complete, standalone env release (builds.md §10.4). The delta
+# grammar will grow with the deployment round (deploy/given deltas, mocks).
+record Environment
+  description  A delta-variation of the enclosing topology
+
+  field id Identifier
+  field name String optional
+  field description String optional
+  field address Override optional repeatable
+  field guarantee Presumption optional repeatable
+  field service Service optional repeatable
+
+record Topology
+  field name Identifier
+  field service Service optional repeatable
+  field guarantee Presumption optional repeatable
+  field environment Environment optional repeatable
+
+document
+  field command Command optional repeatable
+  field toolchain Toolchain optional repeatable
+  field repository Repository optional repeatable
+  field project Project optional repeatable
+  field topology Topology optional repeatable

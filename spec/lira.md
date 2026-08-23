@@ -402,7 +402,7 @@ Each section's `tree` field references a **Tree metadata blob**: a TEL document 
 paths to blob hashes:
 
 ```tel
-tel 1.0 <lira-tree schema signature>
+tel 1.0  <lira-tree schema signature>
 
 # path                        # blob
 entry gossamer/Text.class       Ab12…
@@ -652,7 +652,7 @@ its class, its value hash, and its key in human-readable form (for diagnostics; 
 does not participate in any hash):
 
 ```text
-tel 1.0 <lira-atoms schema signature>
+tel 1.0  <lira-atoms schema signature>
 
 discipline tasty/1
 
@@ -705,6 +705,20 @@ a silent change would fracture hash stability.
 Names SHOULD identify the interface carrier a discipline canonicalizes rather than the language
 that produces it — `tasty`, `dts`, `wit` — since one carrier may be shared by several languages
 and one language may present several carriers.
+
+> **The dual-declaration bridge** *(non-normative)*. Two versions of one discipline stand in
+> no formal relationship: each is an immutable canonicalization, and domain separation keeps
+> their atoms disjoint even over identical content. Migration is nonetheless graded, because
+> it happens at the release level: a release may declare both `foo/1` and `foo/2`, and since
+> the grade is computed over the union of its atoms, the bridging release is a **minor**
+> (pure addition), the later release dropping `foo/1` is a **major**, and in between the
+> grade of the union is the maximum of the per-discipline grades — a theorem of §12.3, not a
+> rule of this section. The maximum has a consequence worth knowing: while both versions are
+> declared, the stricter canonicalization governs, so a successor discipline's greater
+> precision pays off only after the off-ramp. Used-sets are per-canonicalization, so
+> consumers recording uses against `foo/2` atoms during the bridge make the eventual drop of
+> `foo/1` a non-event for spanning — and published used-sets make "who still depends on
+> `foo/1`?" a manifests-only query.
 
 ### 11.2 Requirements
 
@@ -853,6 +867,16 @@ This specification and its companion documents register the following discipline
   *topology*: additions are minors, and removing an address, retargeting it to a different
   module, or withdrawing a given is a major, behind **L110**'s explicit-major gate. Deploys,
   selections and routes enter no atom and change at patch grade.
+- **`tels/1`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
+  schema discipline, for releases whose content is a TEL schema document — including the
+  layers of this specification's own extensibility seam (§14). Its domain is every universe
+  and `host`, on `dts/1`'s reasoning; keying by declaration; it emits only rigid atoms — one
+  per component of the schema's composed sequence, one per ordered component pair — so that
+  grade computation coincides, by construction, with TEL's signature-subsequence
+  compatibility relation, and schema versions are derived from TEL's own subtype relation.
+  It certifies **recompilation** in its schema transposition: revalidation. It also enforces
+  publish-time name binding: a schema's declared `name` binds its module name, and its layer
+  names are the names a TEL pragma's `+` selections address.
 
 Anticipated future disciplines include one for Java source signatures where no `.class` files
 are shipped; a klib-metadata sibling of `kotlin-metadata/1` for Kotlin multiplatform; and
@@ -1474,8 +1498,7 @@ scalar ProfileId
   validate     profile-id
 
 scalar Guarantee
-  description  A guarantee level (§11.5): linkage or recompilation. Behavior is never
-               certifiable, so never breakable by record.
+  description  A guarantee level (§11.5): linkage or recompilation. Behavior is never certifiable, so never breakable by record.
   validate     guarantee
 
 scalar TreePath
@@ -1485,9 +1508,9 @@ scalar TreePath
 record Tool
   description  One tool that produced content in this release.
 
-  field name     Identifier
-  field version  String
-  field flag     Identifier optional repeatable
+  field name Identifier
+  field version String
+  field flag Identifier optional repeatable
 
 record Source
   description  The sources a toolchain consumed to produce this release (§17); authorial.
@@ -1505,8 +1528,8 @@ record Api
 record Profile
   description  An ecosystem profile whose predicates this release claims to satisfy.
 
-  field id      ProfileId
-  field breaks  Guarantee optional repeatable   # levels not preserved vs the predecessor (§12.4)
+  field id ProfileId
+  field breaks Guarantee optional repeatable  # levels not preserved vs the predecessor (§12.4)
 
 record Resource
   description  One resource claim for the resource/1 discipline (§11.4).
@@ -1528,13 +1551,12 @@ record Dependency
 record Integration
   description  One alternative dependency vector this release was built against (§9.5).
 
-  field  id     Identifier
-  field  rank   Natural optional    # canonical-assignment preference, lower first (§13.3)
-  field  label  String optional     # human-readable note; no authority
+  field id Identifier
+  field rank Natural optional  # canonical-assignment preference, lower first (§13.3)
+  field label String optional  # human-readable note; no authority
 
 record Requires
-  description  One requirement of this section, on either kind of provider (hosts.md,
-               services.md).
+  description  One requirement of this section, on either kind of provider (hosts.md, services.md).
 
   field module ModuleName               # the provider's module name (host contract or deployable, L137)
   field api Hash                        # required contract snapshot (satisfied by lineage membership)
@@ -1542,8 +1564,7 @@ record Requires
   field uses Hash optional              # Uses metadata blob against the contract (hosts.md §7)
 
 scalar Address
-  description  An environment address (§4.1): a DNS name or URL prefix, compared as
-               authored — the owns precedent, no canonicalization (environments.md §4).
+  description  An environment address (§4.1): a DNS name or URL prefix, compared as authored — the owns precedent, no canonicalization (environments.md §4).
   validate     address
 
 record Given
@@ -1585,13 +1606,13 @@ record Artifact
   field locator String optional         # advisory retrieval hint; no authority
 
 record Section
-  select  Realm
-  field   integration Identifier optional            # the integration realized (§9.5)
-  field   tree        Hash                           # Tree metadata blob
-  field   delete      TreePath optional repeatable  # root paths removed in this overlay
-  field   derivative  Hash  optional                # canonical derivative artifact (§13.6)
-  field   artifact    Artifact optional            # closed-artifact pin (app sections only, §9.4)
-  field   requires    Requires optional repeatable  # requirements on providers (§9.4)
+  select Realm
+  field integration Identifier optional  # the integration realized (§9.5)
+  field tree Hash  # Tree metadata blob
+  field delete TreePath optional repeatable  # root paths removed in this overlay
+  field derivative Hash optional  # canonical derivative artifact (§13.6)
+  field artifact Artifact optional  # closed-artifact pin (app sections only, §9.4)
+  field requires Requires optional repeatable  # requirements on providers (§9.4)
 
 record Payload
   field  compression  Identifier          # brotli
@@ -1719,6 +1740,11 @@ document
 
 New universes, disciplines with schema-level needs, and future fields are introduced as TEL
 schema layers; the manifest's pragma signature encodes exactly which extensions a file uses.
+Those layers are themselves **shipped through LIRA**: an extension layer is published as a
+release of a `tels/1` module ([`tels.md`](tels.md)), referenced as
+`‹domain›/‹name›:‹version›` (distribution design §2), its version derived from TEL's own
+compatibility relation — so LIRA's extensibility seam is delivered by LIRA itself, with the
+same naming, lineage, and verification as any other release.
 
 ## 15. Signatures
 
@@ -1969,7 +1995,7 @@ representation that references them differently.
 
 ```text
 #!/usr/bin/env lira
-tel 1.0 <lira schema signature>
+tel 1.0  <lira schema signature>
 
 module gossamer-core
 version 0.64.2
@@ -2005,7 +2031,7 @@ integration
 integration
   id rudiments0
   rank 1
-  label built against the rudiments 0.x line
+  label  built against the rudiments 0.x line
 
 # module              # api     # version
 dependency anticipation-core      Ab12…     0.64.0
@@ -2045,7 +2071,7 @@ signature
   signer jon.pretty@propensive.com
   algorithm ml-dsa-65
   key St34…
-  value <BASE-256 signature>
+  value  <BASE-256 signature>
 ##
 <Brotli-compressed blob stream>
 ```

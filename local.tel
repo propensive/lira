@@ -1,0 +1,56 @@
+tel 1.0
+
+# Local settings for one working copy; sits beside build.tel and is never checked in.
+#
+# The governing principle: this file may change where bytes come from, what the tool
+# does extra, and which option cases are selected by default — never what a release
+# *is*. Anything built against locally-diverged state (a dirty checkout, an
+# overridden tool) is a development release carrying build pins (§12.5), so L118
+# blocks publication automatically until the divergence is reconciled: the local
+# file needs no trust story of its own.
+
+# Transport override: point a repository declared in build.tel at a local checkout.
+# Scope and semantics stay as declared there; the checkout is still verified against
+# source records where it matches a published state, and a dirty tree resolves to a
+# development release under a tree-hash source scheme (no commit to name).
+repository soundness
+  origin /Users/propensive/work/soundness
+
+# Default option selections for local builds. Options are user-choice by design, so
+# a local default is exactly in character; commands and the CLI still override.
+set optimization debug
+
+# Where this user's signing key lives (per-user by nature; the signer identity
+# appears in published manifests, §15, but the key location is machine-local).
+signer jon.pretty@propensive.com
+  key ~/.config/lira/ml-dsa.key
+
+# OPEN: locally overriding a tool version would be honest (§17 records what actually
+# ran) but produces artifacts diverging from CI — permitted with a lint, or banned?
+
+# What this machine provides: these become the `given` records of `environment local`
+# (build.tel) — the same record production's operator authors, sourced here from the
+# system home. The tool may also detect these; a declaration pins the expectation.
+given postgresql 16
+
+# Presumption guarantees this machine makes (the local counterpart of the topology's
+# `guarantee`, same grammar): a missing one fails environment validity before launch,
+# from manifests, rather than at runtime. Probed, never valued.
+guarantee envvar ACCESS_KEY
+guarantee dataset tzdata 2026a
+
+# Downstream projects: consumers of this project's releases, used as test cases for
+# local changes. Impact is reported in two stages: first from manifests alone —
+# grade the fresh development release and check each downstream's dependency and
+# requires records against it (lineage membership, or used-set spanning, §13.4) —
+# then, for those that still satisfy, build and test them with the development
+# release substituted via build pin. The index knows the full reverse-dependency
+# graph from published manifests, so suggesting downstreams is a natural LIRA
+# online-service query; this list selects which ones to actually run.
+downstream wisteria
+  origin /Users/propensive/work/wisteria
+  run wisteria/test    # the command serving as this downstream's test case
+
+downstream honeycomb
+  origin https://github.com/propensive/honeycomb.git
+  run honeycomb/test
