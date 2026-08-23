@@ -135,6 +135,13 @@ siblings. Contrast **snapshot**.
 module or an external coordinate with a selector. Compiles to a `dependency` record.
 Its subtractive counterpart is `exclude`.
 
+**input identity** — The hash of a release's full input closure (sources, per-cell
+tool identities and output-affecting settings, dependency implementation identities,
+the guarantees document, case coordinates), carried as a `source` record under scheme
+`inputs/1`. Computable without building: the memoization key of the whole build.
+Governed by the hashability law — output-affecting inputs must have canonical byte
+encodings and reach tools only through declared, hashed channels.
+
 **integration** — One alternative dependency vector a release was built against
 (spec §9.5), selected by resolution (canonical assignment), invisible to API identity.
 In the build file, an axis of cases whose peer product flattens to composite ids.

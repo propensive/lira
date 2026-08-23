@@ -157,6 +157,7 @@ tables, CA trust roots, the MIME database.
 | `lira-tree`, `lira-atoms`, `lira-uses`, `lira-delta` | Metadata-blob schemas |
 | `lira-capabilities` | Capability listing schema (hosts.md §5) |
 | `build` (`build.schema.tel`) | The build-file schema, registered locally; publishable as a `tels/1` module |
+| `lira-inputs` | Planned: the input-closure document whose digest is the `inputs/1` source scheme (builds.md §3.1 addendum) |
 | `tool` (`tool.schema.tel`) | Tool descriptors, extracted at publish (builds.md §14.3); registered; worked instance `scalac.tool.tel` |
 
 ## Overloaded words, disambiguated
