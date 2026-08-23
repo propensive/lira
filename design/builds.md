@@ -93,6 +93,28 @@ consumers, implementation identity for exactness, source identity for substituti
 > exactly these terms — foreign identity verbatim, atom-free, authorial per spec §16, with
 > independent rebuild as its check (spec §18).
 
+> **Addendum: the input identity, closing the remainder.** Source identity
+> under-determines the output: the same sources under a different output-affecting
+> setting, a different edge component, or a different dependency *implementation* (the
+> manifest records dependencies by snapshot, never payload) yield different bytes. The
+> full memoization key of §1 is the **input closure**, and it needs no new record kind —
+> the `source` record's scheme vocabulary is open, so the addition is one scheme and one
+> law. **Scheme `inputs/1`**: the digest of a canonical BinTEL document (`lira-inputs`,
+> a sibling of `lira-uses`) listing, sorted and per cell: source digests; tool
+> identities with output-affecting settings and components; dependency
+> module→payload-hash pairs; the guarantees document hash; the case coordinates. It is
+> computable *without building* — a function of inputs, not outputs — making it the
+> cache key §1 always wanted: compute, look up, skip the build. Verification is
+> three-tier: authorial (§16), consistency-checkable from the same inputs without
+> compiling, bindingly verified by §17 rebuild. **The hashability law**: every
+> output-affecting input MUST have a canonical byte encoding, and a tool may receive
+> output-affecting data only through declared, hashed channels — the descriptor's
+> `affects output` classification implies hashability, and ambient inputs are excluded
+> by construction: hashability and hermeticity are the same requirement. A release may
+> thus carry arbitrarily many relevant hashes — payload, per-section derivatives,
+> per-scheme sources, `inputs/1` — each answering a different question with the same
+> mechanism.
+
 ### 3.2 Variant axes beyond the matrix
 
 "Different version dependencies, different platforms, *etc*" — the *etc* matters. The

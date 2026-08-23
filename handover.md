@@ -1,5 +1,30 @@
 # Handover: `build.tel` — a build-file format as a live test of LIRA
 
+> **Round update (2026-08-23b).** builds.md §3.1 gains its closing addendum: the
+> **input identity** — scheme `inputs/1` on the existing open-vocabulary source record
+> (no new record kind), digest of a canonical `lira-inputs` BinTEL doc (per-cell:
+> source digests, tool identities + output-affecting settings + components, dependency
+> module→payload pairs, guarantees doc hash, case ids). Computable WITHOUT building —
+> the §1 memoization's real cache key (compute → look up → skip build); three-tier
+> verification (authorial / consistency-check from inputs / §17 rebuild). The
+> **hashability law**: output-affecting inputs must have canonical byte encodings and
+> reach tools only through declared hashed channels — descriptor `affects output`
+> implies hashable; hashability = hermeticity. Glossary + catalog updated
+> (lira-inputs planned). This closes §3.1's remainder; the lira-inputs schema file and
+> the spec-side scheme registration are follow-ups, and input-hash lookup joins the
+> online-service query list.
+>
+> **The open items now live in design/gaps.md** — a tiered living checklist
+> (1: designed, awaiting spec application — Tool records first, blocking everything;
+> 2: discipline specs to write — tool, envvar/1, file/1, dataset; 3: named and
+> half-designed — run settings, artifact selection, precedence order, local.tel
+> completion, environment deltas, command args, multi-parent assemble, parameterized
+> edges in practice; 4: untouched — build.lock, the publishing workflow,
+> universes.tel, diagnostics, codegen, remote store, CLI relationship, the real
+> trait, warm-equals-cold mechanics; 5: verification debt — the module core manifest
+> hand-derivation FIRST, the two leak-checks, the local.tel gitignore question).
+> Update gaps.md as items land rather than growing this handover further.
+
 > **Round update (2026-08-21c, tool anatomy).** builds.md §14: DAG nodes are **forms**
 > (genus over source forms / universes / application types; carrier stays the
 > discipline-side word; "format" retired from the node role — universes.md §4 updated).
