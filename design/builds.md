@@ -54,7 +54,7 @@ Each element of the vision, against the mechanism that already carries it:
 | "snapshot of the build state for a module"  | the manifest: toolchain records, dependency snapshots, atoms, payload identity |
 | build feeds deployment                      | aggregated requirements seed the deployable's `requires` (hosts.md §10, services.md §4.1) |
 | running modules are "services"              | services.md, by that name                             |
-| coherent deployment over services           | environment validity (spec §13.7, L147)               |
+| coherent deployment over services           | environment validity (spec §13.7, L145)               |
 
 Two rows deserve their footnotes. The from-source row is *gated correctly by publication
 rules the spec already has*: a module depending on an unpublished from-source build carries
@@ -173,7 +173,7 @@ the surface:
   *closing over* is what an egress does to a buildpath — and nothing ever does it to an
   environment (execution.md §1). The coherence the deployment definition needs is
   **closure** in the §13.3/§13.7 sense: every requirement provided, every provider
-  satisfying, checked over the whole set (L147) and re-checked at every transition (L148).
+  satisfying, checked over the whole set (L145) and re-checked at every transition (L146).
   The build tool gets its guarantee — no service deployed into a set that cannot support
   it — from validity, not from closure-into-an-artifact, and the two words should not be
   allowed to blur, since one produces a thing and the other sustains a state.
@@ -464,7 +464,7 @@ CLI, never `build.tel`.
 
 ### 10.1 One validity algebra, two world documents
 
-Buildpath validity (§13.3) and environment validity (§13.7, L147) are the same judgment —
+Buildpath validity (§13.3) and environment validity (§13.7, L145) are the same judgment —
 closure, satisfaction, aggregation, coherence, quantified over an assignment of one
 integration per release — differing only in **which document supplies the providers**. At
 build time the providers are the target's host contracts, and requirements naming
@@ -472,7 +472,7 @@ deployables are left explicitly pending (rule 7); at run time the providers are 
 environment's givens and bindings, and the pending judgments close. The environment
 release is the run's world document exactly as the lockfile is the build's (§9.2): the
 same genus of verifiable memoization, with one honest difference in polarity — the
-lockfile is *sampled* state, the environment is *desired* state, and L148's re-check at
+lockfile is *sampled* state, the environment is *desired* state, and L146's re-check at
 every transition holds the two together. Extending §9's bijection to the running half:
 the environment manifest is its `build.lock`.
 
@@ -661,7 +661,7 @@ presumes is superfluous, so supply cannot silently outgrow demand.
    authored", with the computing tool being the compiler itself: the strongest
    provenance a used-set can have;
 4. requires + uses aggregate to the app section; environment validity enforces them;
-   probes verify at startup; L148 re-checks at every transition.
+   probes verify at startup; L146 re-checks at every transition.
 
 Soundness is §10.2's verifiability doing new work: the compiler may assume totality
 *because the egress cannot land where the guarantee fails*. This is the first place
@@ -1224,7 +1224,7 @@ reduced to the one satisfaction relation.
 The complete set of ways disciplines relate:
 
 1. **Coexistence** — multiple `api` records on one release; the snapshot is the atom
-   union; claiming order resolves content overlap (`kotlin-metadata/1` beside
+   union; claiming order resolves content overlap (`kmeta/1` beside
    `classfile/1`). The dual-declaration bridge (spec §11.1) is this mechanism's
    special case for two versions of one discipline.
 2. **Shared canonical encodings** — `jsig/1` over `classfile/1`'s encoding:

@@ -48,10 +48,10 @@ LIRA defines:
   (§13.7, [`services.md`](services.md), [`environments.md`](environments.md)).
 
 A `.lira` file thus has three consumers: the **compiler**, which composes it on a buildpath;
-the **deployer**, which composes it into an environment; and the **runtime**, which keeps
-reading the same manifests for as long as anything runs.
-
-FIXME: What does "keeps reading the manifests" mean?
+the **deployer**, which composes it into an environment; and the **runtime**, for which the
+same manifests stay live for as long as anything runs — every subsequent deploy into the
+environment, every readiness probe, and every drift report is judged against them (§13.7,
+[`hosts.md`](hosts.md) §9).
 
 The primary motivating ecosystem is Scala (JVM, Scala.js, Scala Native), and the motivating
 deployment case is the microservice environment; but no normative part of this specification is
@@ -66,10 +66,7 @@ TypeScript declaration discipline ([`dts.md`](dts.md)), the OpenAPI discipline
 ([`openapi.md`](openapi.md)), the JVM ecosystem profile ([`jvm.md`](jvm.md)), host contracts
 and requirements ([`hosts.md`](hosts.md)), deployable releases and environment validity
 ([`services.md`](services.md)), and environment releases, bindings and provisioning
-([`environments.md`](environments.md)). Requirement labels **L144** and **L145** are retired
-and not reused.
-
-FIXME: Let's reuse L144 and L145 for the final spec, rather than leave a gap.
+([`environments.md`](environments.md)).
 
 ## 2. Conformance Language
 
@@ -101,10 +98,17 @@ executing several representations) dissolve once each thing is named by its **ro
   role: the same format can appear at different points of a pipeline with different meanings, so
   nothing in this specification is keyed by format.
 
-FIXME: Can we avoid the forward reference to universe in the realm description?
-
-- **Realm**: an axis by which a section may be keyed. Every universe is a realm, and three
-  realms are not universes: the `host` realm ([`hosts.md`](hosts.md)), which holds a host
+- **Universe**: an axis along which independently-published libraries meet and compose,
+  characterized by an **interface convention** (how a library's API is expressed to other
+  libraries), a **linkage mechanism** (how library artifacts are later combined), and a
+  **capability model** (what composed code may assume of its surroundings). The litmus test for
+  universe-hood: _do independently-published libraries compose there?_ `jvm` passes — classloading
+  composes arbitrary classfile sets; DEX fails — Android libraries ship classfiles, and dexing
+  happens after the library phase closes; LLVM bitcode fails — no ecosystem publishes open-world
+  libraries as bitcode. The universe vocabulary is open (§9.4).
+- **Realm**: the axis by which a release's **sections** — its stored views of the release's
+  content (§4.2, §9) — are keyed. Every universe is a realm, and three realms are not
+  universes: the `host` realm ([`hosts.md`](hosts.md)), which holds a host
   contract's content rather than a composable library representation; the `app` realm
   ([`services.md`](services.md)), which holds a closed, runnable artifact — content that is
   past composition rather than awaiting it; and the `env` realm
@@ -114,17 +118,6 @@ FIXME: Can we avoid the forward reference to universe in the realm description?
   _world_, which this specification must use in WIT's own sense ([`wit.md`](wit.md)) and
   whose cosmological intuition inverts the containment needed here; a realm carries no
   instinct about what contains what.
-
-FIXME: "by which a section may be keyed" - what is meant by a section here?
-
-- **Universe**: a realm in which independently-published libraries meet and compose, characterized
-  by an **interface convention** (how a library's API is expressed to other libraries), a
-  **linkage mechanism** (how library artifacts are later combined), and a **capability model**
-  (what composed code may assume of its surroundings). The litmus test for universe-hood: _do
-  independently-published libraries compose there?_ `jvm` passes — classloading composes arbitrary
-  classfile sets; DEX fails — Android libraries ship classfiles, and dexing happens after the
-  library phase closes; LLVM bitcode fails — no ecosystem publishes open-world libraries as
-  bitcode. The universe vocabulary is open (§9.4).
 - **Host**: a runtime environment that executes _closed_ artifacts, exposing a versioned
   capability interface: the JVM at a JDK version, a browser with its Web APIs, Node with its
   builtins, the Android runtime at an API level, a WASI runtime with its world, an operating
@@ -494,7 +487,7 @@ specification's two kinds of **provider** — the capability an environment is _
 capability _deployed into_ it — recognizable by their `host` and `app` sections respectively.
 
 Content in an `app` or `env` section that no declared discipline claims is claimed
-**atomless** rather than falling to `opaque/1` (**L146**). The asymmetry with universe
+**atomless** rather than falling to `opaque/1` (**L144**). The asymmetry with universe
 sections is principled: a universe section's content is interface-bearing by default, because
 consumers compile against it; an `app` section's content is closed by default, because
 nothing consumes its bytes as interface, and those bytes are already covered by
@@ -518,17 +511,17 @@ companion document [`services.md`](services.md).
 An `env` section marks an **environment release**: the operator-signed statement of one
 environment's desired state (§13.7, [`environments.md`](environments.md)). Such a release
 MUST carry exactly that one section, MUST declare no integrations and no dependencies, and
-its section MUST carry no `requires` records (**L150**) — a `given` record (§14) states
+its section MUST carry no `requires` records (**L148**) — a `given` record (§14) states
 provision, not requirement, and is read by environment closure from the provision side. The
 environment's substance is not section content at all but the manifest's `given`, `deploy`
-and `binding` records, which any other release MUST NOT declare (also **L150**): the
+and `binding` records, which any other release MUST NOT declare (also **L148**): the
 judgments that read them (§13.7) read manifests, never payloads, so the records live where
 every judgment input in this specification lives. An `env` section's tree carries only
 ancillary content — probe metadata, operator notes — and MAY be empty. An environment
 release declares `environment/1` (§11.3), whose atoms are its bindings and givens; and an
 environment module is _neither kind of provider_ — it carries no `host` and no `app` section
 — so no `requires` record can name one (**L137**) and no environment is ever a dependency
-(**L149**): environments are judged and consulted, never composed against.
+(**L147**): environments are judged and consulted, never composed against.
 
 ### 9.5 Integrations
 
@@ -590,7 +583,7 @@ whose contents are deliberately non-contractual — contributes nothing to any u
 atom set, which is what permits universes to diverge in implementation without violating the
 invariant. Content claimed by no discipline falls to `opaque/1` in universe
 sections — and must therefore be byte-identical across the universes that carry it — and is
-atomless in `app` sections (**L146**, §9.4), where it may diverge freely across integrations.
+atomless in `app` sections (**L144**, §9.4), where it may diverge freely across integrations.
 
 The invariant is also scoped to the discipline's **domain** (§11.2) — the universes it atomizes
 at all. A discipline may be **universal**, atomizing a representation carried in every universe
@@ -751,7 +744,7 @@ A discipline defines, deterministically:
    §11.4). Claiming partitions each section's materialized tree: every content item has exactly
    one claimant, determined by **first match** over the release's `api` records in manifest
    order, then `resource/1`, then the `opaque/1` fallback (**L134**) — except in an `app`
-   section, where the final fallback is atomless rather than `opaque/1` (**L146**, §9.4). The
+   section, where the final fallback is atomless rather than `opaque/1` (**L144**, §9.4). The
    order of `api` records
    is therefore semantic, and producers MUST order them so that each item is claimed by the
    discipline that carries its contract — [`classfile.md`](classfile.md) §4 is the case that
@@ -850,9 +843,7 @@ This specification and its companion documents register the following discipline
   contracts, and of `scalajs-javalib`, whose shared discipline is what lets cross-contract
   spanning decide portability.
 
-FIXME: Can we rename `kotlin-metadata` to `kmeta`?
-
-- **`kotlin-metadata/1`** (informative here; normative specification in
+- **`kmeta/1`** (informative here; normative specification in
   [`kotlin.md`](kotlin.md)): the Kotlin declaration-surface discipline over the `@Metadata`
   annotation. Its domain is `{jvm, host}`; keying by **membership**; certifies
   **recompilation**. It covers what `classfile/1` cannot see — nullability, properties,
@@ -892,7 +883,7 @@ FIXME: Can we rename `kotlin-metadata` to `kmeta`?
   names are the names a TEL pragma's `+` selections address.
 
 Anticipated future disciplines include one for Java source signatures where no `.class` files
-are shipped; a klib-metadata sibling of `kotlin-metadata/1` for Kotlin multiplatform; and
+are shipped; a klib-metadata sibling of `kmeta/1` for Kotlin multiplatform; and
 `proto/1` over Protobuf descriptors — the `classfile/1` of the network family, since Protobuf's
 tag numbers and unknown-field rules are properties of the wire format itself, licensing a
 stronger linkage claim than `openapi/1` makes.
@@ -1207,7 +1198,7 @@ A dependency record MAY additionally carry:
   build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.5).
 
 A `dependency` record naming a module whose releases are not library releases — host
-contracts, deployable releases, or environments (§9.4) — is invalid (**L149**): nothing of a
+contracts, deployable releases, or environments (§9.4) — is invalid (**L147**): nothing of a
 provider composes onto a buildpath, the correct edge for a provider is `requires`, and no
 edge at all names an environment.
 
@@ -1407,7 +1398,7 @@ the provider's contract is read for atoms and never materialized, and whether th
 actually present is decided by probing at the third verification moment (hosts.md §9).
 Satisfaction is lineage membership and spanning, unchanged.
 
-An environment is stated by an **environment release** (§9.4, **L150**): an operator-signed
+An environment is stated by an **environment release** (§9.4, **L148**): an operator-signed
 release of the `env` realm whose manifest carries `given` records — the platform contracts
 the environment supplies — `deploy` records — the releases intended to run, each pinned by
 implementation identity and naming the `app` section deployed (its realm and integration,
@@ -1416,17 +1407,17 @@ machinery beyond this choice) — and `binding` records, each associating an **a
 provider module and a release **selection**: a snapshot, satisfied through the provider's
 lineage, or an exact implementation identity. Binding addresses MUST be pairwise disjoint —
 neither equal to nor a path-prefix of one another, compared as authored strings on the `owns`
-precedent (**L151**): the address disambiguates at run time what uniqueness (rule 1, L111)
+precedent (**L149**): the address disambiguates at run time what uniqueness (rule 1, L111)
 disambiguates at build time, which is why the environment has no uniqueness rule of its own —
 two releases of one module serving concurrently is the normal state of a rolling deployment,
 not an error.
 
-Environment validity (**L147**) transposes §13.3. Closure requires every module named by any
+Environment validity (**L145**) transposes §13.3. Closure requires every module named by any
 deployed release's applicable `requires` records to be **provided** — by a given platform
 contract, by a deployed release of that module, or, where the requirement carries a used-set,
 by any provider whose atoms cover it (cross-module spanning, hosts.md §7). Satisfaction must
 hold against _every_ concurrently-serving release of a provider — refined per binding
-(**L152**): where a requirement resolves to a binding, the quantifier ranges over the
+(**L150**): where a requirement resolves to a binding, the quantifier ranges over the
 concurrently-serving releases _within that binding's selection_, releases behind other
 bindings being other providers; a provider deployed but unbound keeps the unrefined
 quantifier. Requirements aggregate across the environment by the rule of hosts.md §10.
@@ -1436,7 +1427,7 @@ bindings are those whose provider module and selection satisfy it ([`services.md
 §5, cross-module spanning included); tools MUST resolve each requirement to its first
 candidate in ascending (`rank`, `address`) order, unless a `route` pin on the consumer's
 deploy record names a candidate, which is then chosen — a `route` naming an address that is
-not a candidate for its requirement is invalid (also **L150**), else a pin could silently
+not a candidate for its requirement is invalid (also **L148**), else a pin could silently
 defeat satisfaction. **Provisioning** — the §13.5 analog — evaluates a valid environment into
 a table from each requirement to its resolved binding's address; a requirement whose provider
 carries no binding is _unaddressed_, an advisory fact rather than a failure, since not every
@@ -1446,7 +1437,7 @@ orchestrator's business, exactly as invoking egress tools is the build's (§13.5
 A **deploy** is a transition of an environment — any change to its release's `given`,
 `deploy` or `binding` records, a rebinding included — and a release is **deployable** into an
 environment iff the state after the transition — and, for a rolling deploy, the intermediate
-state in which old and new releases serve together — is valid (**L148**). Deployability is
+state in which old and new releases serve together — is valid (**L146**). Deployability is
 thus the same judgement as buildpath validity, made at the second moment, from the same
 manifests: closure and satisfaction over a set, with the guarantee levels (§11.5) saying
 which consumers may keep running and which must move (§12.4). Environment validity and
@@ -1582,7 +1573,7 @@ scalar Address
   validate     address
 
 record Given
-  description  One platform contract this environment supplies (L150, environments.md §4).
+  description  One platform contract this environment supplies (L148, environments.md §4).
 
   field module ModuleName               # a host-contract module
   field api Hash                        # its snapshot
@@ -1595,7 +1586,7 @@ record Route
   field address Address                 # the candidate binding this requirement resolves to
 
 record Deploy
-  description  One release this environment intends to run (L150, environments.md §4).
+  description  One release this environment intends to run (L148, environments.md §4).
 
   field module ModuleName
   field build Hash                      # implementation identity: desired state names artifacts
@@ -1604,7 +1595,7 @@ record Deploy
   field route Route optional repeatable # routing pins (§13.7)
 
 record Binding
-  description  One address bound to a provider (L150, L151, environments.md §4).
+  description  One address bound to a provider (L148, L149, environments.md §4).
 
   field address Address
   field module ModuleName               # provider module: either L137 kind
@@ -1665,9 +1656,9 @@ document
   field profile Profile optional repeatable
   field integration Integration optional repeatable  # alternative dependency vectors (§9.5)
   field dependency Dependency optional repeatable
-  field given Given optional repeatable      # environment releases only (L150, §13.7)
-  field deploy Deploy optional repeatable    # environment releases only (L150, §13.7)
-  field binding Binding optional repeatable  # environment releases only (L150, L151, §13.7)
+  field given Given optional repeatable      # environment releases only (L148, §13.7)
+  field deploy Deploy optional repeatable    # environment releases only (L148, §13.7)
+  field binding Binding optional repeatable  # environment releases only (L148, L149, §13.7)
   field delta Hash optional             # Delta metadata blob for this lineage step
   field section Section repeatable     # first section = root (§9.1); keyed (realm, integration)
   field payload Payload
@@ -1810,12 +1801,12 @@ file (and, where noted, additional artifacts):
    checks the cross-section invariant over each discipline's domain for every section of the
    (realm × integration) matrix (§9.6), that integration declarations are well-formed
    (**L131**) and each is realized (**L133**), that no declared discipline is inapplicable
-   (**L127**), that content claiming follows the claiming order (**L134**, **L146**, §11.2),
+   (**L127**), that content claiming follows the claiming order (**L134**, **L144**, §11.2),
    that resource declarations are well-formed and effective (**L124**, **L125**, §11.4), that a
    `host` section, where present, obeys the host-contract shape (**L135**, §9.4), that an
    `app` section, where present, obeys the deployable-release shape (**L143**, §9.4), and
    that an `env` section, where present, obeys the environment shape, including binding
-   disjointness and route validity (**L150**, **L151**, §9.4, §13.7)
+   disjointness and route validity (**L148**, **L149**, §9.4, §13.7)
    — requires an implementation of each discipline (though `opaque/1`, `resource/1`,
    `capability/1` and `environment/1` are language-blind and implementable by every verifier;
    the last two atomize manifest records rather than tree content, §11.3);

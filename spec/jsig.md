@@ -57,7 +57,7 @@ and one difference of obligation:
   implementation MUST still fail on a supertype that is claimed content yet unreadable. What it
   MUST NOT do is fail on `java.lang.Object`'s absence from a contract that is not the JDK's:
   a supertype outside the claimed content contributes nothing to presented sets, exactly as a
-  metadata-less supertype contributes nothing to `kotlin-metadata/1` ([`kotlin.md`](kotlin.md)
+  metadata-less supertype contributes nothing to `kmeta/1` ([`kotlin.md`](kotlin.md)
   §5).
 
 ## 5. Why Not `classfile/1` With a Different Registry Entry

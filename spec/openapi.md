@@ -54,7 +54,7 @@ description and health endpoint are the native probes.
 
 The domain is the pair `{host, app}`: the contract carrier and the deployable
 self-description, and nothing else. In a `host` section the release is a host contract (LIRA
-L135); in an `app` section the discipline is the exception to the atomless default (LIRA L146,
+L135); in an `app` section the discipline is the exception to the atomless default (LIRA L144,
 §9.4) that the default exists to permit — the artifact's bytes stay atomless, its description
 does not. The cross-section invariant (LIRA §9.6) binds across `app` integrations: a release
 offering several integrations MUST serve one described surface.
