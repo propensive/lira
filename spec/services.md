@@ -4,7 +4,7 @@
 
 The buildpath answers, from manifests alone, whether a set of libraries composes at build time
 (LIRA §13). This document extends the same algebra to the second moment the question arises:
-whether a set of *running* artifacts composes at deploy time. It specifies **deployable
+whether a set of _running_ artifacts composes at deploy time. It specifies **deployable
 releases** — `.lira` files whose content is a closed artifact in the `app` realm (LIRA §9.4)
 and whose atoms are the network surface they serve — **requirements on services**, by which
 one deployed module needs another, the **environment** as the runtime counterpart of the
@@ -24,18 +24,20 @@ contract tests and runbooks — here derived from one algebra, and decidable fro
 This document is a working draft. It is normative for the `app` realm (LIRA §9.4), for
 requirements naming deployable modules (LIRA §13.3, **L137**), and for environment validity
 and deployment (LIRA §13.7); the labels **L143** and **L146** through **L148** are defined in
-the base specification and elaborated here. The environment *release* — the `env` realm, its
+the base specification and elaborated here. The environment _release_ — the `env` realm, its
 records, the `environment/1` discipline, and provisioning — is the companion
 [`environments.md`](environments.md).
 
 ## 2. Motivation: the Second Composition
 
-A build composes *artifacts*: libraries meet on a buildpath, an egress closes over them, and
+A build composes _artifacts_: libraries meet on a buildpath, an egress closes over them, and
 the composition produces a thing — a JAR, a bundle, an image. A deployment composes
-*processes*: services meet in a cluster, calls resolve between them at runtime, and the
+_processes_: services meet in a cluster, calls resolve between them at runtime, and the
 composition never produces an artifact at all. It produces a **state**, continuously linked and
 continuously re-linkable, in which the compatibility question is asked not once but at every
 deploy.
+
+FIXME: Is it a useful analogy to think of a build as producing the artifact bytes "on disk" while the deployment produces the state of the running process "in memory"?
 
 The state of practice answers that question with disconnected point tools: a schema linter
 grades API diffs, a contract-testing broker records what consumers actually call, a schema
@@ -47,7 +49,7 @@ interface's compatible states; a **used-set** is the atoms a consumer actually t
 is a partial reinvention of one corner of LIRA's algebra — the linter is the grade
 computation, the contract broker is used-sets and spanning, the registry is lineage, the
 runbook is `breaks linkage`. This document
-replaces none of their *judgement* and all of their *bookkeeping*: the same three objects that
+replaces none of their _judgement_ and all of their _bookkeeping_: the same three objects that
 decide build-time composition — atoms, lineages, used-sets — decide deploy-time composition,
 from signed manifests, with no new trust.
 
@@ -55,7 +57,7 @@ from signed manifests, with no new trust.
 
 The tempting encoding is a new universe — a `net` realm in which services are the libraries and
 the network is the linkage mechanism. It fails the universe litmus test (LIRA §4.1) in a subtle
-way: services do meet and compose, but composition never *closes over artifacts*. No egress
+way: services do meet and compose, but composition never _closes over artifacts_. No egress
 consumes a set of service artifacts and produces one thing; nothing of a provider ever enters a
 consumer's build. Universes compose artifacts; environments compose processes.
 
@@ -72,8 +74,8 @@ to the edge between a consumer service and the provider it calls:
 
 All three point the same way. **A running service is a host to its consumers** (LIRA §4.1), and
 the edge is a `requires` record — which is why this document adds no edge type. A deployed
-service is Janus-faced — a *module* at distribution time, published, versioned and signed like
-any release; a *host* at runtime, required, satisfied and probed like any environment — and
+service is Janus-faced — a _module_ at distribution time, published, versioned and signed like
+any release; a _host_ at runtime, required, satisfied and probed like any environment — and
 this specification makes the two faces one object: the release's atoms are simultaneously its
 published API and its capability surface. The base specification's aggregation rule had
 already noticed the convergence: hosts.md §10 observes that a buildpath's aggregated
@@ -83,7 +85,7 @@ publishes it.
 ## 3. A Service Is Its Own Contract
 
 A service publishes **one module**. Its releases are deployable releases (§4), and each
-release's atom set *is* the network surface that release serves, recomputed at publish time
+release's atom set _is_ the network surface that release serves, recomputed at publish time
 from the interface description its tree carries — an OpenAPI document atomized by `openapi/1`
 ([`openapi.md`](openapi.md)), Protobuf descriptors by the anticipated `proto/1`, WIT by
 `wit/1` ([`wit.md`](wit.md)) where the boundary is a component world — exactly as a library
@@ -103,12 +105,12 @@ has, with the runtime reading:
 There is deliberately no separate contract object and no bridging record: a service's claim to
 serve a surface is not authorial testimony but recomputation from shipped content — the same
 verification standing as every other claim in the format (LIRA §16), with the same bound:
-recomputation proves the *declaration*, and behavior remains behavior (§8, LIRA §18).
+recomputation proves the _declaration_, and behavior remains behavior (§8, LIRA §18).
 
 **Standards remain host contracts.** An interface that is not any service's own — a standard
 several vendors implement (an S3-style storage API), a mock target, a protocol a gateway
 guarantees — is published as an ordinary host contract (hosts.md §3): a module of its own,
-under the *same discipline* as the services that serve it. No service declares a relationship
+under the _same discipline_ as the services that serve it. No service declares a relationship
 to it; a consumer's requirement on the standard is satisfied by an actual service through
 **cross-module spanning** (§5, hosts.md §7), which is set inclusion over identically-hashed
 atoms. One discipline across `{host, app}` is what makes that inclusion a comparison of like
@@ -121,14 +123,14 @@ with like.
 A **deployable release** is a release carrying `app` sections and only `app` sections
 (**L143**, LIRA §9.4) — one per integration where integrations are declared, exactly as the
 section matrix requires (LIRA §9.5). It MUST NOT declare `dependency` records (also **L143**):
-its composition already happened at the egress that produced it, and the record of *what* it
+its composition already happened at the egress that produced it, and the record of _what_ it
 was built from is provenance — real, valuable, and deliberately deferred to a future
 attestation layer rather than half-expressed through a mechanism whose satisfaction semantics
 do not apply to closed content.
 
 Its `app` sections carry **`requires`** records freely: everything the artifact asks of its
 environment — platform contracts (`kubernetes`, `postgres`, a JDK for a JAR-shaped artifact)
-and other service modules, *undifferentiated*, because at runtime every other service is
+and other service modules, _undifferentiated_, because at runtime every other service is
 environment. Tooling that produced the artifact from a buildpath SHOULD seed these records
 from the buildpath's aggregated requirement set (hosts.md §10), which was computed for exactly
 this purpose.
@@ -143,16 +145,16 @@ an executable JAR, a static binary, a bundle — and the canonical-derivative ma
 Where the artifact lives natively in another content-addressed store, the section instead
 carries an **`artifact` pin** (LIRA §14): a format identifier, the foreign store's own content
 address verbatim (an OCI digest, for the motivating case), and an advisory locator. LIRA does
-not re-hash foreign stores: the pin is to an identity *in that ecosystem*, verified by that
+not re-hash foreign stores: the pin is to an identity _in that ecosystem_, verified by that
 ecosystem's own mechanism (LIRA §18), and the `.lira` file is then what the deployment world
-conspicuously lacks — a small, signed, verifiable manifest *about* the image: its served
+conspicuously lacks — a small, signed, verifiable manifest _about_ the image: its served
 surface, its requirements, its lineage, its authorship. The distribution posture is the same
 as the index's ([`distribution.md`](../design/distribution.md)): identity in the manifest,
 bytes hosted where bytes are best hosted.
 
 A pinned section's tree never carries a copy of the artifact itself — only ancillary content:
 the interface descriptions self-description needs (§4.3) and probe metadata. Where a
-tree-carried artifact is *also* pinned, the pin is a claim about its packaged form, and any
+tree-carried artifact is _also_ pinned, the pin is a claim about its packaged form, and any
 disagreement between them is the publisher's error, not the reader's problem.
 
 ### 4.3 Self-Description
@@ -183,8 +185,8 @@ consumers here exactly as on the buildpath.
 ## 5. Requiring a Service
 
 A `requires` record may name either kind of **provider** (LIRA §9.4, **L137**): a host
-contract — capability the environment is *given* — or a deployable module — capability
-*deployed into* it. The two are recognizable by their `host` and `app` sections, and the
+contract — capability the environment is _given_ — or a deployable module — capability
+_deployed into_ it. The two are recognizable by their `host` and `app` sections, and the
 satisfaction rules are LIRA §13.2's, verbatim:
 
 - **By lineage**: a deployed release `R` of module `M` satisfies a requirement `(M, api)` iff
@@ -196,14 +198,14 @@ satisfaction rules are LIRA §13.2's, verbatim:
   requirement on one service is provably satisfied by a different service, a mock, or a
   standard whose atoms cover the used-set.
 
-At *buildpath* validation, a requirement naming a deployable module is pending, not judged
+At _buildpath_ validation, a requirement naming a deployable module is pending, not judged
 (LIRA §13.3 rule 7): which release of a service is present is a fact about an environment, and
 the rule that reads it is environment validity (§6).
 
 One consequence of the unified design must be stated plainly, because it is the trade this
 specification chose. Without a Uses blob, a requirement is satisfiable only by its named
 module's lineage — so a consumer that publishes no used-set is coupled to its provider's
-*module identity*, and substituting a rewrite, a canary from another codebase, or a compatible
+_module identity_, and substituting a rewrite, a canary from another codebase, or a compatible
 competitor is not expressible for it. The escape is spanning, and it is cheap: used-sets are
 computed by tooling from the consumer's generated client or recorded traffic, not authored.
 Publishers of consumers SHOULD therefore emit a Uses blob on every `requires` record naming a
@@ -215,20 +217,20 @@ that several services implement belongs in a standalone host-contract module fro
 Two structural notes. Requirement edges between services may form **cycles** — two services
 that call each other are ordinary — and nothing here minds: environment validity (§6) is a
 predicate over a set, not a resolution order. And nothing on the provider side is authorial:
-where hosts.md §9 must caveat that no verifier can check code against its *requirements*, a
-service's *provision* is recomputed from its shipped description — the strongest verification
+where hosts.md §9 must caveat that no verifier can check code against its _requirements_, a
+service's _provision_ is recomputed from its shipped description — the strongest verification
 position in the specification, bounded only by the behavior gap (§8).
 
 ## 6. The Environment
 
 An **environment** is a set of deployable releases — the deployed set — together with a set of
 host contracts describing its platform: the orchestrator, the operating surface, the managed
-services (a database, an object store) that are *given* rather than deployed. It is the
+services (a database, an object store) that are _given_ rather than deployed. It is the
 runtime counterpart of the buildpath — a statement of **desired** state, since every rule
 below reads manifests and none inspects a process (LIRA §13.7) — and it is published: an
 operator-signed **environment release** whose manifest carries the givens, deploys and
 bindings this section judges ([`environments.md`](environments.md), **L150**). A cluster's
-controller knows what is *running*; this document says what to check it against.
+controller knows what is _running_; this document says what to check it against.
 
 Environment validity (**L147**) holds, for an assignment of one integration per deployed
 release (LIRA §13.3, unchanged), iff:
@@ -239,13 +241,13 @@ release (LIRA §13.3, unchanged), iff:
    module fails a buildpath — except where a Uses blob licenses cross-module satisfaction
    (rule 2), which is how a mock or a standard's implementation stands in for a named module.
 2. **Satisfaction, against every concurrent release**: each requirement is satisfied, per §5,
-   by *every* concurrently-serving release of its provider — and, for cross-module
+   by _every_ concurrently-serving release of its provider — and, for cross-module
    satisfaction, by every concurrently-serving release of the standing-in module. Where the
    requirement resolves to a binding, the quantifier ranges within that binding's selection
    (**L152**, LIRA §13.7): releases behind other addresses are other providers.
 3. **Aggregation**: requirements on one provider from several releases are jointly judged by
    the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
-   lineage, jointly satisfiable iff *every* concurrently-serving release of the provider
+   lineage, jointly satisfiable iff _every_ concurrently-serving release of the provider
    carries every required snapshot in its lineage (the diamond rule, universalized over the
    overlap); by spanning, the union of the used-sets must be covered by each.
 4. **Platform coherence**: any profiles declared by deployed releases impose their predicates
@@ -257,13 +259,13 @@ release (LIRA §13.3, unchanged), iff:
 There is deliberately **no uniqueness rule**: two releases of one module serving concurrently
 is the normal state of a rolling deployment. What replaces it is the binding (LIRA §13.7,
 L151): the address disambiguates at run time what uniqueness disambiguated at build time,
-and rule 2's quantifier — during the overlap, every consumer must be satisfied by *both* —
+and rule 2's quantifier — during the overlap, every consumer must be satisfied by _both_ —
 ranges per binding (L152). A consumer is pinned to one candidate binding by a `route` row on
 its deploy record ([`environments.md`](environments.md) §6): the routing pin is to
 environments what the integration pin is to buildpaths — a consumer preference which the
-*release* manifests cannot imply, and the *environment* manifest states.
+_release_ manifests cannot imply, and the _environment_ manifest states.
 
-Replication is invisible, and should be: *n* replicas of one release are one provider, because
+Replication is invisible, and should be: _n_ replicas of one release are one provider, because
 the algebra reasons about releases, not processes.
 
 ## 7. Deployment
@@ -293,12 +295,12 @@ actually certify (LIRA §11.5, §12.4): for an `openapi/1` surface, the wire col
 anticipated `http-json/1` profile's claim, not the discipline's
 ([`openapi.md`](openapi.md) §2).
 
-| Lineage step                | Rolling deploy | Running consumers                  | Rebuilt consumers |
-| --------------------------- | -------------- | ---------------------------------- | ----------------- |
-| patch                       | safe           | unaffected                         | unaffected        |
-| minor                       | safe           | safe — wire compatibility preserved | safe             |
-| minor, `breaks linkage`     | coordinated    | must redeploy — and *which* is computed, not guessed | safe |
-| major (new lineage)         | new surface    | satisfied only by spanning         | re-audited        |
+| Lineage step            | Rolling deploy | Running consumers                                    | Rebuilt consumers |
+| ----------------------- | -------------- | ---------------------------------------------------- | ----------------- |
+| patch                   | safe           | unaffected                                           | unaffected        |
+| minor                   | safe           | safe — wire compatibility preserved                  | safe              |
+| minor, `breaks linkage` | coordinated    | must redeploy — and _which_ is computed, not guessed | safe              |
+| major (new lineage)     | new surface    | satisfied only by spanning                           | re-audited        |
 
 The `breaks linkage` row (LIRA §12.4) is the coordinated deploy, named in a signed manifest
 rather than in a runbook: the step is minor by the atom algebra, so regenerated clients need
@@ -326,13 +328,13 @@ precision and timing: a failed requirement surfaces at deploy, with a named modu
 snapshot, not mid-traffic as a 500 with a stack trace behind it. Provisioning
 ([`environments.md`](environments.md) §6) supplies the addresses the probes dial. A tool
 SHOULD keep probing while the release serves: readiness sustained is liveness, and
-divergence of the actual environment from the *published* desired state — **drift** (LIRA
+divergence of the actual environment from the _published_ desired state — **drift** (LIRA
 §13.7; report vocabulary, environments.md §8) — is a probe result on probing's usual
 advisory terms, triggering re-judgment rather than entering it.
 
 The verification split is worth restating from this document's side, because it is cleaner
-here than anywhere else in the specification. What a service *requires* is authorial, exactly
-as hosts.md §9 says, and is checked against the world by probing. What a service *serves* is
+here than anywhere else in the specification. What a service _requires_ is authorial, exactly
+as hosts.md §9 says, and is checked against the world by probing. What a service _serves_ is
 recomputed from shipped content and is not testimony at all — but recomputation proves the
 declaration, never the behavior behind it (LIRA §18), so the probe and the promise meet in the
 middle: manifests decide compatibility, probes decide presence, and behavior remains the
@@ -395,7 +397,7 @@ Three boundaries, drawn deliberately.
 
 **The data plane.** Request/response surfaces fit the algebra because one party provides and
 the other requires. A message topic or a shared database does not fit so cleanly: writers and
-readers *both* evolve, against data that persists — an event written under last year's schema
+readers _both_ evolve, against data that persists — an event written under last year's schema
 is read by next year's consumer — so compatibility there is two-sided and extended over time,
 which is the distinction schema registries encode as backward/forward/full, and which LIRA
 §10.5 identifies as the point where a single lineage stops being the right structure. A topic
@@ -411,7 +413,7 @@ consults, on the same division of labor as LIRA §13.5's "invoking those tools i
 business."
 
 **Behavior.** Unchanged from LIRA §18, and more consequential here, where the common production
-failure is a field whose *meaning* changed under a stable signature. The honest mitigations
+failure is a field whose _meaning_ changed under a stable signature. The honest mitigations
 are the honest ones: signatures, probing, and — the natural future layer — attestation of
 contract test evidence against a named snapshot.
 
@@ -460,13 +462,13 @@ payload
 
 A consumer's manifest simply carries `requires module checkout/payments, api Cc33…, uses
 Kk11…` on its own `app` section: the service module is required directly, and `Cc33…` is a
-snapshot of *this* module's lineage — no second module, no bridge.
+snapshot of _this_ module's lineage — no second module, no bridge.
 
 A deploy tool holding this manifest, the environment's platform contracts, and the manifests of
 what is already running now computes, without pulling the image or starting a process: that the
 served surface `Dd44…` recomputes from the shipped description (LIRA §16 — a checked claim,
 not a label); that `checkout/orders` is deployed, and that this release's used-set `Gg77…` is
-satisfied by *both* releases of it currently serving mid-rollout (§6 rule 2); that `postgres`
+satisfied by _both_ releases of it currently serving mid-rollout (§6 rule 2); that `postgres`
 and `kubernetes` satisfy by lineage membership; and that removing the predecessor
 `checkout/payments` release afterwards is valid, because every requirement naming the module
 is satisfied by the successor's lineage too. If the orders release's last step had carried

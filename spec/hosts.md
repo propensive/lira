@@ -36,24 +36,24 @@ The obvious encoding — a discipline atomizing a library's requirements as its 
 three ways ([`universes.md`](../design/universes.md) §5.1): there is no content to atomize, since
 command and API availability is a property of the environment rather than of any blob (LIRA
 **L127** makes such a discipline undeclarable); the polarity is inverted, since rigid atoms are
-monotonic because *addition is safe*, while adding a requirement breaks consumers whose
+monotonic because _addition is safe_, while adding a requirement breaks consumers whose
 environment lacks it; and the claim is not derivable, since no atomizer can decide from bytecode
 which commands a program will invoke.
 
 Invert the direction and every objection dissolves. **The host is the module.** A host contract
-publishes what a host *provides*, which is content, with the correct polarity — a host gaining a
+publishes what a host _provides_, which is content, with the correct polarity — a host gaining a
 capability is a minor step; one losing a capability is a major, beginning a new lineage, which is
 the actual compatibility behavior of every runtime environment — and it is verifiable by
 recomputation like any other release. The library's side of the edge is then a **requirement**:
 a reference to a contract, satisfied by lineage membership, exactly like a dependency (LIRA
-§13.2) — and *only* the library's side is authorial (§9).
+§13.2) — and _only_ the library's side is authorial (§9).
 
 ## 3. Host Contracts Are Releases
 
 A host contract is an ordinary `.lira` release: a module with a name, a lineage, `api` records,
 a payload, and signatures. Everything in the base specification applies to it unchanged —
 identity (§6), hashing (§7), atom listings (§10.4), snapshots and grades (§12), verification
-(§16). Its distinguishing feature is *what its atoms describe*: not a library's interface but a
+(§16). Its distinguishing feature is _what its atoms describe_: not a library's interface but a
 host's capability surface.
 
 The contract's content — the carrier from which its atoms are recomputed — lives in its single
@@ -76,6 +76,8 @@ The contract's content — the carrier from which its atoms are recomputed — l
   §3) and its guarantee is linkage against a lineage of shipped bytecode, not presence of a
   platform surface.
 
+Do we have the means to generate `host` sections automatically for each of the host contracts?
+
 Content claiming inside a `host` section follows LIRA §11.2 unchanged, including the claiming
 order (**L134**) and the `opaque/1` fallback; **L127** applies unchanged, so a host contract can
 declare only disciplines whose domain includes `host`.
@@ -94,7 +96,7 @@ vendor's modules — one contract module per platform module (`java.base`, `java
 for the union. The union fuses every module's churn into one atom set, so any module's removal
 fractures the lineage of consumers who never touched it; per-module contracts give each
 surface its own honest history, and a platform module's removal simply ends its lineage. What
-coordinates a platform *release* across them is the tag: every module contract harvested from
+coordinates a platform _release_ across them is the tag: every module contract harvested from
 one vendor release carries the same tag, and "JDK 19" is the set of releases tagged `jdk-19`
 across the `java.*` contract modules — resolved per L142's uniqueness, validated by handing
 rule 7 the whole set, whose aggregation (§10) already spans contract modules. A library's
@@ -104,13 +106,17 @@ requirements — which is also exactly the question a trimmed runtime (a jlink i
 native-image build) asks, since such a runtime is a host whose contract is the union of the
 module contracts it includes.
 
+FIXME: Could our build tool produce a lightweight jlink image to satisfy the host contract?
+
 ## 4. The `host` Realm
+
+FIXME: The other document mentions _three_ realms that are not universes. This should be clarified.
 
 The `host` realm is one of the two realms that are not universes (LIRA §4.1; the other is
 `app`, [`services.md`](services.md)): independently-published
 libraries do not compose in it, and its sections are never materialized onto any artifact path
 (LIRA §13.5) and never consumed by any egress or join. It exists so that a host contract's
-content is *ordinary content* — held in a tree, deduplicated in the payload, hashed, atomized,
+content is _ordinary content_ — held in a tree, deduplicated in the payload, hashed, atomized,
 verified and signed by the machinery every release already gets — rather than a parallel
 structure with parallel rules.
 
@@ -122,6 +128,8 @@ requiring a host would make satisfaction recursive for no identified need. Contr
 — a browser contract aggregating WebIDL modules, a WASI world importing interfaces — is real,
 and a future schema layer MAY relax the dependency exclusion to express it; until then an
 aggregate contract is published whole.
+
+FIXME: Do I correctly understand that a release carrying a `host` section is a LIRA bundle without a payload?
 
 ## 5. The `capability/1` Discipline
 
@@ -159,10 +167,10 @@ is declared — `0x01` followed by the predicate's UTF-8 bytes, or the single by
 none is. The `probe` field enters no atom: it participates in implementation identity (it is
 bytes in the payload) but never in API identity, so editing a probe is a patch.
 
-**Version predicates.** A predicate folds into the atom's value, so a contract *tightening* a
+**Version predicates.** A predicate folds into the atom's value, so a contract _tightening_ a
 minimum (`git >= 2.30` → `git >= 2.40`) changes the atom — a removal plus an addition, hence
 major — which is correct: consumers satisfied by the old floor may not be satisfied by the new
-one. A contract *loosening* a predicate is equally a major by this rule, which is conservative
+one. A contract _loosening_ a predicate is equally a major by this rule, which is conservative
 but sound, and predicates SHOULD therefore be chosen sparingly.
 
 **Variants.** A bare name promises **POSIX-conformant behavior only**: `sh` means a POSIX `sh`.
@@ -184,7 +192,7 @@ and `app` sections respectively; requirements on deployed services are the subje
 Requirements sit on **sections**, not on releases, because needs genuinely differ per universe
 and per integration: a library may shell out only in its `jvm` implementation, or touch the DOM
 only in its `sjsir` one. This does not collide with the cross-section API invariant (LIRA §9.6):
-**L108** constrains what a release *presents*, requirements are not API, and two sections
+**L108** constrains what a release _presents_, requirements are not API, and two sections
 presenting one interface while needing different things of their environments is ordinary, not a
 violation.
 
@@ -205,7 +213,7 @@ satisfaction extends by **spanning**, and in a form dependency spanning does not
 
 - **Across majors**: `H` satisfies the requirement whenever `used ⊆ atoms(H)`, even when the
   required snapshot appears in no lineage of `H` — LIRA §13.4, unchanged.
-- **Across providers**: a provider release `H′` of a *different module* — a contract, or a
+- **Across providers**: a provider release `H′` of a _different module_ — a contract, or a
   self-described deployable ([`services.md`](services.md)) — satisfies the requirement
   whenever `used ⊆ atoms(H′)`. This is sound because atoms are content-addressed and
   module-blind: two providers atomizing equivalent surfaces under the same discipline produce
@@ -216,7 +224,7 @@ Cross-module spanning is the mechanism for the multi-host library, and the motiv
 is worth spelling out. Scala.js reimplements a subset of the Java standard library; suppose that
 subset is published as a contract, under the same signature discipline as the JDK contract. A
 library that declares `requires` on the JDK contract with a Uses blob naming only
-`java.lang.String` and kin is then *provably* satisfied by the Scala.js contract too — `used ⊆
+`java.lang.String` and kin is then _provably_ satisfied by the Scala.js contract too — `used ⊆
 atoms(scalajs-javalib)` — while a sibling library whose used-set touches `java.nio` provably is
 not. "This module runs on the JVM, Scala.js and Android; that one is JVM-only" stops being a
 README sentence and becomes set inclusion, computed from manifests, per section, with no
@@ -231,8 +239,8 @@ the single-host case.
 Requirements and dependencies share one satisfaction algebra and differ in three normative
 respects. Tools MUST NOT conflate them:
 
-1. **Who supplies the content.** A dependency names content the *buildpath* must supply, and
-   which composes into the application. A requirement names capability the *environment* must
+1. **Who supplies the content.** A dependency names content the _buildpath_ must supply, and
+   which composes into the application. A requirement names capability the _environment_ must
    supply; the contract describes it but contributes nothing to any artifact.
 2. **Materialization.** A dependency's sections are materialized and handed to egresses and
    joins (LIRA §13.5). A required contract is never materialized: its `host` section is read for
@@ -249,9 +257,9 @@ resolution time from manifests. A `requires` claim is neither, in one specific p
 verifier can decide that code needs what it declares.** Command strings are assembled at runtime
 from configuration and input; reflection and dynamic loading hide API use from any static
 reading. The declaration is irreducibly an assertion about the code, and a reader who assumes
-`requires` was checked *against the code* has misread the format. What is machine-checked is
+`requires` was checked _against the code_ has misread the format. What is machine-checked is
 everything around the assertion: the contract's atoms are recomputed from its payload (LIRA
-§16), satisfaction is decided from manifests (**L136**), and the *environment* is checked at the
+§16), satisfaction is decided from manifests (**L136**), and the _environment_ is checked at the
 third moment:
 
 **Probing, at install or launch time.** Whether the actual host honors the contract the
@@ -289,20 +297,20 @@ applying.
 
 The contracts the focus ecosystems want first, with their natural carriers:
 
-| Contract           | Surface                                   | Carrier / discipline               |
-| ------------------ | ----------------------------------------- | ---------------------------------- |
-| `jdk`              | Java standard library                     | capability listing now; classfile-signature discipline later (§3) |
-| `android`          | `android.jar` per API level               | as `jdk`; majors track removals, minors track API levels |
-| `nodejs`           | Node builtins and globals                 | `.d.ts` / `dts/1`                  |
-| `browser-baseline` | interoperable Web APIs ("Baseline")       | Web IDL / `webidl/1`               |
-| `wasi`             | a WASI world (0.2+)                       | WIT / `wit/1`                      |
-| `openssl`          | `libcrypto`'s declared surface            | C header / `cheader/1`             |
-| `posix`            | POSIX shell and userland commands         | `capability/1`                     |
-| `scalajs-javalib`  | the JDK subset Scala.js reimplements      | same discipline as `jdk` — which is what makes cross-module spanning (§7) decide JVM/Scala.js/Android portability |
+| Contract           | Surface                              | Carrier / discipline                                                                                              |
+| ------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `jdk`              | Java standard library                | capability listing now; classfile-signature discipline later (§3)                                                 |
+| `android`          | `android.jar` per API level          | as `jdk`; majors track removals, minors track API levels                                                          |
+| `nodejs`           | Node builtins and globals            | `.d.ts` / `dts/1`                                                                                                 |
+| `browser-baseline` | interoperable Web APIs ("Baseline")  | Web IDL / `webidl/1`                                                                                              |
+| `wasi`             | a WASI world (0.2+)                  | WIT / `wit/1`                                                                                                     |
+| `openssl`          | `libcrypto`'s declared surface       | C header / `cheader/1`                                                                                            |
+| `posix`            | POSIX shell and userland commands    | `capability/1`                                                                                                    |
+| `scalajs-javalib`  | the JDK subset Scala.js reimplements | same discipline as `jdk` — which is what makes cross-module spanning (§7) decide JVM/Scala.js/Android portability |
 
-Beyond this registry of *given* environments, every deployed service adds a provider of its
+Beyond this registry of _given_ environments, every deployed service adds a provider of its
 own: a service's surface is its release's own atom set, under `openapi/1`
-([`openapi.md`](openapi.md)) and kin ([`services.md`](services.md) §3), while a *standard*
+([`openapi.md`](openapi.md)) and kin ([`services.md`](services.md) §3), while a _standard_
 several services implement — an S3-style API, a mock target — is published as an ordinary host
 contract under the same disciplines and satisfied across modules by spanning (§7).
 
@@ -311,7 +319,7 @@ a **classfile-signature discipline whose domain includes `host`** (§3): `classf
 serve, since its domain is `{jvm}` and its guarantee is linkage against shipped bytecode rather
 than presence of a platform surface — though where the stubs carry Kotlin metadata,
 `kotlin-metadata/1` ([`kotlin.md`](kotlin.md)) already reaches them. And **target triples**
-parameterize contract *modules*, not the format: an operating-system contract is published per
+parameterize contract _modules_, not the format: an operating-system contract is published per
 triple family (`glibc-x86-64-linux`, or coarser where surfaces genuinely coincide), exactly as
 `sed:gnu` names a variant capability (§5) — satisfaction stays lineage membership and spanning,
 with no new mechanism, and a library's per-triple requirements are ordinary per-section
