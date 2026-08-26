@@ -282,7 +282,9 @@ private def usage(help: Optional[Help], exit: Exit)(using cli: Cli): Exit =
   Out.println(t"  verify, atoms, id, jar   a .lira file, or for `atoms` and `id` a bare artifact")
   Out.println(t"  delta                    two .lira files, previous first")
   Out.println(t"  assign                   a .lira file, optionally its predecessor")
-  Out.println(t"  harvest                  jdk|android, an output directory, then the sources")
+  Out.println(t"  harvest                  jdk|android|dts|wit, an output directory, then the")
+  Out.println(t"                           sources; `dts` and `wit` take a module name first,")
+  Out.println(t"                           then one source per release, in succession order")
   Out.println(t"  cache                    add|ls|rm|path; pin and unpin take a hash prefix")
   Out.println(t"")
   Out.println(t"A `+<tag>` argument to `harvest` sanctions that release as a major — a removal")
@@ -460,6 +462,12 @@ private def assign(file: Path on Local, previous: Optional[Path on Local], force
 // one contract module. Majors — the removals in a vendor's history — require explicit `+<tag>`
 // sanction (L110), applied per module wherever that vendor release removed surface. Emitted
 // files carry the executable bit, as §5.1 requires of producers.
+//
+// The `dts` and `wit` kinds harvest declaration carriers (`.d.ts`, `.wit`) rather than stub
+// archives: a module name, then one source — a directory or single file — per vendor release,
+// in the vendor's succession order, each tagged by its basename. The command-line order is the
+// lineage order: filename sorting misorders version numbers (`0.2.10` before `0.2.9`), and
+// vendor succession is exactly what the operator states by listing.
 private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text])
     (using cli: Cli)
 :   Exit =
@@ -475,7 +483,11 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
     // module's lineage and the rest carry on, so `Lira.Error` is recovered here rather than
     // reaching the command's own handler. Recovering it locally also *narrows* what the rest of
     // the loop may raise, which is the property a `catch` could not state.
-    def emit(module: Text, releases: proscenium.List[HostRelease]): Boolean =
+    def emit
+      ( module:     Text,
+        releases:   proscenium.List[HostRelease],
+        discipline: Discipline = JsigDiscipline )
+    :   Boolean =
       val contracts: Optional[proscenium.List[(Text, Data)]] =
         recover:
           case error: Lira.Error =>
@@ -493,6 +505,7 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
               module,
               releases,
               toolchain  = proscenium.List(Lira.Manifest.Tool(t"lira", t"0.1")),
+              discipline = discipline,
               allowMajor = { tag => majors.stdlib.contains(tag) })
 
       contracts.lay(false): contracts =>
@@ -565,6 +578,45 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
 
         if emit(t"android", releases) then Exit.Ok else Exit.Fail(1)
 
+      // Declaration carriers, one contract module: `.d.ts` under `dts/1` (a Node-builtins
+      // contract), `.wit` under `wit/1` (a WASI world). The atomizers are xenophile's — the
+      // same implementations `lira atoms` already names — so a harvested contract's atoms are
+      // exactly what a verifier recomputes.
+      case carrier @ ("dts" | "wit") =>
+        val (discipline, suffix) = carrier match
+          case "dts" => (DtsDiscipline, t".d.ts")
+          case _     => (WitDiscipline, t".wit")
+
+        sources match
+          case module :: rest if !rest.stdlib.isEmpty =>
+            var good = true
+
+            val releases = rest.map: source =>
+              val path = resolve(source)
+              val name = path.name
+
+              val tag =
+                if name.s.endsWith(suffix.s) then Text(name.s.dropRight(suffix.s.length))
+                else name
+
+              val content = HostTree.surface(path.encode, suffix)
+
+              if content.stdlib.isEmpty then
+                Out.println(t"lira: no *$suffix files found at $source")
+                good = false
+              else Out.println(t"harvested $tag (${content.stdlib.size} files)")
+
+              HostRelease(tag, content)
+
+            if !good then Exit.Fail(1)
+            else if emit(module, releases, discipline) then Exit.Ok
+            else Exit.Fail(1)
+
+          case _ =>
+            Out.println(t"lira: pass a module name, then one source (a directory or a single")
+            Out.println(t"      *$suffix file) per vendor release, in succession order")
+            Exit.Fail(1)
+
       case other =>
-        Out.println(t"lira: unknown host kind '$other' (expected jdk or android)")
+        Out.println(t"lira: unknown host kind '$other' (expected jdk, android, dts or wit)")
         Exit.Fail(1)
