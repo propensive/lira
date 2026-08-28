@@ -6,7 +6,7 @@ The buildpath is judged and then closed; an environment is judged and then *live
 Services keep calling each other, deploys keep arriving, and the compatibility question a
 buildpath answers once is asked continuously, for as long as anything runs. This document
 specifies the object that keeps the question answerable: the **environment release** — an
-ordinary `.lira` release of the `env` realm (LIRA §9.4, **L150**) whose manifest states one
+ordinary `.lira` release of the `env` realm (LIRA §9.4, **L148**) whose manifest states one
 environment's **desired state**: the platform contracts it supplies (`given`), the releases
 intended to run (`deploy`), and the **addresses** at which providers answer (`binding`). It
 also specifies **`environment/1`**, the discipline that atomizes an environment's topology,
@@ -23,9 +23,9 @@ which is the design's whole content, derived in [`execution.md`](../design/execu
 
 This document is a working draft. It is normative for the `env` realm (LIRA §9.4), the
 `given`, `deploy` and `binding` records (LIRA §14), the `environment/1` discipline, and
-resolution and provisioning (LIRA §13.7); the labels **L150**, **L151** and **L152** are
-defined in the base specification and elaborated here. Environment *validity* (L147) and
-deployment (L148) remain the subject of [`services.md`](services.md), unchanged in
+resolution and provisioning (LIRA §13.7); the labels **L148**, **L149** and **L150** are
+defined in the base specification and elaborated here. Environment *validity* (L145) and
+deployment (L146) remain the subject of [`services.md`](services.md), unchanged in
 substance by this document.
 
 ## 2. Motivation: the Judgments Need a Home
@@ -43,28 +43,28 @@ that arrangement, each derived at length in [`execution.md`](../design/execution
    release provides module M?" by rule 1 (L111); the environment deliberately dropped
    uniqueness for rolling deploys, and with it the answer. The **binding** answers it by
    address: two majors of one service coexist at two addresses, and "which provider does
-   this consumer get?" is decided per address (L151, L152) instead of per path.
-3. **Concurrent majors were inexpressible.** Under L147 rule 2's unrefined quantifier, two
+   this consumer get?" is decided per address (L149, L150) instead of per path.
+3. **Concurrent majors were inexpressible.** Under L145 rule 2's unrefined quantifier, two
    concurrently-serving releases with disjoint lineages fail every lineage-only consumer;
    the routing pin that fixes this was tool lore "the manifests cannot imply." The binding's
-   selection makes it a manifest fact (L152).
+   selection makes it a manifest fact (L150).
 
 What this document deliberately does **not** do: give addresses lineages (an address has
 nothing to atomize — its API is the bound release's, borrowed; execution.md §4), let
 requirements name addresses (a release naming an address is welded to one environment), or
 make environments requirable or dependable (LIRA §9.4: an environment is neither provider
-kind under L137, and no dependency names one under L149 — environments are judged and
+kind under L137, and no dependency names one under L147 — environments are judged and
 consulted, never composed against).
 
 ## 3. The Environment Release
 
 An environment release is an ordinary `.lira` release: a module with a name, a lineage,
 `api` records, a payload, and signatures, to which everything in the base specification
-applies unchanged. **L150** (LIRA §9.4) fixes the shape: exactly one `env` section; no
+applies unchanged. **L148** (LIRA §9.4) fixes the shape: exactly one `env` section; no
 integrations, no dependencies, no `requires` records; the `given`, `deploy` and `binding`
 records that are its substance — and that no other kind of release may carry; and the
 `environment/1` discipline declared over them. The `env` section's tree holds only ancillary
-content (probe metadata, operator notes; atomless by default, **L146**) and MAY be empty:
+content (probe metadata, operator notes; atomless by default, **L144**) and MAY be empty:
 unlike a host contract, whose carrier is content, an environment's substance is manifest
 records, because they are exactly what the composition judgments read, and every judgment
 input in this specification is manifest-level (LIRA §13.1).
@@ -91,7 +91,7 @@ Three record families (LIRA §14), one desired state:
 
 **`given`** — a platform contract this environment supplies: module and snapshot. Polarity
 matters: a given is *provision*, not requirement — it is read by environment closure
-(services.md §6 rule 1) from the provision side, which is why L150 forbids `requires` on the
+(services.md §6 rule 1) from the provision side, which is why L148 forbids `requires` on the
 `env` section rather than spelling givens as requirements. The satisfied side is the
 deployed releases' `requires` records, per hosts.md §7 unchanged.
 
@@ -110,7 +110,7 @@ development release — which, in continuous deployment, it usually does.
 - The **address** is the environment's own kind of name: a DNS name or URL prefix, compared
   as authored — the `owns` precedent, no canonicalization; operators who want normalization
   apply it before authoring. Within one manifest, addresses MUST be pairwise disjoint:
-  neither equal to, nor a path-prefix of, one another (**L151**) — L112's prefix-clash rule
+  neither equal to, nor a path-prefix of, one another (**L149**) — L112's prefix-clash rule
   transposed, so `orders.internal` clashes with `orders.internal/v2` exactly as a namespace
   clashes with its dotted extension.
 - The **provider module** is either L137 kind: a deployable service, or a host contract — the
@@ -162,7 +162,7 @@ The major row is a **safety interlock**, obtained for free from **L110**: a publ
 refuses to extend the lineage with a topology-destroying successor unless the operator
 explicitly requests a major. "Can I turn this off?" (services.md §7) thus acquires a
 publish-time gate to go with its validity-time answer. Grades *record and gate*; they never
-schedule: deployability is judged by L148 alone, and rebinding an address's occupant within
+schedule: deployability is judged by L146 alone, and rebinding an address's occupant within
 its selection is the gradeless transition-validity case, exactly as
 [`execution.md`](../design/execution.md) §9 recommended.
 
@@ -175,7 +175,7 @@ consumers whose used-sets it covers. Resolution is deterministic on the canonica
 pattern (LIRA §13.3): tools MUST resolve each requirement to its first candidate in
 ascending (`rank`, `address`) order, unless a `route` pin on the consumer's deploy record
 names a candidate binding, which is then chosen. A `route` naming an address that is not a
-candidate for its requirement is invalid (**L150**): a pin states a preference among
+candidate for its requirement is invalid (**L148**): a pin states a preference among
 satisfying options, never an escape from satisfaction. Routes live on deploy records — in
 the environment release, authored by the operator — and never in any release manifest, which
 would weld the release to one environment (execution.md §4); the route is the buildpath's
@@ -193,13 +193,13 @@ tools is the build's (LIRA §13.5).
 
 ## 7. Transitions
 
-Every change to an environment release's records is a transition, judged by **L148**
+Every change to an environment release's records is a transition, judged by **L146**
 (services.md §7): the posterior state — and, for rolling changes, the overlap state — must
 be valid. The record-level reading of the three shapes:
 
 - **Deploying** adds or replaces `deploy` rows (and, mid-rollout, two releases stand
-  transiently inside one binding's selection — L152's quantifier covers exactly them).
-- **Rebinding** retargets a `binding` row. Its validity condition falls out of L147 with no
+  transiently inside one binding's selection — L150's quantifier covers exactly them).
+- **Rebinding** retargets a `binding` row. Its validity condition falls out of L145 with no
   new rule: every consumer whose requirement resolves to that address must be satisfied by
   the new occupant's selected releases. Same-module retargeting is patch-grade; retargeting
   to a different module is additionally a topology major (§5), so the interlock and the

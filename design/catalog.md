@@ -72,7 +72,7 @@ OpenAPI documents · TEL capability listings · TEL schemas.
 | `tasty/1` | TASTy signatures (jvm, sjsir, nir) | spec |
 | `classfile/1` | Classfile signatures; certifies linkage | spec |
 | `jsig/1` | Java signature surface (stubs; jdk/android contracts) | spec |
-| `kotlin-metadata/1` | Kotlin `@Metadata` declaration surface | spec |
+| `kmeta/1` | Kotlin `@Metadata` declaration surface | spec |
 | `dts/1` | TypeScript declarations | spec |
 | `wit/1` | WIT worlds (component universe, WASI contracts) | spec |
 | `webidl/1` | Web IDL (browser contracts) | spec |

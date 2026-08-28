@@ -13,7 +13,7 @@ worth elevating.
 1. **Domain** — the fixed set of realms atomized; multi-universe domains are bound by
    the cross-section invariant (§9.6).
 2. **Claiming** — which tree items are atomized, which claimed atomless; first-match
-   over `api` records makes claiming order semantic (L134, L146).
+   over `api` records makes claiming order semantic (L134, L144).
 3. **Atomization** — a pure function of the semantic model: no file ordering,
    timestamps, tool version strings, or fresh names (§17).
 4. **Keying** — declaration or membership, stated, and sound for the guarantee

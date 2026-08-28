@@ -240,7 +240,7 @@ else stays a flat verb.
 | `lira assign <file> [<prev>] [--major]`    | derive the next version (spec §12.5)                             |
 | `lira delta <prev> <next> [--blob <file>]` | what changed between two releases, and its grade (§5.1 below)    |
 | `lira atoms <file> [--realm …]`            | the atom listing of a release, or of a bare artifact (§5.2)      |
-| `lira harvest jdk\|android …`              | host-contract lineages from `ct.sym` / `android.jar`             |
+| `lira harvest jdk\|android …`              | host-contract lineages from `ct.sym` / `android.jar` (§5.3)      |
 
 #### 5.1 `delta`
 
@@ -277,6 +277,81 @@ letting an `opaque/1` fallback read as an answer.
 `--discipline <id>` restricts the listing to one discipline — the way to see a jar under `jsig/1`,
 which tolerates supertypes outside the claimed content, rather than `classfile/1`, which fails on
 them by design. `--owner <prefix>` restricts it to keys under one owner.
+
+#### 5.3 `harvest`
+
+`harvest` produces host-contract lineages from vendor-published carriers (spec hosts.md §3):
+today `jdk` from `ct.sym` and `android` from `android.jar`s, as hardcoded kinds. Every
+harvestable carrier in hosts.md's registry wants the same treatment, and the design that
+admits them is to make the source specification an artifact rather than configuration.
+
+**Harvest descriptors.** Where a carrier comes from is a source of truth, so it belongs in
+neither tool nor project configuration — §9's stance, extended: configuration never adds
+sources of truth. It belongs in a **harvest descriptor**: a TEL document, conforming to a
+`lira-harvest` schema, stating everything a harvest needs — the contract family and its
+module-naming scheme, the harvester (name and version, below), the discipline the emitted
+`host` sections declare, and the acquisition: an advisory locator plus, optionally, a
+content-hash **pin** of the acquired material. The locator/pin split is the `artifact` pin of
+services.md §4.2, reapplied: identity by hash, bytes fetched from wherever bytes are best
+fetched. The command then generalizes without changing shape: `lira harvest jdk` becomes name
+resolution to a descriptor shipped with the tool — one per registry contract (hosts.md §11) —
+and `lira harvest ./contract.tel` takes an explicit descriptor for anything else. A descriptor
+with a pinned acquisition makes the harvest **reproducible**: re-running it must land on
+identical atoms, so re-harvesting is a recomputation check, on the verification standing
+everything else in the format enjoys.
+
+**Stewardship.** The definitive object is the signed contract release — not the descriptor,
+and not the upstream source. Atoms recompute from the shipped carrier, so a published
+contract's content claims are checkable by anyone holding the release; what is genuinely
+authorial, and therefore what stewardship *is*, is the naming residue hosts.md §3 identifies:
+module granularity, the tag scheme, and sanctioning majors (`+<tag>`, L110). The descriptor is
+the middle layer — provenance — and publishing it beside the contract modules records how the
+carrier was obtained: with a pinned acquisition it is the seed of the attestation layer
+services.md defers. Governance stays deliberately open (universes.md §5.6); bootstrap
+stewardship under a neutral namespace is low-stakes by construction, because content claims
+verify by recomputation, cross-module spanning leaves consumers free to adopt a better
+publisher's modules provably, and handover is a signing-key succession, not a format event.
+Vendor adoption is the desired end state.
+
+**The harvester interface.** The implementation has already discovered it implicitly —
+`CtSym.releases` / `CtSym.modules` and `HostArchive.surface` feeding the shared `emit` are its
+two instances. Named, a **harvester** is three stages and a declaration:
+
+- **`acquire(descriptor) → material`** — the only impure stage: locate `ct.sym`, download a
+  `webref` snapshot, run `deno types`, read jars. Material lands content-addressed in the
+  store (§2), and the stage is skipped entirely when the descriptor pins material already
+  held.
+- **`releases(material) → ordered [(tag, release material)]`** — enumeration of the *vendor's*
+  release axis, ordered by the vendor's succession, which is what lineage assembly consumes.
+  Necessarily separate from acquisition, and `ct.sym` is the proof: one acquisition yields
+  every JDK release, while Android is one jar per release.
+- **`modules(release) → {module → carrier tree}`** — the granularity mapping (hosts.md §3):
+  per contract module, the carrier content of its single `host` section. Android returns a
+  singleton; the JDK fans out per platform module.
+- **`discipline`** — what the emitted sections declare (`jsig/1`, `dts/1`, `webidl/1`,
+  `wit/1`, `cheader/1`).
+
+Everything downstream is generic and is exactly what `emit` already does: group by module
+across vendor releases, assemble lineages, grade each step, demand `+<tag>` sanction on
+majors, derive versions, stamp the shared tag, sign, set the executable bit (spec §5.1). Two
+properties are load-bearing rather than accidental:
+
+1. **Purity after acquisition.** `releases` and `modules` are pure functions of the material
+   bytes. This single constraint is what makes pinned descriptors reproducible and re-harvest
+   a verification act.
+2. **Tag coordination by construction.** Because the release axis is enumerated before the
+   module fan-out, every module contract from one vendor release carries the same tag
+   automatically — hosts.md §3's coordination requirement falls out of the interface shape
+   rather than needing a rule.
+
+Harvesters version like disciplines, on spec §11.1's reasoning: a change to release
+enumeration or module mapping changes which contracts exist and what their lineages say, so it
+is `jdk/2`, never a revision of `jdk/1`, and the descriptor names the harvester version it was
+written against. The boundary to hold: harvesters are tool plugins, not spec objects. The
+carrier→atoms direction (disciplines) is normative because verifiers depend on it; the
+world→carrier direction needs only reproducibility, which the descriptor schema and the purity
+rule supply — so the `lira-harvest` schema belongs, eventually, in the spec's extensibility
+seam (spec §14), while the interface stays here.
 
 ### Store commands (new)
 
@@ -409,6 +484,9 @@ may only restrict (§4).
 
 1. **System-store provisioning**: who writes the lower tier — the OS package manager,
    `lira` itself under elevated privileges, or both — and whether `harvest` should be able
-   to target it directly.
+   to target it directly. The descriptor design of §5.3 narrows the second half: a harvest
+   driven by a pinned descriptor is a reviewable, reproducible object an administrator can
+   sanction, so a privileged `harvest` targeting the system store becomes an auditable act
+   rather than an open-ended one. Who holds the privilege remains open.
 2. **Referral depth**: one hop is the design (§4); whether real partner-chain topologies
    ever justify more, or whether the explicit-act-per-hop friction is exactly right.

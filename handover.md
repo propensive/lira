@@ -358,7 +358,7 @@ Structure: `command` blocks (build/dev/test) → `toolchain tools` (scalac, java
 | build outputs other targets | egresses to application types; deployable releases (`app`) |
 | deployment stanza | an environment release (`env` realm) — the build tool acts as *operator* |
 | "connect to service X" | `requires` naming a deployable module |
-| coherent deployment | environment validity (§13.7, **L147**) |
+| coherent deployment | environment validity (§13.7, **L145**) |
 
 **The guardrail** (`builds.md` §4): one surface syntax may present both edge kinds, but they
 must **compile to distinct records** — `dependency` (buildpath supplies, materializes,
@@ -408,7 +408,7 @@ what an egress does; an environment merely **coheres**. Don't let the two words 
 4. **`include` is overloaded three ways**: compose (dependency), close over (egress input),
    and run (deploy). Only the first is a `dependency`.
 5. **Addresses.** Nothing says where `main` answers. Suggestion: `service main example/image
-   at api.example.com`, compiling to a `binding` row; address prefix-disjointness (**L151**)
+   at api.example.com`, compiling to a `binding` row; address prefix-disjointness (**L149**)
    then becomes a build-file lint.
 6. **Served surfaces.** For `require database` (or anything requiring `main`) to be
    satisfiable, the provider needs a self-description — e.g. `serve openapi.json` compiling to
