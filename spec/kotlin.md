@@ -1,8 +1,8 @@
-# The Kotlin Metadata Discipline `kotlin-metadata/1` — Specification Draft
+# The Kotlin Metadata Discipline `kmeta/1` — Specification Draft
 
 ## Abstract
 
-`kotlin-metadata/1` is the LIRA discipline for the Kotlin declaration surface carried by the
+`kmeta/1` is the LIRA discipline for the Kotlin declaration surface carried by the
 `@Metadata` annotation on JVM classfiles. It atomizes what `classfile/1` cannot see: the
 Kotlin-level contract — nullability, properties as properties, default-parameter existence,
 suspend coloring — that Kotlin consumers, and foreign-function layers reading Kotlin metadata,
@@ -25,7 +25,7 @@ normative transcription of its rules.
 
 This document is a working draft, versioned in lockstep with the discipline identifier: any
 change to the canonicalization defined here — however small — is a new discipline
-(`kotlin-metadata/2`), never a revision of this one (LIRA §11.1).
+(`kmeta/2`), never a revision of this one (LIRA §11.1).
 
 ## 2. Scope and Guarantee
 
@@ -46,7 +46,7 @@ atomized; a classfile without one is not claimed and falls through — to `class
 registered, else to `opaque/1`. Facade and multi-file-part classes are claimed and atomized
 under the facade the metadata declares. **Claiming order is load-bearing** (LIRA §11.2,
 `classfile.md` §4): a registry listing `classfile/1` before this discipline leaves it nothing
-to claim, so a release registering both MUST list `kotlin-metadata/1` first.
+to claim, so a release registering both MUST list `kmeta/1` first.
 
 ## 4. Extraction
 
@@ -100,7 +100,7 @@ Keys are:
   violate LIRA §11.2's purity requirement. The inline flag's *existence* folds into the rigid
   signature atom, so gaining or losing inline-ness registers; body churn is invisible at this
   level, exactly as classfile-level bridge churn is invisible to `tasty/1`, and a
-  `kotlin-metadata/2` MAY add body tracking over a carrier that has one.
+  `kmeta/2` MAY add body tracking over a carrier that has one.
 
 ## 7. Canonical Encoding
 

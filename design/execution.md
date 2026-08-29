@@ -17,7 +17,7 @@ adopted. Nothing here is normative yet.
 A `.lira` file today has two kinds of consumer. A **compiler** consumes a buildpath: the
 composition is judged (spec §13.3), materialized (§13.5), closed by an egress, and the
 composition moment is over. A **deployer** consumes an environment: the composition is
-judged again (§13.7, services.md §6), a transition is checked (L148), and the artifact
+judged again (§13.7, services.md §6), a transition is checked (L146), and the artifact
 starts running.
 
 But the second composition does not end the way the first one does. An egress closes over a
@@ -51,7 +51,7 @@ The transposition table, with the two cells the environment currently leaves emp
 
 | Judgment            | Buildpath (§13.3)                  | Environment (§13.7, services.md §6)   |
 | ------------------- | ---------------------------------- | ------------------------------------- |
-| Closure             | rule 4 (L113)                      | rule 1 (L147)                         |
+| Closure             | rule 4 (L113)                      | rule 1 (L145)                         |
 | Satisfaction        | rule 5 (L114); rule 7 (L136)       | rule 2, per hosts.md §7               |
 | Aggregation         | hosts.md §10                       | rule 3                                |
 | Profile coherence   | rule 6                             | rule 4                                |
@@ -87,7 +87,7 @@ versus **actual state**.
 - The **desired state** is a statement of intent: what is supposed to be deployed, and where
   each provider is supposed to answer. It is manifest-shaped, and every validity judgment in
   the algebra is a judgment about it. This is already true today without being said: nothing
-  in L147 or L148 inspects a process — they read manifests — so the deploy-time rules *are*
+  in L145 or L146 inspects a process — they read manifests — so the deploy-time rules *are*
   desired-state rules, and no new label family is needed to make them so.
 - The **actual state** is knowable only by looking, and looking is the third verification
   moment (hosts.md §9). Extended over an artifact's whole life, readiness becomes liveness,
@@ -162,7 +162,7 @@ Now the three empty cells of §2's table fill at one stroke, and the derivation 
 shape as hosts.md's polarity inversion:
 
 **Bindings are the transposed uniqueness rule.** L111 exists because a buildpath must answer
-"which release provides module M?" with one release. L147 deliberately dropped it, because
+"which release provides module M?" with one release. L145 deliberately dropped it, because
 two releases of one module serving concurrently is the normal state of a rolling deploy —
 and dropping it left the question unanswered rather than answered differently. The address
 answers it: *the binding disambiguates at run time what uniqueness disambiguated at build
@@ -231,8 +231,8 @@ its precedent, and the unsettled ones flagged for §9:
   as the exact form, with L118 untouched.
 - **Validity**: §13.7's rules, with the two additions of §5 — binding disjointness, and rule
   2's quantifier re-scoped per binding — each of which would take a fresh label in the
-  §13.3 style (one rule, one label) rather than silently widening L147. Deployability
-  (L148) is unchanged in form: a transition of the *document* — including a rebinding, which
+  §13.3 style (one rule, one label) rather than silently widening L145. Deployability
+  (L146) is unchanged in form: a transition of the *document* — including a rebinding, which
   is judged as the transition it is: valid iff every consumer resolved to the address
   remains satisfied by the new occupant. No address-level grade exists (§4a).
 - **The aggregate, at last published.** The environment manifest's provision side — the
@@ -350,7 +350,7 @@ Production and test are two environment manifests. That sentence is most of the 
 
 > **Status.** Adopted: [`spec/environments.md`](../spec/environments.md) is the normative
 > home, with the `env` realm, the `given`/`deploy`/`binding` records, `environment/1`,
-> resolution, and provisioning in the base spec (§9.4, §11.3, §13.7, §14; L150–L152). Two
+> resolution, and provisioning in the base spec (§9.4, §11.3, §13.7, §14; L148–L150). Two
 > corrections were made in adoption: the environment's substance became **manifest records**,
 > not a payload document — the judgments that read it read manifests, per the spec's
 > manifests-alone principle — and atoms cover address + provider module (bindings) and

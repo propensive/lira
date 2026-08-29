@@ -8,7 +8,7 @@ applying the folding principle (§10.3): *safe additions become standalone atoms
 additions fold into their parent's atom.*
 
 > **Status.** These sketches predate the normative discipline companions (see the readme's
-> spec list). Where a sketch differs from its companion — `kotlin-metadata/1`'s
+> spec list). Where a sketch differs from its companion — `kmeta/1`'s
 > recompilation-only guarantee and empty replaceable set, `classfile/1`'s linkage-only claim,
 > `wit/1`'s registration — the companion governs; and "world" in the section-key sense reads
 > "realm" (spec §4.1).
@@ -213,7 +213,7 @@ keep interface members additive where `dts` must fold them. Inverting the direct
 | Language   | Discipline         | Realm(s)           | Guarantee       | Replaceable atoms        | Rule-table prior art          |
 | ---------- | ------------------ | ------------------ | --------------- | ------------------------ | ----------------------------- |
 | Scala      | `tasty/1`          | jvm, sjsir, nir    | recomp + linkage| inline/macro bodies      | TASTy-MiMa, MiMa              |
-| Kotlin     | `kotlin-metadata/1`| jvm, host          | recompilation   | — (v1; bodies not carried)| binary-compatibility-validator|
+| Kotlin     | `kmeta/1`| jvm, host          | recompilation   | — (v1; bodies not carried)| binary-compatibility-validator|
 | TypeScript | `dts/1`            | all (js reserved)  | recompilation   | —                        | api-extractor, semver-ts      |
 | Rust       | `rmeta`            | crate (anticipated)| recompilation   | generic/inline bodies    | cargo-semver-checks           |
 | Java       | `classfile/1`      | jvm                | linkage         | `static final` constants | MiMa, JLS 13                  |

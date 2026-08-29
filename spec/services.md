@@ -23,7 +23,11 @@ contract tests and runbooks — here derived from one algebra, and decidable fro
 
 This document is a working draft. It is normative for the `app` realm (LIRA §9.4), for
 requirements naming deployable modules (LIRA §13.3, **L137**), and for environment validity
+<<<<<<< HEAD
 and deployment (LIRA §13.7); the labels **L143** and **L146** through **L148** are defined in
+=======
+and deployment (LIRA §13.7); the labels **L143** through **L146** are defined in
+>>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 the base specification and elaborated here. The environment _release_ — the `env` realm, its
 records, the `environment/1` discipline, and provisioning — is the companion
 [`environments.md`](environments.md).
@@ -159,7 +163,7 @@ disagreement between them is the publisher's error, not the reader's problem.
 
 ### 4.3 Self-Description
 
-Content in an `app` section that no discipline claims is atomless (**L146**, LIRA §9.4): a
+Content in an `app` section that no discipline claims is atomless (**L144**, LIRA §9.4): a
 closed artifact's bytes are implementation, covered by implementation identity, and making
 them `opaque/1` atoms would turn every rebuild into a major. What stands as interface is the
 **description**: the release declares `api` records over the interface descriptions its tree
@@ -229,10 +233,14 @@ services (a database, an object store) that are _given_ rather than deployed. It
 runtime counterpart of the buildpath — a statement of **desired** state, since every rule
 below reads manifests and none inspects a process (LIRA §13.7) — and it is published: an
 operator-signed **environment release** whose manifest carries the givens, deploys and
+<<<<<<< HEAD
 bindings this section judges ([`environments.md`](environments.md), **L150**). A cluster's
+=======
+bindings this section judges ([`environments.md`](environments.md), **L148**). A cluster's
+>>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 controller knows what is _running_; this document says what to check it against.
 
-Environment validity (**L147**) holds, for an assignment of one integration per deployed
+Environment validity (**L145**) holds, for an assignment of one integration per deployed
 release (LIRA §13.3, unchanged), iff:
 
 1. **Closure**: every module named by any deployed release's applicable `requires` records is
@@ -244,7 +252,7 @@ release (LIRA §13.3, unchanged), iff:
    by _every_ concurrently-serving release of its provider — and, for cross-module
    satisfaction, by every concurrently-serving release of the standing-in module. Where the
    requirement resolves to a binding, the quantifier ranges within that binding's selection
-   (**L152**, LIRA §13.7): releases behind other addresses are other providers.
+   (**L150**, LIRA §13.7): releases behind other addresses are other providers.
 3. **Aggregation**: requirements on one provider from several releases are jointly judged by
    the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
    lineage, jointly satisfiable iff _every_ concurrently-serving release of the provider
@@ -258,9 +266,15 @@ release (LIRA §13.3, unchanged), iff:
 
 There is deliberately **no uniqueness rule**: two releases of one module serving concurrently
 is the normal state of a rolling deployment. What replaces it is the binding (LIRA §13.7,
+<<<<<<< HEAD
 L151): the address disambiguates at run time what uniqueness disambiguated at build time,
 and rule 2's quantifier — during the overlap, every consumer must be satisfied by _both_ —
 ranges per binding (L152). A consumer is pinned to one candidate binding by a `route` row on
+=======
+L149): the address disambiguates at run time what uniqueness disambiguated at build time,
+and rule 2's quantifier — during the overlap, every consumer must be satisfied by _both_ —
+ranges per binding (L150). A consumer is pinned to one candidate binding by a `route` row on
+>>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 its deploy record ([`environments.md`](environments.md) §6): the routing pin is to
 environments what the integration pin is to buildpaths — a consumer preference which the
 _release_ manifests cannot imply, and the _environment_ manifest states.
@@ -275,7 +289,7 @@ A **deploy** is a transition of an environment: any change to its release's `giv
 removing one, replacing one with a successor, or rebinding an address. A release is
 **deployable** iff the posterior state is valid, and — for a
 rolling replacement — the intermediate state, in which predecessor and successor serve
-together, is valid too (**L148**). Deployability is therefore not a new judgement but validity
+together, is valid too (**L146**). Deployability is therefore not a new judgement but validity
 (§6) applied to the states a transition passes through, decidable from manifests before
 anything moves. The three transition shapes:
 
