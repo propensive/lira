@@ -76,9 +76,6 @@ The contract's content — the carrier from which its atoms are recomputed — l
   §3) and its guarantee is linkage against a lineage of shipped bytecode, not presence of a
   platform surface.
 
-<<<<<<< HEAD
-Do we have the means to generate `host` sections automatically for each of the host contracts?
-=======
 Every carrier above except the first is **harvestable** (informative): a machine-readable
 statement of the surface already exists, published by the vendor or by a project maintained for
 the purpose — Node's builtins as published `.d.ts` (and Deno emits its own with `deno types`);
@@ -93,7 +90,6 @@ modules, lineages and tags (the Versioning and Granularity paragraphs below). On
 `capability/1` contracts are authored rather than harvested, necessarily so: where there is no
 formal grammar there is nothing to harvest, which is exactly the case that discipline exists
 for.
->>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 
 Content claiming inside a `host` section follows LIRA §11.2 unchanged, including the claiming
 order (**L134**) and the `opaque/1` fallback; **L127** applies unchanged, so a host contract can
@@ -126,20 +122,11 @@ computed an application's per-module requirements can also _provision_ the host,
 with exactly the platform modules those requirements name, and the resulting image is a host
 whose contract satisfies the aggregated requirement set (§10) by construction.
 
-FIXME: Could our build tool produce a lightweight jlink image to satisfy the host contract?
-
 ## 4. The `host` Realm
 
-<<<<<<< HEAD
-FIXME: The other document mentions _three_ realms that are not universes. This should be clarified.
-
-The `host` realm is one of the two realms that are not universes (LIRA §4.1; the other is
-`app`, [`services.md`](services.md)): independently-published
-=======
 The `host` realm is one of the three realms that are not universes (LIRA §4.1; the others are
 `app`, [`services.md`](services.md), and `env`,
 [`environments.md`](environments.md)): independently-published
->>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 libraries do not compose in it, and its sections are never materialized onto any artifact path
 (LIRA §13.5) and never consumed by any egress or join. It exists so that a host contract's
 content is _ordinary content_ — held in a tree, deduplicated in the payload, hashed, atomized,
@@ -155,15 +142,11 @@ requiring a host would make satisfaction recursive for no identified need. Contr
 and a future schema layer MAY relax the dependency exclusion to express it; until then an
 aggregate contract is published whole.
 
-<<<<<<< HEAD
-FIXME: Do I correctly understand that a release carrying a `host` section is a LIRA bundle without a payload?
-=======
 A host contract is not, for the avoidance of doubt, a release without a payload: its carrier
 content (§3) is ordinary payload bytes, held in the `host` section's tree and deduplicated in
 the payload, from which its atoms are recomputed at publish and verification time (LIRA §16).
 What the shape excludes is composition — dependencies, integrations, `requires`, and
 materialization — not content.
->>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 
 ## 5. The `capability/1` Discipline
 
@@ -352,11 +335,7 @@ Two further axes are anticipated rather than specified. The `jdk` and `android` 
 a **classfile-signature discipline whose domain includes `host`** (§3): `classfile/1` will not
 serve, since its domain is `{jvm}` and its guarantee is linkage against shipped bytecode rather
 than presence of a platform surface — though where the stubs carry Kotlin metadata,
-<<<<<<< HEAD
-`kotlin-metadata/1` ([`kotlin.md`](kotlin.md)) already reaches them. And **target triples**
-=======
 `kmeta/1` ([`kotlin.md`](kotlin.md)) already reaches them. And **target triples**
->>>>>>> c76bf79d0baf129f9ac6db8f6347bd284844b290
 parameterize contract _modules_, not the format: an operating-system contract is published per
 triple family (`glibc-x86-64-linux`, or coarser where surfaces genuinely coincide), exactly as
 `sed:gnu` names a variant capability (§5) — satisfaction stays lineage membership and spanning,

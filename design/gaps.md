@@ -16,13 +16,13 @@ Worked proposals whose target is `spec/lira.md` (or distribution):
   input. The blocking item for the manifest hand-derivation (§5 below).
 - **The `inputs/1` source scheme** and its `lira-inputs` document schema (§3.1
   addendum): registration in the spec's scheme vocabulary; the schema file itself.
-- **Bare-name provider identity** (§6 item 4): `dependency`/`requires`/`given`/
+- **Bare-name provider identity** (§6 item 4): `dependency`/`requires`/`grant`/
   `binding` carry bare names; the domain exists only at resolution.
 - **Stewarded namespaces** (§6 item 5): the transparent index record for unclaimed
   vendor namespaces, with DNS-proof supersession.
 - **Discipline-obligation promotions** ([`discipline-obligations.md`](discipline-obligations.md)
   B.1, B.2): the used-set closure rule and encoding invariance into lira.md §11.2.
-- **Registry entries**: `oci-image` (jvm-reachable application type), `lira-tool`.
+- **Registry entries**: `oci-image` (jvm-reachable deliverable), `lira-tool`.
 
 ## 2. Discipline specs to write
 
@@ -37,6 +37,11 @@ Statements exist; the `dts.md`-pattern documents do not:
 
 ## 3. Named and half-designed
 
+- **Host provisioning** — hosts.md §3's closing observation as a tool capability:
+  driving `jlink` (and its analogues) with exactly the platform modules an
+  application's computed per-module requirements name, yielding an image whose
+  contract satisfies the aggregated requirement set by construction. No command
+  surface, no worked example; pairs with artifact selection below.
 - **The `run` settings model** — §10.3's design (side-effect class on the ephemeral
   environment) has no syntax; debugger attach is still inexpressible. Gates the rest
   of the deployment round.

@@ -7,7 +7,7 @@ Services keep calling each other, deploys keep arriving, and the compatibility q
 buildpath answers once is asked continuously, for as long as anything runs. This document
 specifies the object that keeps the question answerable: the **environment release** — an
 ordinary `.lira` release of the `env` realm (LIRA §9.4, **L148**) whose manifest states one
-environment's **desired state**: the platform contracts it supplies (`given`), the releases
+environment's **desired state**: the platform contracts it supplies (`grant`), the releases
 intended to run (`deploy`), and the **addresses** at which providers answer (`binding`). It
 also specifies **`environment/1`**, the discipline that atomizes an environment's topology,
 and **provisioning**, the runtime analog of materialization.
@@ -22,7 +22,7 @@ which is the design's whole content, derived in [`execution.md`](../design/execu
 ## 1. Status
 
 This document is a working draft. It is normative for the `env` realm (LIRA §9.4), the
-`given`, `deploy` and `binding` records (LIRA §14), the `environment/1` discipline, and
+`grant`, `deploy` and `binding` records (LIRA §14), the `environment/1` discipline, and
 resolution and provisioning (LIRA §13.7); the labels **L148**, **L149** and **L150** are
 defined in the base specification and elaborated here. Environment *validity* (L145) and
 deployment (L146) remain the subject of [`services.md`](services.md), unchanged in
@@ -61,7 +61,7 @@ consulted, never composed against).
 An environment release is an ordinary `.lira` release: a module with a name, a lineage,
 `api` records, a payload, and signatures, to which everything in the base specification
 applies unchanged. **L148** (LIRA §9.4) fixes the shape: exactly one `env` section; no
-integrations, no dependencies, no `requires` records; the `given`, `deploy` and `binding`
+integrations, no dependencies, no `requires` records; the `grant`, `deploy` and `binding`
 records that are its substance — and that no other kind of release may carry; and the
 `environment/1` discipline declared over them. The `env` section's tree holds only ancillary
 content (probe metadata, operator notes; atomless by default, **L144**) and MAY be empty:
@@ -85,14 +85,14 @@ any registry that holds the release.
 implementation identity distinguishes every state; API identity (§5) distinguishes every
 *topology*. The lineage is the topology's history, and the grade algebra reads it (§5).
 
-## 4. Givens, Deploys, and Bindings
+## 4. Grants, Deploys, and Bindings
 
 Three record families (LIRA §14), one desired state:
 
-**`given`** — a platform contract this environment supplies: module and snapshot. Polarity
-matters: a given is *provision*, not requirement — it is read by environment closure
+**`grant`** — a platform contract this environment supplies: module and snapshot. Polarity
+matters: a grant is *provision*, not requirement — it is read by environment closure
 (services.md §6 rule 1) from the provision side, which is why L148 forbids `requires` on the
-`env` section rather than spelling givens as requirements. The satisfied side is the
+`env` section rather than spelling grants as requirements. The satisfied side is the
 deployed releases' `requires` records, per hosts.md §7 unchanged.
 
 **`deploy`** — a release intended to run: module; **`build`**, the implementation identity
@@ -115,7 +115,7 @@ development release — which, in continuous deployment, it usually does.
   clashes with its dotted extension.
 - The **provider module** is either L137 kind: a deployable service, or a host contract — the
   latter being how a third-party endpoint (a vendor API nobody here deploys) enters an
-  environment: as a given bound to the address it answers at.
+  environment: as a grant, bound to the address it answers at.
 - The **selection** admits releases to the binding: `api`, a snapshot satisfied through the
   provider's lineage (the default form — a rolling deploy is two releases transiently inside
   one selection), or `build`, an exact implementation identity (the L118 boundary above
@@ -130,21 +130,21 @@ property of the address, which has no lineage and no grade of its own.
 `environment/1` is the discipline of environment topology. Its domain is the single realm
 `{env}`; its keying is by declaration; it emits only rigid atoms and no reference lists; it
 certifies **presence**, on `capability/1`'s terms (hosts.md §5). Like `resource/1` (LIRA
-§11.4), its input reaches beyond the tree: it atomizes the manifest's `binding` and `given`
+§11.4), its input reaches beyond the tree: it atomizes the manifest's `binding` and `grant`
 records, which is unproblematic for the same reason — atomization runs only where the
 manifest is in hand.
 
 **Atomization.** One rigid atom per `binding` row: the key is `binding <address>`; the
 canonical encoding is the byte `0x01`, the address's UTF-8 bytes, `0x00`, then the provider
-module's UTF-8 bytes. One rigid atom per `given` row: the key is `given <module>`; the
+module's UTF-8 bytes. One rigid atom per `grant` row: the key is `grant <module>`; the
 canonical encoding is the byte `0x02` followed by the module's UTF-8 bytes. Nothing else
-enters any atom — not selections, not deploys, not routes, not the given's snapshot — on
+enters any atom — not selections, not deploys, not routes, not the grant's snapshot — on
 exactly the precedent of `capability/1`'s `probe` field: they participate in implementation
 identity (they are manifest content under the signature) but never in API identity, so all
 of them change at patch grade. The exclusions are load-bearing: a selection in the atom
 would make every routine roll of a binding a major, and the environment's lineage a proxy
 for its occupants' histories — the address-level lineage this design exists to refuse
-(execution.md §4); a snapshot in the given's atom would make every platform upgrade an
+(execution.md §4); a snapshot in the grant's atom would make every platform upgrade an
 environment major.
 
 **The grade reading.** With those exclusions, the ordinary algebra (LIRA §12.3) grades an
@@ -153,10 +153,10 @@ environment's evolution exactly as operations would wish:
 | Change                                              | Grade |
 | --------------------------------------------------- | ----- |
 | selection rolled; deploys changed; routes edited    | patch |
-| probe metadata, notes, given's snapshot upgraded    | patch |
-| new address bound; new given granted                | minor |
+| probe metadata, notes, grant's snapshot upgraded    | patch |
+| new address bound; new contract granted             | minor |
 | address removed or retargeted to a different module | major |
-| given withdrawn                                     | major |
+| grant withdrawn                                     | major |
 
 The major row is a **safety interlock**, obtained for free from **L110**: a publishing tool
 refuses to extend the lineage with a topology-destroying successor unless the operator
@@ -186,7 +186,7 @@ from each deployed release's requirements to the addresses of their resolved bin
 consumer-facing answer to "where is my provider?", computed from manifests, handed to the
 runtime. A requirement whose provider carries no binding is **unaddressed**: an advisory
 fact, not a validity failure, since not every provider answers at an address (`kubernetes`
-is a given nobody dials). What happens next divides on the sentence that has divided every
+is a grant nobody dials). What happens next divides on the sentence that has divided every
 such question in this specification: provisioning produces the table, and *reconciling the
 running world to the judged one is the orchestrator's business*, exactly as invoking egress
 tools is the build's (LIRA §13.5).
@@ -204,7 +204,7 @@ be valid. The record-level reading of the three shapes:
   the new occupant's selected releases. Same-module retargeting is patch-grade; retargeting
   to a different module is additionally a topology major (§5), so the interlock and the
   validity judgment fire together.
-- **Retiring** removes rows. Removing a binding or given is valid only if no requirement
+- **Retiring** removes rows. Removing a binding or grant is valid only if no requirement
   resolves to it — closure names the objecting consumers — and is a topology major behind
   L110's gate: the algebra requires the operator to *say* they mean it.
 
@@ -223,7 +223,7 @@ orchestration concerns, outside the format.
 ## 9. Variants (Informative)
 
 Production and test are two environment releases, usually of two modules. The same deployed
-releases are judged against different givens and bindings; a mock stands in by cross-module
+releases are judged against different grants and bindings; a mock stands in by cross-module
 spanning (services.md §5, §9) for exactly the consumers that published used-sets; and no
 release-side mechanism exists or is needed — a variant is the operator's side of the
 judgment, as a target (LIRA §13.3) is the consumer's. Expressing one environment as a
@@ -236,13 +236,13 @@ want it more than they want two whole manifests they can diff.
 
 Three exclusions, restated from services.md §11 with the address dimension answered:
 
-- **The data plane.** A message broker is a *given*; its topics are not bindings, and their
+- **The data plane.** A message broker is a *grant*; its topics are not bindings, and their
   two-sided evolution over retained data still needs machinery a single lineage does not
   have (LIRA §10.5). The exclusion stands; a topic is not an address.
 - **Orchestration.** Surge policies, rollback triggers, traffic shifting: the controller's
   business. This document supplies the desired state and the predicate; nothing here moves a
   process.
 - **Aggregate contract publication.** An environment's full provided surface — the union of
-  its bindings' surfaces and its givens — is derivable from the named releases' manifests at
+  its bindings' surfaces and its grants — is derivable from the named releases' manifests at
   any moment, and tools SHOULD report it (hosts.md §10). Publishing that union as a host
   contract of its own is possible today by ordinary means and needs no mechanism here.
