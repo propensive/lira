@@ -403,6 +403,21 @@ The payoffs land directly on §1's worst afternoon:
   answered by re-judgment, with a vocabulary for saying precisely what is wrong: which
   module, which snapshot, which address.
 
+And one payoff deserves its own paragraph, because it answers the afternoon §1 left out:
+*it worked in staging* — and production is supposed to be the same, except nobody can say
+in what sense. In LIRA, **one artifact serves many environments**, and both halves of that
+sentence are checkable. Your laptop, CI, staging, and production are environment releases
+describing one architecture. The software moving between them is *verifiably* the same,
+because deploy records pin exact bits and promotion never rebuilds — what staging
+validated is byte-for-byte what production runs. And everything that legitimately differs —
+which database, which addresses, which platform, which mock — is confined to the
+environment release, the one signed place where difference can be written. Promotion is
+therefore not a leap of faith but a re-run of one judgment against the next environment's
+statement: same manifests, different grants and bindings, decided before anything
+launches. Even the local case is nothing special: a development build, localhost bindings,
+the machine's own contracts as grants — an environment-of-one, judged and probed like any
+cluster.
+
 **What this buys.** The deploy-time question becomes the build-time question, answered by
 the same three objects — atoms, lineages, used-sets — from signed manifests, continuously,
 for as long as anything runs. The schema linter, the contract broker, the registry, and
@@ -466,8 +481,9 @@ multi-platform multiplicity stays inside one artifact and out of your reasoning;
 substitution are computations; the **buildpath** makes build-time composition an audit
 over manifests; **host contracts** bring the environment into the same algebra; and the
 **environment** transposes all of it to run time, where a running service is a host, a
-deploy is a judged transition, and the consumer nobody remembered is a closure failure
-with a name. One question, two moments, three objects — atoms, lineages, used-sets — and
+deploy is a judged transition, the consumer nobody remembered is a closure failure with a
+name, and laptop, staging, and production are one architecture under different signed
+statements. One question, two moments, three objects — atoms, lineages, used-sets — and
 a single small algebra, carried in the artifact, checkable by anyone.
 
 ## Reading the Specification Suite

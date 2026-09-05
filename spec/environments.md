@@ -220,13 +220,38 @@ environment release supplies — so "something is wrong in prod" becomes "the re
 generate and act on. Probe cadence, escalation, and reconciliation strategy are tooling and
 orchestration concerns, outside the format.
 
-## 9. Variants (Informative)
+## 9. Variants: One Artifact, Many Environments (Informative)
 
-Production and test are two environment releases, usually of two modules. The same deployed
-releases are judged against different grants and bindings; a mock stands in by cross-module
-spanning (services.md §5, §9) for exactly the consumers that published used-sets; and no
+This section names the property the rest of the document quietly provides: **the same
+software runs in development, staging, and production with the same confidence that
+everything links up, because "the same" and "links up" are both checkable claims.** "The
+same" is implementation identity: a deploy record pins the exact bits (§4), so two
+environments running one release is a manifest-level fact rather than an assumption, and
+promotion between them is the assignment pattern of LIRA §12.5 — the payload untouched, so
+what one environment validated is bit-for-bit what the next one runs. "Links up" is
+environment validity (services.md §6): every difference between variants is confined to
+the one signed object this document specifies — the grants an environment supplies, the
+bindings it routes — so moving a release between environments re-judges the *same*
+manifests against a different statement, and nothing else can vary, because difference has
+exactly one place to be written.
+
+Production and test are thus two environment releases, usually of two modules. The same
+deployed releases are judged against different grants and bindings; a mock stands in by
+cross-module spanning (services.md §5, §9) for exactly the consumers that published
+used-sets — variants are free precisely for those consumers; and no
 release-side mechanism exists or is needed — a variant is the operator's side of the
-judgment, as a target (LIRA §13.3) is the consumer's. Expressing one environment as a
+judgment, as a target (LIRA §13.3) is the consumer's, and neither judgment touches the
+artifacts.
+
+A developer's machine is not a lesser case but a third instance of the same shape: an
+environment release with the machine's platform contracts as grants, localhost addresses
+as bindings, and development builds (LIRA §12.5) pinned into its deploy records — an
+environment-of-one, judged by services.md §6's validity before anything launches and
+probed (hosts.md §9) while it runs. Nothing in this document distinguishes it from a
+cluster: "works on my machine" and "works in production" become the same sentence with a
+different environment release as its subject.
+
+Expressing one environment as a
 minimal delta over another — test = prod with three substitutions, on the overlay calculus
 of LIRA §9.3 — is anticipated but not specified: environment releases are small, and the
 overlay's payoff (a computed, signed difference) should wait for evidence that operators
