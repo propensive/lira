@@ -33,12 +33,12 @@ are reserved for schema layers (now shipped as `tels/1` modules).
 | `nir` | Scala Native IR; carrier: TASTy. Architecture-agnostic: one cell, N links |
 | `js` | JavaScript itself — ES/CJS modules, `.d.ts` or no carrier. JavaScript's own form (reserved) |
 | `klib` | Kotlin multiplatform libraries; carrier: Kotlin metadata (reserved) |
-| `component` | WASM component-model *libraries*; carrier: WIT (reserved) |
+| `wasmc` | WASM component-model *libraries* (the WASM component universe); carrier: WIT (reserved) |
 | `native/<triple>` | C-ABI archives, one universe per target triple; carrier: C headers (reserved family) |
 | `wasm-object` | Relocatable wasm objects (linking-section symbols); the C/Rust wasm route (reserved) |
 | `crate` | Rust source + rmeta (informative only) |
 
-## Application types
+## Deliverables
 
 Closed forms paired with host contracts; registry objects, never manifest objects.
 
@@ -56,7 +56,7 @@ Closed forms paired with host contracts; registry objects, never manifest object
 | `wasi-oci` | Wasm OCI artifact (packaging of wasi-component) × OCI runtime |
 | `oci-image` / `oci-image/<platform>` | Container image (per platform) × container runtime |
 | `oci-index` | Multi-arch index over `oci-image/<platform>` members × container runtime |
-| `lira-tool` | Jar × `lira.tool` — the build tool's plugin application type |
+| `lira-tool` | Jar × `lira.tool` — the build tool's plugin deliverable |
 
 ## Carriers
 
@@ -74,14 +74,14 @@ OpenAPI documents · TEL capability listings · TEL schemas.
 | `jsig/1` | Java signature surface (stubs; jdk/android contracts) | spec |
 | `kmeta/1` | Kotlin `@Metadata` declaration surface | spec |
 | `dts/1` | TypeScript declarations | spec |
-| `wit/1` | WIT worlds (component universe, WASI contracts) | spec |
+| `wit/1` | WIT worlds (wasmc universe, WASI contracts) | spec |
 | `webidl/1` | Web IDL (browser contracts) | spec |
 | `cheader/1` | C headers (shared-library contracts) | spec |
 | `openapi/1` | OpenAPI descriptions; the first `app`-realm discipline | spec |
 | `capability/1` | Capability listings — commands, tool availability, Web APIs; the general no-formal-carrier discipline | spec |
 | `resource/1` | Resource path claims | spec |
 | `opaque/1` | Whole-file rigidity for undisciplined content | spec |
-| `environment/1` | Environment topology: bindings + givens, nothing else | spec |
+| `environment/1` | Environment topology: bindings + grants, nothing else | spec |
 | `tels/1` | TEL schema payloads; grades coincide with TEL's subsequence relation | spec (new) |
 | `envvar/1` | Environment-variable presumptions | proposed (builds.md §12) |
 | `file/1` | Filesystem-presence presumptions | proposed (builds.md §12) |
@@ -162,10 +162,10 @@ tables, CA trust roots, the MIME database.
 
 ## Overloaded words, disambiguated
 
-- **WASM** is four different things: two universes (`wasm-object`, `component`), several
-  application types (`wasm-browser`, `wasi-component`, `wasi-module`, `wasi-oci`), and a
+- **WASM** is four different things: two universes (`wasm-object`, `wasmc`), several
+  deliverables (`wasm-browser`, `wasi-component`, `wasi-module`, `wasi-oci`), and a
   closed-artifact format. Never a single node.
 - **JAR** is two: the canonical derivative artifact of a `jvm` section (automatic,
-  §13.6) and the executable-jar application type `jvm-app` (an egress product).
+  §13.6) and the executable-jar deliverable `jvm-app` (an egress product).
 - **WASIp2** is a host contract — never a format, never a universe.
 - **JavaScript** is a universe (`js`), not a source form: the universe is its form.

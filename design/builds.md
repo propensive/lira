@@ -50,7 +50,7 @@ Each element of the vision, against the mechanism that already carries it:
 | multi-variant `.lira` file                  | the section matrix, (realm × integration), L131; one API everywhere, L108 |
 | downstream pins one variant                 | integration pinning; canonical assignment (§13.3)     |
 | build outputs `.lira` files                 | library releases; conventional artifacts recoverable per §13.6 |
-| build outputs other targets                 | egresses to application types (§4.1); deployable releases (§9.4) |
+| build outputs other targets                 | egresses to deliverables (§4.1); deployable releases (§9.4) |
 | "snapshot of the build state for a module"  | the manifest: toolchain records, dependency snapshots, atoms, payload identity |
 | build feeds deployment                      | aggregated requirements seed the deployable's `requires` (hosts.md §10, services.md §4.1) |
 | running modules are "services"              | services.md, by that name                             |
@@ -222,7 +222,7 @@ shaped for, and §2's table is citation, not construction. The motivated changes
    key-value settings (`encoding UTF-8`, `-release 19`) find their missing home — `Tool`
    today carries only name, version and bare flags, yet option cases (§7) are *defined
    by* setting differences the manifest cannot currently record.
-4. **Bare-name provider identity** (distribution): `dependency`, `requires`, `given` and
+4. **Bare-name provider identity** (distribution): `dependency`, `requires`, `grant` and
    `binding` records all carry bare module names; the domain of the coordinate exists only
    at index resolution. Two domains publishing one module name are indistinguishable in a
    manifest.
@@ -420,7 +420,7 @@ one rule applied four times:
 3. **Artifact selection is undefined** — `module app` declares four `native-exe`
    triples; what an invocation builds needs a default (the host triple, which the tool
    knows) and a selection syntax, which exposes that artifacts are anonymous: optional
-   names, or selection by application-type pattern.
+   names, or selection by deliverable pattern.
 4. **Local pins** — `local.tel` can redirect a repository's transport but cannot resolve
    a coordinate to a specific commit, binary or path regardless of selector (the
    npm-link workflow). A `pin` record in `local.tel` compiles to a build pin; the L118
@@ -469,7 +469,7 @@ closure, satisfaction, aggregation, coherence, quantified over an assignment of 
 integration per release — differing only in **which document supplies the providers**. At
 build time the providers are the target's host contracts, and requirements naming
 deployables are left explicitly pending (rule 7); at run time the providers are the
-environment's givens and bindings, and the pending judgments close. The environment
+environment's grants and bindings, and the pending judgments close. The environment
 release is the run's world document exactly as the lockfile is the build's (§9.2): the
 same genus of verifiable memoization, with one honest difference in polarity — the
 lockfile is *sampled* state, the environment is *desired* state, and L146's re-check at
@@ -491,7 +491,7 @@ Of §7's three axis kinds, follow each through the egress into an environment:
 The observability classification predicts this: integrations are the consumer-observable
 axis, and the environment is the final consumer. Deployability into a particular
 environment is therefore **verifiable from manifests alone**: "can this deploy into E?" =
-"does some integration's requirement set get satisfied by E's givens and bindings?" — a
+"does some integration's requirement set get satisfied by E's grants and bindings?" — a
 service shipped with `pg15` and `pg16` cases is deployable into either estate, the
 environment's assignment selecting exactly as the buildpath's canonical assignment
 selects a backend.
@@ -504,14 +504,14 @@ bijection, and the correspondences run word-for-word:
 
 | Build side | Run side | Shared mechanism |
 | --- | --- | --- |
-| `host` declaration (project) | `given` records | contracts provided; hosts.md §7 |
+| `host` declaration (project) | `grant` records | contracts provided; hosts.md §7 |
 | lockfile entry | `binding` selection by `api` | intent resolved to a lineage fact |
 | local `pin` | `route` pin on a deploy | consumer choosing a candidate |
-| `local.tel` repository override | machine-supplied givens | the system home supplying the world |
+| `local.tel` repository override | machine-supplied grants | the system home supplying the world |
 | downstream test list | staging with a dev build substituted | spanning and mocks (environments.md §9) |
 
 The machine's local file declares (or the tool detects) what it provides — a JDK, a local
-postgres — and those are the ephemeral environment's givens: the *system* home doing its
+postgres — and those are the ephemeral environment's grants: the *system* home doing its
 §9 job. The command's run steps become deploy records, build-pinned to fresh development
 builds — which the spec blesses: deploy pins are publishable even naming development
 releases. Addresses default to localhost bindings. Validity is checked before launch;
@@ -539,7 +539,7 @@ yields module coordinates for free: the environments of `topology main` are
 `example/core`.
 
 The spec agrees at the atom level. The `environment/1` discipline atomizes **only
-bindings and givens** — nothing else: not deploys, not selections, not routes. Rolling a
+bindings and grants** — nothing else: not deploys, not selections, not routes. Rolling a
 new build into production is patch-grade; binding a new address is minor; retargeting or
 withdrawing is major. That is: **the topology is the environment's API, and deployment
 is its implementation.** Routine promotion never changes an environment's API identity;
@@ -549,7 +549,7 @@ Operationally, difference between environments has exactly one place to be writt
 drift is impossible by construction, and a review of the delta block reviews the entire
 gap — the staging mock (environments.md §9) collapses to a one-line deploy delta,
 satisfying by cross-module spanning. The local environment joins as a third
-instantiation, not a third mechanism: the same topology with givens from the system home
+instantiation, not a third mechanism: the same topology with grants from the system home
 and localhost bindings, at the least formal end of the promotion continuum.
 
 Compilation is honest about what is shared: each environment still emits a **complete,
@@ -574,7 +574,7 @@ by the very build that then uses it. The machinery is §10's, applied reflexivel
   invocation ABI, atomized like any contract, with the build tool *providing* its
   snapshot exactly as a JDK provides `java.base`. Compatibility across build-tool
   versions is contract lineage.
-- **(jar, `lira.tool`) is an application type** — by the definition's own pair — one
+- **(jar, `lira.tool`) is a deliverable** — by the definition's own pair — one
   registry entry, `lira-tool`. A tool is an ordinary application module targeting it;
   its `requires` are seeded by aggregation (hosts.md §10).
 - **The edges a tool implements are its served surface**: a descriptor in its tree
@@ -622,7 +622,7 @@ shape — contract rows of *name* (atomized: the guarantee's identity), optional
 (never atomized: how a runtime checks) — and its worked examples are shell commands
 (`sed:gnu`, `awk:bsd`). Environment variables (`envvar/1`) and filesystem paths
 (`file/1`) are sibling disciplines of the same three-part shape. The algebra
-needs nothing: atoms, `requires` + used-sets, givens and spanning apply unchanged.
+needs nothing: atoms, `requires` + used-sets, grants and spanning apply unchanged.
 
 Two boundaries, drawn at once. **Presence and format are atomizable; mutable content is
 data plane** — "a file exists at this path in this format" is a platform fact, its
@@ -631,12 +631,12 @@ value**: `ACCESS_KEY`'s atom encodes name and predicate; nothing in any manifest
 probe may carry a secret.
 
 **Provision and constraint: zero new machinery.** Guarantees enter environments as a
-`given` naming a contract release carrying the atoms — naturally a **generated
+`grant` naming a contract release carrying the atoms — naturally a **generated
 per-topology config contract** (`main/config`), produced from `guarantee` declarations
 by the same generated-release convention as the ephemeral local environment, and
 promoted with it. "Deployment constrained to environments where `ACCESS_KEY` is set"
 is then environment validity rule 1, verbatim: the requirement aggregates to the app
-section (hosts.md §10) and an environment lacking the given is not valid for it. Local
+section (hosts.md §10) and an environment lacking the grant is not valid for it. Local
 development inherits the constraint helpfully: `environment local` must guarantee it
 too (from `local.tel`, or machine detection), so a missing variable fails **before
 launch, from manifests**.
@@ -736,7 +736,7 @@ from manifests, but their failure modes are liveness-class or continuous, so the
 never reach the compiler.
 
 **Maps to existing machinery, not presumptions:** sidecars and mesh proxies are
-services — givens bound to localhost addresses; vendor endpoints likewise. **Stays
+services — grants bound to localhost addresses; vendor endpoints likewise. **Stays
 excluded:** database schema — the data plane (environments.md §10), the case where a
 guarantee would feel like configuration but behave like shared mutable state.
 **Known frontier, not admitted:** exclusivity guarantees ("no other writer for this
@@ -811,12 +811,12 @@ What the exercise surfaced:
    composition or mixin mechanism. The surface language expresses the sharing
    uniformly; the schema layer cannot. Worth weighing as a TEL feature.
 3. **The §4 guardrail became visible in types**: module-side `require` takes a
-   contract module reference; service-side `require` takes a service/given name. Two
+   contract module reference; service-side `require` takes a service/grant name. Two
    operand scalars for one keyword — the two compiled edge kinds, now distinguishable
    by the schema rather than only by context.
 4. **The environment delta grammar is thin** (an address override and additive
    service/guarantee rows) — an honest measure of how much of the deployment round
-   remains; the record will grow deploy deltas, given deltas and mocks.
+   remains; the record will grow deploy deltas, grant deltas and mocks.
 5. Semantic rules that stay lints, deliberately outside the schema: subtractive
    keywords in root bodies, L107 minimality, one-tool-per-edge, option cases touching
    `include`, one-cell-refined-once, toolchain self-application.
@@ -841,7 +841,7 @@ resolved. This section makes the implicit explicit.
 The DAG's nodes are **forms**: the kinds content is *in* between tool invocations. The
 existing taxonomy becomes species of this genus — a **source form** (`scala`, `java`,
 `dockerfile`) is what humans write; a **universe** is a form whose content
-composes (the litmus test unchanged); an **application type** is a closed form paired with
+composes (the litmus test unchanged); a **deliverable** is a closed form paired with
 a host contract; and a **carrier** keeps its discipline-side meaning — the
 interface-bearing artifact kind *within* a form (`jvm` holds `.class`, `.tasty` and Kotlin
 metadata, which is why a node cannot *be* a carrier). "Format" is retired from the node
@@ -853,7 +853,7 @@ Forms are one namespace, so source forms are named plainly for their languages �
 constraint that they avoid universe names. The litmus case shows why this works: there is
 no `javascript` source form to name, because the `js` universe already *is* the form
 JavaScript sources compose in; TypeScript is its own source form, compiled into `js`.
-Universes and application types keep their established names.
+Universes and deliverables keep their established names.
 
 ### 14.2 Edges are hyperedges, with three input roles
 
@@ -966,7 +966,7 @@ This **information model** is fixed and carrier-neutral. Its realization splits:
   referenced as a placeholder in form names, bound by backward flow per §15.2.
 
 The split also defines what a **WIT twin** would mean, precisely: a second contract
-module (`lira.tool-wit`; carrier WIT, graded `wit/1`; application type
+module (`lira.tool-wit`; carrier WIT, graded `wit/1`; deliverable
 (wasi-component, `lira.tool-wit`)), with equivalence judged by the descriptor — a Scala
 tool and a WASM tool are the same kind of thing exactly when both extract identical
 `tool.tel` documents. The trade-off is honest: in-process JVM plugins are direct and
@@ -1027,7 +1027,7 @@ are the authored relative ones inside trees.
 
 **Extraction is the one way content leaves the store.** A command step (or ad hoc CLI
 operation) `extract <module> <entry> <path>` saves a **named entry** — an artifact's
-application-type name, or a container-format name for a §13.6 canonical derivative
+deliverable name, or a container-format name for a §13.6 canonical derivative
 (`jar`, which exists for every jvm section with no declaration) — into the project tree
 at a fully-authored destination. This supersedes the earlier `emit` keyword, which
 assumed an output location. The store stays hidden; entries are addressed by build-file
@@ -1041,7 +1041,7 @@ shared intent; the CLI form is occasion — the bijection sorts the two homes.
 ### 14.6 Resolution, restated — *(see also §15, where packaging edges join the algebra)*
 
 Per (module × universe × integration case × option case): required outputs are the
-universe's stored forms, or the artifact's application type; available inputs are the
+universe's stored forms, or the artifact's deliverable; available inputs are the
 module's source forms plus dependency context; resolve a hyperpath through the applied
 toolchain's edges. The one-tool-per-edge rule generalizes to hyperedges as the
 **covering-edge rule**: a given source form maps to at most one edge, except that an edge
@@ -1051,7 +1051,7 @@ errors, resolved by a per-module `tool` pin — the same shape as integration pi
 
 ## 15. Packaging is an environment: the container chain
 
-A Docker image is a **frozen environment-of-one**: it supplies givens — commands
+A Docker image is a **frozen environment-of-one**: it supplies grants — commands
 installed, files baked in, variables set — to the application deployed inside it. The
 packaging edge therefore performs environment validity in miniature, which makes it the
 **third site of the one validity algebra** (§10.1's buildpath and environment being the
@@ -1092,12 +1092,12 @@ and service start.
 host requirements into an application with a different set is exact:
 
 ```text
-R(image) = ( R(app) − G(probe-verified) ) ∪ C(app-type)
+R(image) = ( R(app) − G(probe-verified) ) ∪ C(deliverable)
 ```
 
 — the inner requirements, minus the internally-satisfied guarantees, plus the target
-application type's own contract half. The last term needs no declaration: an application
-type is by definition (closed format, host contract), so moving from
+deliverable's own contract half. The last term needs no declaration: a deliverable
+is by definition (closed format, host contract), so moving from
 `native-exe/<triple>` to `oci-image` swaps libc-and-kernel for container-runtime by
 construction. The propagated remainder lands in the image's app-section `requires`,
 where environment validity picks it up — checkable from manifests at every joint.
@@ -1119,7 +1119,7 @@ content from several parents (a distroless base, a tooling image, an assets imag
 one image.
 
 The frozen-environment reading extends without new machinery: each parent is a
-given-provider, the closure judgment runs against the **union** of their declared
+grant-provider, the closure judgment runs against the **union** of their declared
 provisions, and overlapping content between parents is the resource-disjointness rule
 (L126) transposed to layers — two parents supplying the same path is an error, not a
 merge. Surface-wise this makes `assemble` repeatable on a packaging module (each
@@ -1130,7 +1130,7 @@ deferred until a real multi-parent example lands in `build.tel`.
 ### 15.2 Multi-architecture images, and the backward flow of the platform parameter
 
 An OCI multi-arch artifact is an **index** over per-platform images. In form vocabulary:
-`oci-image/<platform>` is a parameterized application-type family (the parameter part of
+`oci-image/<platform>` is a parameterized deliverable family (the parameter part of
 the type, exactly as `native-exe/<triple>`), and `oci-index` is a composite whose
 packaging edge takes several members of that family as inputs — the parameterized-edge
 feature (§14.2, still open) now demanded from a second direction.

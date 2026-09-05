@@ -2,15 +2,18 @@
 
 A language-agnostic artifact format: one `.lira` file carries every compiled representation of
 a library release (e.g. JVM classfiles + TASTy + Scala.js IR + Scala Native IR), deduplicated,
-with a human-readable [TEL](https://github.com/propensive/tel) manifest, verifiable
+with a canonical binary [TEL](https://github.com/propensive/tel) manifest (BinTEL) — rendered
+as readable TEL text by any conforming tool — verifiable
 API-derived versioning, and quantum-safe signatures. The same format and algebra extend to
 deploy time: a deployable service publishes one `.lira` release carrying its closed artifact
 (or an OCI pin to one) whose atoms are the network surface it serves, and deployability into a
-running environment is checked from manifests alone. Executing a `.lira` file invokes the
-`lira` tool on it.
+running environment is checked from manifests alone. A `.lira` file is data, never executable;
+the `lira` tool presents, verifies, and analyses it.
 
 Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and JavaScript.
 
+- [`spec/introduction.md`](spec/introduction.md) — an informative introduction: the problems,
+  the abstractions, and how they fit together; start here.
 - [`spec/lira.md`](spec/lira.md) — the format specification (working draft).
 - [`spec/tasty.md`](spec/tasty.md) — the normative Scala discipline.
 - [`spec/classfile.md`](spec/classfile.md) — the normative JVM bytecode discipline.
@@ -27,14 +30,14 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`spec/webidl.md`](spec/webidl.md) — the normative Web IDL discipline, for browser host
   contracts.
 - [`spec/wit.md`](spec/wit.md) — the normative WIT discipline, for WASI worlds and, ahead, the
-  `component` universe.
+  `wasmc` universe.
 - [`spec/cheader.md`](spec/cheader.md) — the normative C header discipline, for shared-library
   host contracts.
 - [`spec/kotlin.md`](spec/kotlin.md) — the normative Kotlin metadata discipline.
 - [`spec/jsig.md`](spec/jsig.md) — the normative Java signature-surface discipline, for the
   `jdk` and `android` host contracts.
 - [`design/universes.md`](design/universes.md) — the taxonomy of formats, universes, hosts and
-  application types; the pipeline DAG; what belongs in a `.lira` file.
+  deliverables; the pipeline DAG; what belongs in a `.lira` file.
 - [`design/compatibility.md`](design/compatibility.md) — per-language compatibility
   (discipline) designs.
 - [`design/integrations.md`](design/integrations.md) — one release carrying several dependency

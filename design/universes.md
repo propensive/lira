@@ -2,7 +2,7 @@
 
 This document defines the vocabulary LIRA uses to categorize compiled representations, and
 derives from it: which formats belong in a `.lira` file, how overlapping ecosystems (JS, WASM,
-WASI, Android, native) relate, where LLVM fits, and how a target application type is resolved
+WASI, Android, native) relate, where LLVM fits, and how a target deliverable is resolved
 from a buildpath by search over a pipeline DAG.
 
 The animating observation: terms like "platform", "target", and "ecosystem" conflate several
@@ -14,13 +14,13 @@ pipeline graph** rather than by file format.
 ## 1. Definitions
 
 > **Status.** The definitions of this section are now normative in the spec's taxonomy
-> (spec §4.1: format, realm, universe, host, host contract, application type, egress, join,
+> (spec §4.1: format, realm, universe, host, host contract, deliverable, egress, join,
 > ecosystem, language, platform, compatible; the spec's generic section-key axis is the
 > **realm**, a term postdating this document — where this document says "world" in that role,
 > read "realm"). This section remains the informative elaboration —
 > the litmus-test walkthroughs and the registry below — and where wording differs, the spec
-> governs. The application-type examples and the packaging exclusion from **egress** are
-> likewise normative (spec §4.1); the application types themselves, and their triple
+> governs. The deliverable examples and the packaging exclusion from **egress** are
+> likewise normative (spec §4.1); the deliverables themselves, and their triple
 > parameterization, are not spec objects at all (§6).
 
 **Format.** A concrete byte-level encoding: classfile, TASTy, SJSIR, NIR, Kotlin `@Metadata`,
@@ -55,25 +55,25 @@ world), an operating system + libc for a target triple. WASI "previews" are not 
 universes: they are host capability contracts, exactly the same kind of thing as "Android
 minSdk 26" or "JDK 17+". They belong on the *host* axis, versioned like any API.
 
-**Application type.** A pair (closed artifact format, host contract): an executable jar on
+**Deliverable.** A pair (closed artifact format, host contract): an executable jar on
 JDK ≥ N; an APK on ART ≥ API 26; an ES-module bundle in a browser; a script for Node ≥ 20; a
 core-WASM module + JS glue in a browser; a WASM component exporting `wasi:cli/run@0.2`; that
 same component packaged as a Wasm OCI Artifact, for a runtime that schedules it from a registry;
 a self-extracting command-line bundle for a POSIX or Windows shell with a JVM; an ELF executable
-for `x86_64-linux-gnu`. Application types are what a *build* produces; they are never stored as
+for `x86_64-linux-gnu`. Deliverables are what a *build* produces; they are never stored as
 composable content. (Since this was written, the spec's `app` realm lets a **deployable
 release** store or pin exactly one, as *closed* content — spec §9.4,
 [`spec/services.md`](../spec/services.md) — which refines rather than reverses this rule: the
 artifact still composes in no universe.)
 
-Two application types may share a format and differ only in how it is packaged: a WASM component
+Two deliverables may share a format and differ only in how it is packaged: a WASM component
 and that component wrapped as an OCI artifact are the same bytes under different envelopes,
 distinguishable to a build because they reach different hosts. A packaging step is not an egress
 — it closes over nothing and reads no `.lira` file (spec §4.1) — but it is an edge of the
-pipeline all the same, running from one application type to another, and resolution follows it
+pipeline all the same, running from one deliverable to another, and resolution follows it
 exactly as it follows an egress.
 
-**Egress.** A linking edge from a universe to an application type: it consumes the closed set
+**Egress.** A linking edge from a universe to a deliverable: it consumes the closed set
 of that universe's library artifacts (drawn from a buildpath) and produces the application
 artifact. One universe may have many egresses — this is the resolution of the "SJSIR serves
 JS *and* WASM" puzzle:
@@ -86,13 +86,14 @@ JS *and* WASM" puzzle:
   native launcher stub, wrapped in a polyglot script).
 
 A library never chooses its egress; an application does. That is *why* the sjsir section is
-stored once and serves four application types.
+stored once and serves four deliverables.
 
 **Join.** The point where two universes' contributions merge into one application. Examples:
 the output of the sjsir→js egress joins the `js` universe (a bundler links Scala.js output
 with TypeScript-compiled and hand-written JS libraries); the nir→native egress joins the
 `native/<triple>` C-ABI universe (system linker combines it with `.a`/`.so` libraries); WASM
-components from Rust and from Scala compose in the component world via WIT interfaces. Joins
+components from Rust and from Scala compose in the `wasmc` universe (the WASM component
+universe) via WIT interfaces. Joins
 are what make *cross-language buildpaths* meaningful: they are explicit edges in the DAG, not
 an informal notion of "ecosystem overlap".
 
@@ -105,7 +106,7 @@ an informal notion of "ecosystem overlap".
 | `nir`             | TASTy                       | `.nir` (+ divergent files)   | Scala                         |
 | `js`              | `.d.ts` (or none)           | ES/CJS modules, `.d.ts`      | TypeScript, JavaScript        |
 | `klib`            | Kotlin metadata             | klib contents                | Kotlin (JS/Native/WASM backends) |
-| `component`       | WIT                         | WASM components (library components) | Rust, Scala (via sjsir egress), any |
+| `wasmc`           | WIT                         | WASM components (library components) | Rust, Scala (via sjsir egress), any |
 | `native/<triple>` | C headers / C ABI           | `.a`/`.so`/`.dylib` archives | Rust, C/C++, any AOT language |
 | `wasm-object`     | linking-section symbols     | relocatable `.o` wasm        | Rust, C/C++ (wasm targets)    |
 | `crate`           | rmeta / source              | Rust source + rmeta          | Rust (informative; Rust-to-Rust distribution is source-based today) |
@@ -118,11 +119,11 @@ Notes:
 - The `jvm` universe is shared by three languages with three interface conventions layered
   over one linkage mechanism. The *universe* is one (they classload together); the
   *disciplines* differ (see `compatibility.md`).
-- The dual-role formats are handled by role, not by format: a WASM component is an application
-  type when it exports a runnable world, and a `component`-universe library when it is composed
+- The dual-role formats are handled by role, not by format: a WASM component is a
+  deliverable when it exports a runnable world, and a `wasmc`-universe library when it is composed
   with others; a classfile set is a `jvm` library until an egress closes it into a jar/APK.
   One tool edge can therefore land in either node: the sjs linker's component output is a
-  `wasi-component` application when the world it exports is runnable, and `component`-universe
+  `wasi-component` application when the world it exports is runnable, and `wasmc`-universe
   library content otherwise — which is what the registry's "Scala (via sjsir egress)" row means,
   and why the DAG draws the same-labelled edge into both.
 - `native/<triple>` is a family of universes, one per target triple, because C-ABI artifacts
@@ -133,7 +134,7 @@ Notes:
 - The application axis is parameterized by triple for the same reason, one step further on:
   `native-exe/<triple>` and `native-image/<triple>` are families, one member per triple, because
   a closed native artifact does not *run* across triples any more than an open one composes
-  across them. The parameter is part of the application type rather than a setting of its
+  across them. The parameter is part of the deliverable rather than a setting of its
   egress, since it is what decides whether the artifact runs at all on the host in hand — as
   visible a distinction to whoever receives the artifact as jar-versus-bundle is.
 
@@ -153,7 +154,7 @@ Android's *library* format is classfiles) and minified bundles (inside `js → j
 
 ## 4. The pipeline DAG
 
-Nodes are **forms** (builds.md §14.1) — sources, universes, application types, hosts; edges
+Nodes are **forms** (builds.md §14.1) — sources, universes, deliverables, hosts; edges
 are tools (compilers, linkers/egresses, joins). ("Formats-in-role", as this section
 previously said, is superseded by the form vocabulary, which leaves "format" to closed
 artifacts.) Application resolution is graph search over this DAG — and the edges are
@@ -171,7 +172,7 @@ graph LR
     NIR[nir]
     JSU[js: esm + d.ts]
     KLIB[klib]
-    COMP[component: wasm + wit]
+    COMP[wasmc: wasm + wit]
     NATIVE[native/triple: C ABI]
     WOBJ[wasm-object]
   end
@@ -232,7 +233,7 @@ tools — and nothing about either is visible to a library.
 ### 4.1 Resolution
 
 Given a buildpath **B** (each lira offering sections in certain universes) and a requested
-application type **T**:
+deliverable **T**:
 
 1. Identify the egresses producing **T**, and therefore the **primary universe** each egress
    closes over, plus the universes that **join** at that egress.
@@ -422,21 +423,21 @@ Still open:
 
 ## 6. Spec impact
 
-Applied to the spec: the section key is a **realm** — now `jvm | sjsir | nir | host | app`
-(§9.4), freeing
+Applied to the spec: the section key is a **realm** — now `jvm | sjsir | nir | host | app |
+env` (§9.4), freeing
 `js` for the JS universe proper; the root section is per-file, defined as the first section
 (§9.1); the taxonomy of §1 is normative (spec §4.1); host contracts and `requires` are normative
 ([`spec/hosts.md`](../spec/hosts.md)), in the host-as-module form of §5, with the third
 verification moment of §5.5 named in spec §16; and cross-universe dependencies are normative via
 the `serves` field and the **target** generalization of buildpath validity and derivation
 (spec §13.2, §13.3, §13.5) — the manifest-decidable slice of §4.1's resolution, steps 1–3.
-Spec §4.1's application-type examples now cover OCI-packaged components and per-triple native
+Spec §4.1's deliverable examples now cover OCI-packaged components and per-triple native
 executables, and its **egress** definition now says explicitly that packaging an application
 artifact is not an egress: it closes over nothing and reads no `.lira` file, so it stays outside
 the compatibility algebra entirely.
 
 Nothing on the application axis is a schema object, so the nodes and edges added here — the
-`wasi-oci` and `xeq-bundle` application types, the packaging edges reaching them, and the
+`wasi-oci` and `xeq-bundle` deliverables, the packaging edges reaching them, and the
 triple-parameterized native families — change no manifest, no atom and no buildpath rule. They
 are the pipeline registry's business (item 2 below), and are recorded here so that the registry
 has something to be faithful to.

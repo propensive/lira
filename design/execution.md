@@ -41,7 +41,7 @@ environment each provider is reachable.
 
 The spec already knows that buildpath and environment are two species of one thing —
 services.md §2 is headed "the Second Composition", and §13.7 opens by transposing §13.3. The
-genus deserves a name: a **composition** is a set of releases together with given contracts,
+genus deserves a name: a **composition** is a set of releases together with granted contracts,
 under a validity judgment decidable from manifests alone. (The name must be fenced at once:
 this is *not* composition in a universe. Services.md §2.1 paid for that distinction —
 universes compose artifacts, environments compose processes — and the genus term names the
@@ -129,7 +129,7 @@ production and the test address in test, so either the release is rebuilt per en
 destroying the one-artifact-many-environments property that makes variants cheap (§8) — or
 the address is a lie in all environments but one. Requirements name *modules* (L137's two
 provider kinds), and where the provider is a third party nobody deploys — a vendor API — the
-spec already has its category: capability *given* rather than deployed (services.md §6), a
+spec already has its category: capability *granted* rather than deployed (services.md §6), a
 platform contract (hosts.md §3), which §5 will simply allow to be bound to an address like
 any other provider.
 
@@ -147,14 +147,14 @@ where — is still in-all-but-publication. This document publishes it.
 
 The environment becomes a document: the **environment manifest**, authored and signed by the
 *operator* — the party the spec has never yet given a pen. It states the desired state of
-one environment: the platform contracts that are given, the releases that are deployed, and
+one environment: the platform contracts that are granted, the releases that are deployed, and
 — the new vocabulary — where each provider answers.
 
 A **binding** is the unit of that last part: a record of
 
 - an **address** — a DNS name or URL prefix, the environment's own kind of name;
 - a **provider module** — either L137 kind: a deployable service, or a host contract for a
-  given/third-party surface;
+  granted/third-party surface;
 - a **selection** — which releases of that module the binding admits: a snapshot, a lineage
   constraint, or an exact implementation identity.
 
@@ -212,11 +212,11 @@ What the environment manifest would be, in the format's own terms — each choic
 its precedent, and the unsettled ones flagged for §9:
 
 - **A `.lira`-style document.** A TEL manifest with the same discipline the release manifest
-  has: human-readable, canonically encodable, signed (spec §15). Whether it is literally a
+  has: canonically encodable, signed (spec §15). Whether it is literally a
   release — a module in a new realm, following the one-section shape pattern of L135 and
   L143 — or a sibling document under its own schema is open (§9); the one-section-realm
   pattern has twice proven the cheap way to give new content ordinary verification.
-- **Contents**: the environment's name; the platform contracts that are given (module +
+- **Contents**: the environment's name; the platform contracts that are granted (module +
   snapshot, satisfied from their published releases); the deploy records (module, release
   identity, `app` section — realm and integration, per §13.7); the bindings of §5; and the
   operator's signature over the whole.
@@ -256,10 +256,10 @@ concurrently; the environment manifest for `prod` binds them at two addresses:
 ```text
 environment prod
 
-given
+grant
   module postgres
   api Ll22…
-given
+grant
   module kubernetes
   api Mm33…
 
@@ -349,18 +349,18 @@ Production and test are two environment manifests. That sentence is most of the 
 ## 10. Spec impact (if adopted)
 
 > **Status.** Adopted: [`spec/environments.md`](../spec/environments.md) is the normative
-> home, with the `env` realm, the `given`/`deploy`/`binding` records, `environment/1`,
+> home, with the `env` realm, the `grant`/`deploy`/`binding` records, `environment/1`,
 > resolution, and provisioning in the base spec (§9.4, §11.3, §13.7, §14; L148–L150). Two
 > corrections were made in adoption: the environment's substance became **manifest records**,
 > not a payload document — the judgments that read it read manifests, per the spec's
 > manifests-alone principle — and atoms cover address + provider module (bindings) and
-> module (givens) only, with selections excluded on the `probe`-field precedent, so grades
+> module (grants) only, with selections excluded on the `probe`-field precedent, so grades
 > track *topology* rather than occupancy. §9's questions resolved: **9.1** an env-realm
 > release, atoms as above, lineage as topology history; **9.2** as recommended — occupant
 > rebinding is gradeless transition validity — with topology changes additionally graded and
 > majors gated by L110; **9.3** the report vocabulary is environments.md §8, cadence is
-> tooling; **9.4** unchanged (hosts.md §11; a third-party endpoint is a given bound to an
-> address); **9.5** re-affirmed (environments.md §10: a broker is a given, a topic is not an
+> tooling; **9.4** unchanged (hosts.md §11; a third-party endpoint is a grant bound to an
+> address); **9.5** re-affirmed (environments.md §10: a broker is a grant, a topic is not an
 > address); **9.6** the operator reuses §15 verbatim, anchoring out of scope as for
 > publishers (§15.3).
 
@@ -375,7 +375,7 @@ In the format of universes.md §6 — what this design would change, none of it 
    hosts.md §10's "in all but publication" precedent; add binding disjointness and the
    re-scoped rule-2 quantifier as fresh labels; state canonical binding resolution beside
    the canonical assignment.
-3. **Schema**: the environment-manifest schema (or realm), with `given`, `deploy` and
+3. **Schema**: the environment-manifest schema (or realm), with `grant`, `deploy` and
    `binding` records; selection semantics defended against L118 via the `artifact`-pin
    precedent.
 4. **services.md §8**: liveness as the third moment sustained; drift's advisory standing;

@@ -177,7 +177,7 @@ conventions:
 
 - **Facade libraries** (Scala facades over TS/JS/Kotlin) SHOULD publish `uses` blobs against
   the foreign library, so spanning and staleness work across the language boundary.
-- **WIT as the polyglot interface**: in the `component` universe, WIT worlds/interfaces are
+- **WIT as the polyglot interface**: in `wasmc` (the WASM component universe), WIT worlds/interfaces are
   the interface carrier shared by *all* source languages — a natural `wit/1` discipline
   (functions/types in an interface as atoms; WASI's own versioning of worlds is upstream
   prior art). Component-model composition is where Rust↔Scala interop is cleanest, and its
@@ -185,7 +185,7 @@ conventions:
 
 ## 9. The host axis, uniformly
 
-Orthogonal to all of the above: every application type carries a **host capability contract**
+Orthogonal to all of the above: every deliverable carries a **host capability contract**
 (universes.md §1) — JDK version, Android API level, browser/DOM baseline, Node version, WASI
 preview + world, libc/triple. These are ordinary versioned interfaces and could, in the limit,
 be treated with the same machinery (a host contract is a "module" whose atoms are
@@ -218,7 +218,7 @@ keep interface members additive where `dts` must fold them. Inverting the direct
 | Rust       | `rmeta`            | crate (anticipated)| recompilation   | generic/inline bodies    | cargo-semver-checks           |
 | Java       | `classfile/1`      | jvm                | linkage         | `static final` constants | MiMa, JLS 13                  |
 | JavaScript | `esm`              | js (anticipated)   | export presence | —                        | —                             |
-| (WIT)      | `wit/1`            | host, component    | recompilation   | —                        | WASI world versioning         |
+| (WIT)      | `wit/1`            | host, wasmc        | recompilation   | —                        | WASI world versioning         |
 | (C)        | `cheader/1`        | host               | recomp/presence | —                        | pkg-config, symbol versioning |
 | (HTTP)     | `openapi/1`        | host, app          | recompilation (regeneration) | —           | oasdiff, buf breaking, Pact   |
 | (any)      | `resource/1`       | all universes      | name presence   | tracked resource content | —                             |

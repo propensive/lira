@@ -44,7 +44,7 @@ of my modules with it — eventually publishing the fork for others.*
 
 - A tool is a service whose host is the build tool: the plugin API is a host contract
   (`lira.tool`, a Scala trait graded by `tasty/1`), and (jar, `lira.tool`) is the
-  application type `lira-tool` — §11, §14.3.
+  deliverable `lira-tool` — §11, §14.3.
 - Loadability is deployability: whether the build tool can run the tool is decided from
   manifests, by lineage or by spanning over the plugin's compiled-reference used-set.
 - The tool's edges are its served surface: a descriptor extracted at publish
@@ -66,8 +66,8 @@ must not bake in the secret. I want the machine to know all of this.*
 - The image is a frozen environment-of-one: `guarantee` on the packaging module declares
   what it satisfies internally; declared guarantees are probe-verified *inside the built
   image*, failing the build on a miss — §15.
-- What is not guaranteed propagates: `R(image) = (R(app) − G(verified)) ∪ C(app-type)`,
-  the application type swapping libc-and-kernel for container-runtime by construction.
+- What is not guaranteed propagates: `R(image) = (R(app) − G(verified)) ∪ C(deliverable)`,
+  the deliverable swapping libc-and-kernel for container-runtime by construction.
 - The secret deliberately propagates, and the deployment topology's own `guarantee`
   answers it — the chain *presumes → requires → satisfies-or-propagates → guarantees*
   is checkable from manifests at every joint.
@@ -77,7 +77,7 @@ must not bake in the secret. I want the machine to know all of this.*
 *I ship the same service for amd64 and arm64 as one multi-arch image, which means the
 native executable inside must be built per architecture, from one definition.*
 
-- `oci-image/<platform>` is a parameterized application-type family; `oci-index` is the
+- `oci-image/<platform>` is a parameterized deliverable family; `oci-index` is the
   composite over its members — §15.2.
 - Platforms are declared once, at the outermost artifact; the parameter flows
   *backward* through hyperpath resolution, binding each earlier egress's triple
@@ -92,7 +92,7 @@ native executable inside must be built per architecture, from one definition.*
 
 - Builder stages are subsumed: hermetic compilation is what the LIRA build *is*, so
   multi-stage Dockerfiles reduce to their legitimate half, runtime composition — §15.1.
-- Each parent is a given-provider; closure runs against the union of their declared
+- Each parent is a grant-provider; closure runs against the union of their declared
   provisions; overlapping content between parents is the resource-disjointness rule
   transposed to layers (an error, never a merge).
 
@@ -158,9 +158,9 @@ same shape, and drift must be impossible.*
 - A `topology` declares the common shape (services, requirements, served surfaces,
   addresses); environments nest as its children, each a delta — difference has exactly
   one place to be written — §10.4.
-- The topology is the environment's API: env atoms are exactly bindings and givens, so
+- The topology is the environment's API: env atoms are exactly bindings and grants, so
   routine deploys are patch-grade and architectural change regrades every instantiation.
-- A local `run` constructs an ephemeral environment-of-one — givens from the machine,
+- A local `run` constructs an ephemeral environment-of-one — grants from the machine,
   localhost bindings, dev builds pinned into deploy records — judged by environment
   validity *before launch* — §10.3.
 

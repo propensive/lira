@@ -9,8 +9,9 @@ types a WIT package declares, applying the folding principle of the LIRA specifi
 WIT serves two roles, and the discipline serves both. A **WASI world** is a host contract —
 "a WASM component assumes a WASI world" is the canonical host assumption of
 [`hosts.md`](hosts.md) — and a contract carried as WIT is atomized by this discipline exactly
-as a Node contract carried as `.d.ts` is atomized by `dts/1`. And in the `component` universe,
-where library components compose by WIT interfaces, the same atomization is the natural
+as a Node contract carried as `.d.ts` is atomized by `dts/1`. And in the `wasmc` universe —
+the WASM component universe, where library components compose by WIT interfaces — the same
+atomization is the natural
 compatibility carrier for libraries; that universe is reserved but not yet defined in the base
 schema (LIRA §9.4), so the library role becomes exercisable only when its schema layer lands.
 
@@ -37,8 +38,8 @@ Presence of an interface or function in a host contract is certified on the term
 
 ## 3. Domain and Content Claiming
 
-The domain is `{host, component}`: the `host` realm for WASI-world contracts, and the reserved
-`component` universe for library components when its schema layer arrives. Until then every
+The domain is `{host, wasmc}`: the `host` realm for WASI-world contracts, and the reserved
+`wasmc` universe for library components when its schema layer arrives. Until then every
 release carrying this discipline is in practice a host contract, and the cross-section
 invariant (LIRA §9.6) is vacuous.
 

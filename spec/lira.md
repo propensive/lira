@@ -7,7 +7,7 @@ software, and an algebra for answering — from metadata alone — the question 
 composition of independently-published parts: _will these work together?_ The question arises
 at two moments. At **build time**, libraries meet on a buildpath and must present compatible
 interfaces. At **deploy time**, running artifacts meet in an environment and must honor
-compatible contracts. LIRA gives both moments one answer, because they are one question asked
+compatible contracts. LIRA gives both occasions a single answer: they are one question asked
 with two polarities: a release **provides** an interface, expressed as a set of hashed atoms,
 and **requires** capabilities of its surroundings, satisfied by the same set relations that
 grade the interface's evolution.
@@ -15,13 +15,15 @@ grade the interface's evolution.
 A single `.lira` file carries the compiled representations of one release — for a library,
 every platform's view of it (for example, JVM classfiles, TASTy, Scala.js IR and Scala Native
 IR), deduplicated within one container; for a deployable service, its closed artifact or a pin
-to one — together with a human-readable manifest, machine-verifiable API-derived version
-metadata, and quantum-safe signatures.
+to one — together with a manifest — stored in canonical binary form, rendered as readable TEL
+text by any conforming tool (§5) — machine-verifiable API-derived version metadata, and
+quantum-safe signatures.
 
 LIRA defines:
 
-- a **container format**: a TEL manifest, a document separator, and a Brotli-compressed
-  content-addressed payload;
+- a **container format**: a fixed four-byte header, a BinTEL manifest under the published
+  `lira` schema — the base, or the base plus published layers — and a Brotli-compressed
+  content-addressed payload, each beginning where the last ends;
 - a **sectioning model** by which platform-specific views of a library are stored as overlays on a
   shared root, and from which conventional per-platform artifacts (such as classpath entries) can
   be reconstructed;
@@ -42,7 +44,7 @@ LIRA defines:
 - the **buildpath**: a composition of LIRA files whose coherence — including diamond-dependency
   resolution — is decidable from manifests alone, without reading any payload;
 - the **environment**: the buildpath's runtime counterpart — an operator-signed release of
-  the `env` realm whose manifest states a desired state: the platform contracts given, the
+  the `env` realm whose manifest states a desired state: the platform contracts granted, the
   releases deployed, and the addresses each provider is bound to — with coherence, including
   the deployability of a new release into it, decidable from manifests on the same terms
   (§13.7, [`services.md`](services.md), [`environments.md`](environments.md)).
@@ -76,9 +78,9 @@ described in RFC 2119 and RFC 8174 when, and only when, they appear in all capit
 
 ## 3. Normative Dependencies
 
-- **TEL** ([tel.md](https://github.com/propensive/tel/blob/main/spec/tel.md)) — the manifest is a TEL document; metadata blobs are TEL documents.
-- **BinTEL** ([bintel.md](https://github.com/propensive/tel/blob/main/spec/bintel.md)) — canonical binary encoding, used as the signing domain.
-- **BASE-256** ([base256.md](https://github.com/propensive/tel/blob/main/spec/base256.md)) — textual encoding of hashes and signatures.
+- **TEL** ([tel.md](https://github.com/propensive/tel/blob/main/spec/tel.md)) — the manifest's semantic model, schema language, and canonical text rendering (TEL §22.3).
+- **BinTEL** ([bintel.md](https://github.com/propensive/tel/blob/main/spec/bintel.md)) — the stored form of the manifest and of every metadata blob, and the signing domain.
+- **BASE-256** ([base256.md](https://github.com/propensive/tel/blob/main/spec/base256.md)) — textual encoding of hashes and signatures; also names the byte values of the magic numbers (§5.1).
 - **BLAKE3** — the sole hash function of this specification, used with 256-bit output.
 - **Brotli** (RFC 7932) — payload compression.
 - **ML-DSA** (FIPS 204) — the default signature algorithm.
@@ -94,10 +96,12 @@ make a flat vocabulary feel impossible (one representation serving several runti
 executing several representations) dissolve once each thing is named by its **role**.
 
 - **Format**: a concrete byte-level encoding of compiled or declared content — classfile, TASTy,
-  SJSIR, NIR, Kotlin metadata, `.d.ts`, ES module, WASM component, WIT. A format has no intrinsic
+  SJSIR, NIR, Kotlin metadata, `.d.ts`, ES module, WASM component, WIT. A format may occupy
+  whole files (a classfile, a `.d.ts`) or ride within another format's files (Kotlin metadata
+  travels in classfile annotations); either way it is the encoding, wherever its bytes are
+  carried. A format has no intrinsic
   role: the same format can appear at different points of a pipeline with different meanings, so
   nothing in this specification is keyed by format.
-
 - **Universe**: an axis along which independently-published libraries meet and compose,
   characterized by an **interface convention** (how a library's API is expressed to other
   libraries), a **linkage mechanism** (how library artifacts are later combined), and a
@@ -106,8 +110,8 @@ executing several representations) dissolve once each thing is named by its **ro
   composes arbitrary classfile sets; DEX fails — Android libraries ship classfiles, and dexing
   happens after the library phase closes; LLVM bitcode fails — no ecosystem publishes open-world
   libraries as bitcode. The universe vocabulary is open (§9.4).
-- **Realm**: the axis by which a release's **sections** — its stored views of the release's
-  content (§4.2, §9) — are keyed. Every universe is a realm, and three realms are not
+- **Realm**: what a release's **sections** — its stored views of the release's
+  content (§4.2, §9) — are keyed by. Every universe is a realm, and three realms are not
   universes: the `host` realm ([`hosts.md`](hosts.md)), which holds a host
   contract's content rather than a composable library representation; the `app` realm
   ([`services.md`](services.md)), which holds a closed, runnable artifact — content that is
@@ -118,51 +122,74 @@ executing several representations) dissolve once each thing is named by its **ro
   _world_, which this specification must use in WIT's own sense ([`wit.md`](wit.md)) and
   whose cosmological intuition inverts the containment needed here; a realm carries no
   instinct about what contains what.
-- **Host**: a runtime environment that executes _closed_ artifacts, exposing a versioned
-  capability interface: the JVM at a JDK version, a browser with its Web APIs, Node with its
+
+- **Host**: a runtime environment that executes _closed_ artifacts — closed meaning past
+  composition: the product of an egress (below), awaiting linking with nothing — exposing a
+  versioned capability interface: the JVM at a JDK version, a browser with its Web APIs, Node with its
   builtins, the Android runtime at an API level, a WASI runtime with its world, an operating
   system with its libc and shell. A host is not a universe: nothing composes _in_ it; artifacts
   run _on_ it. A **running service is a host to its consumers**: its versioned capability
   interface is its network API, which its own release publishes as its own atoms
   ([`services.md`](services.md)) — the observation from which the whole deployment story of
   this specification follows.
+
 - **Host contract**: the published, verifiable statement of a host's capability interface — an
   ordinary release whose atoms are capabilities ([`hosts.md`](hosts.md)). Host contracts bring
   hosts under the compatibility algebra — versioned by lineage, required by `requires`, satisfied
-  by lineage membership — while remaining a distinct axis from dependencies (hosts.md §8).
-- **Application type**: a pair of a closed artifact format and a host contract — an executable
+  by lineage membership — while remaining a distinct axis from dependencies (hosts.md §8). Why a
+  grown contract still satisfies a requirement and a shrunk one stops — and how position flips
+  the rule — is the polarity structure of §10.5.
+
+- **Deliverable**: a pair of a closed artifact format and a host contract — an executable
   JAR on JDK ≥ 21, an APK on Android API ≥ 26, an ES-module bundle in a baseline browser, a WASM
   component in a WASI 0.2 world, that component packaged as a Wasm OCI Artifact for a runtime
-  that schedules it from a registry, a native executable for one target triple. Two application
-  types may share a format and differ only in how it is packaged, since what distinguishes them
-  is the host they reach. Application types are what _builds_ produce. They are never stored as
-  composable content; a **deployable release** stores or pins exactly one, in its `app`
+  that schedules it from a registry, a native executable for one target triple. Two deliverables
+  may share a format and differ only in how it is packaged, since what distinguishes them
+  is the host they reach. Deliverables are what _builds_ produce; the word names a
+  classification, not a thing, and in particular not a **deployable release** (§4.2), which is
+  a `.lira` file. A deliverable is never stored as
+  composable content; a deployable release stores or pins exactly one, in its `app`
   section, as closed content (§9.4, [`services.md`](services.md)).
-- **Egress**: a linking edge from a universe to an application type: it closes over a buildpath's
-  artifacts in that universe and produces the application artifact. One universe may have many
+- **Egress**: a linking edge from a universe to a deliverable: it closes over a buildpath's
+  artifacts in that universe and produces the deliverable's artifact. One universe may have many
   egresses (`sjsir` egresses to JS bundles, to browser WASM, and to WASI components) — which is
-  why a library stores its representation once and never chooses its application type. What a
-  build then does to an application artifact — repackaging it as an OCI artifact, appending it to
+  why a library stores its representation once and never chooses its deliverable. An egress is
+  an edge of this taxonomy, not a tool: invoking the compilers and linkers that realize one is
+  the build's business (§13.5). And what a
+  build then does to a deliverable's artifact — repackaging it as an OCI artifact, appending it to
   a launcher stub — is not an egress: it reads no `.lira` file and closes over nothing, though
   its product may be exactly what a deployable release stores or pins (§9.4).
 - **Join**: the point where two universes' contributions merge into one application — a bundler
   linking Scala.js output with TypeScript-compiled modules; a system linker combining native
   objects with C libraries. Joins are what make cross-universe dependencies meaningful (§13.2).
-- **Ecosystem**: the community and toolchain conventions surrounding one or more universes. An
+
+- **Ecosystem**: the community and toolchain conventions surrounding one or more universes —
+  the Scala ecosystem surrounds `jvm`, `sjsir` and `nir`; the web ecosystem, with npm and its
+  bundlers, surrounds `js`; Kotlin multiplatform surrounds `jvm` and a klib universe of its
+  own. An
   ecosystem is not a formal object of this specification; its formal projections are the
   ecosystem profile (§11.6) and the canonical container format of its derivative artifacts
   (§13.6).
 - **Language**: a producer of formats. Languages deliberately have no formal role here: one
-  language may present several interface carriers and one carrier may serve several languages,
+  language may present several interface carriers (Kotlin presents classfiles with their
+  `@Metadata`, klib metadata, and JS output) and one carrier may serve several languages
+  (classfiles are produced by Java, Scala and Kotlin alike; `.d.ts` declarations by TypeScript
+  and by any compiler that targets JS and declares its types),
   which is why disciplines are named for the carrier they canonicalize, never for a language
   (§11.1).
 - **Platform**: not a term of this specification. Common usage conflates a universe with a host
   ("the JVM platform" names both the `jvm` universe and the JVM host) and sometimes with an
-  application type; wherever this specification's prose says "platform" informally, one of the
+  deliverable; wherever this specification's prose says "platform" informally, one of the
   precise terms above is meant and recoverable from context.
 - **Compatible**: meaningful only relative to a **guarantee level** (§11.5) — linkage,
   recompilation, or behavior. Every compatibility claim in this specification names its level; a
   claim without one is an equivocation, not a claim.
+
+The taxonomy's edges are now all in view: dependency edges compose libraries within a universe
+(§13.2), joins merge universes, an egress closes a universe into a deliverable, and requirement
+edges point from content — open or closed — to the providers it runs against (§9.4, §13.3). No
+edge leads back out of a deliverable: closure is terminal, and nothing in this specification
+turns a deliverable into composable content again.
 
 ### 4.2 Terms of the Format
 
@@ -180,8 +207,9 @@ executing several representations) dissolve once each thing is named by its **ro
   fragment of a module's public interface (§10).
 - **Discipline**: a named, versioned canonicalization procedure that converts content into atoms
   (§11).
+
 - **Guarantee level**: what a compatibility claim certifies — linkage, recompilation, or
-  behavior (§11.5).
+  behavior. The three are independent, not a hierarchy (§11.5).
 - **Profile**: a named, versioned set of predicates an ecosystem imposes over releases and
   buildpaths in addition to those of this specification (§11.6).
 - **Snapshot**: the hash identifying a release's complete API — the hash of its sorted atom set
@@ -189,28 +217,39 @@ executing several representations) dissolve once each thing is named by its **ro
 - **Lineage**: the ordered list of snapshots of a module's releases within one major series
   (§12.2).
 - **Buildpath**: a set of `.lira` files intended to be used together (§13).
+
 - **Deployable release**: a release carrying `app` sections: a closed artifact, or a pin to
-  one, together with the interface it serves and the capabilities it requires (§9.4,
+  one held natively in a foreign content-addressed store (the `artifact` pin, §9.4), together
+  with the interface it serves and the capabilities it requires (§9.4,
   [`services.md`](services.md)).
+
 - **Environment**: the runtime counterpart of the buildpath: a set of deployable releases and
   host contracts intended to run together, stated as the desired state of an environment
   release in the `env` realm (§9.4, §13.7, [`environments.md`](environments.md)).
+
 - **Deploy**: a transition of an environment; a release is deployable into an environment iff
   the transition preserves the environment's validity (§13.7).
+
 - **Address**: an environment's own kind of name — a DNS name or URL prefix — at which a
   provider answers, compared as authored on the `owns` precedent
-  ([`environments.md`](environments.md)).
+  ([`environments.md`](environments.md)). Other kinds of name — a filesystem path, a queue
+  name — are deliberately not admitted by the base schema; an ecosystem needing one can
+  introduce it as a schema layer, on the same compared-as-authored terms.
 - **Binding**: an environment release's association of an address with a provider module and
-  a release selection: the record that disambiguates at run time what uniqueness (§13.3 rule
-  1. disambiguates at build time ([`environments.md`](environments.md)).
-- **Provisioning**: the runtime analog of materialization (§13.5): evaluating a valid
-  environment's satisfaction relation into a table from each requirement to the binding that
-  answers it (§13.7, [`environments.md`](environments.md) §6).
+  a release selection: the record that disambiguates at run time what uniqueness (§13.3 rule 1)
+  disambiguates at build time ([`environments.md`](environments.md)). How a rebinding reaches
+  running consumers is deliberately not abstracted here: validity re-judges the new desired
+  state, provisioning re-evaluates its table, and reconciliation is the orchestrator's
+  business (§13.7).
+- **Provisioning**: evaluating a valid environment's satisfaction relation into a table from
+  each requirement to the binding that answers it (§13.7,
+  [`environments.md`](environments.md) §6) — the runtime analog of materializing a valid
+  buildpath's sections onto artifact paths (§9.3, §13.5).
 - **Operator**: the party who authors and signs an environment release — the third signing
   role of the format, beside the publisher (§15) and the index
   ([`distribution.md`](../design/distribution.md)).
 - **Composition**: the genus of the buildpath and the environment: a set of releases together
-  with given contracts, under a validity judgment decidable from manifests alone (§13.3,
+  with granted contracts, under a validity judgment decidable from manifests alone (§13.3,
   §13.7) — the environment species being itself published, as an environment release
   ([`environments.md`](environments.md)). The term names the shared judgment and nothing more — universes compose artifacts,
   environments compose processes ([`services.md`](services.md) §2.1) — and the two species
@@ -224,56 +263,66 @@ executing several representations) dissolve once each thing is named by its **ro
 
 A `.lira` file consists of, in order:
 
-1. the **interpreter directive** line (§5.1), whose content is fixed;
-2. a **manifest**: a TEL document conforming to the `lira` schema (§14), encoded per the TEL
-   specification (UTF-8, LF line endings REQUIRED for generated files), of which the interpreter
-   directive is the first line (TEL §7);
-3. a **document separator** line (`##`, per §5.2);
-4. the **payload**: the Brotli-compressed blob stream (§8), extending to the end of the file.
+1. the **header**: the four bytes `B2 B9 B2 BB` — the LIRA magic number, the characters
+   `βιβλ` under BASE-256: the Greek root of _library_, which is what the L stands for;
+2. the **manifest**: a BinTEL document (BinTEL §6) in **external-schema mode**, conforming
+   to the `lira` schema (§14) — the base schema, or the base composed with published layers;
+3. the **payload**: the Brotli-compressed blob stream (§8), beginning at the byte immediately
+   following the manifest and extending to the end of the file.
 
-A reader MUST obtain the manifest by TEL single-document parsing (TEL §6.1), which terminates at
-the separator; the remainder of the file is the payload and is not TEL. A `.lira` file whose
-prefix is not a valid TEL document conforming to the `lira` schema is invalid (**L101**).
+### 5.1 Layout and Framing
 
-The manifest is intentionally human-readable: opening a `.lira` file in a text editor shows the
-complete metadata of the release. Tools that modify manifests MUST follow TEL's
-formatting-preservation rules.
+Because the manifest opens with BinTEL's own external-schema magic `βτελ`, the first eight
+bytes of every `.lira` file are fixed: `B2 B9 B2 BB B2 C4 B5 BB` — `βιβλβτελ` under
+BASE-256. A file that does not begin with these eight bytes is invalid (**L115**) — a
+self-contained-mode manifest (`βτεμ`) included, since the composed schema is a published
+constant, never the file's to supply (§5.2). Every byte of the header is at or above `0x80`,
+so a `.lira` file cannot be mistaken for ASCII or UTF-8 text; and the LIRA magic, distinct
+from BinTEL's, is what file-type detection keys on — a bare BinTEL document is not a `.lira`
+file. Nothing precedes the header — no interpreter directive, no byte-order mark. A `.lira`
+file is a binary file; producers MUST NOT set the executable permission bit.
 
-The RECOMMENDED file extension is `.lira`.
+No length and no separator delimit the manifest, and none is needed: a BinTEL document is
+sized at every level of its structure (BinTEL §6, §7.7), so a reader holding the composed
+schema decodes it to its exact extent — and a reader not holding the composed schema can do
+nothing with the file at all (§5.2), so there is nobody left to serve with a
+schema-independent boundary. A reader MUST obtain the manifest by decoding one BinTEL
+document from the fifth byte, treating the first unconsumed byte as the start of the
+payload rather than as a framing error: BinTEL's trailing-bytes rule is LIRA's to apply,
+and LIRA applies the payload's own rules to it (§8). A file whose manifest does not decode,
+or decodes to a document not conforming to the `lira` schema, is invalid (**L101**); a file
+that ends at or before the end of its manifest carries no payload and is invalid (**L116**).
 
-### 5.1 Interpreter Directive
+### 5.2 Schema Resolution
 
-Every `.lira` file MUST begin with an interpreter directive line (TEL §7) whose bytes are
-exactly:
+The manifest carries its schema **signature**, never a schema: the composed schema is not
+the file's to define. It is the published `lira` base — normative in §14 and compiled into
+every conforming implementation, exactly as the four metadata-blob schemas are (§8.3) —
+alone, or composed with **published layers**, each a signed, lineage-versioned `tels/1`
+release (§14, [`tels.md`](tels.md)) obtained on the same terms as any release, typically
+from the registry that served the file. A reader resolves the signature against the schemas
+it holds; a signature it cannot resolve makes the file **unreadable to that reader**, who
+MUST fail, naming the signature, rather than guess. Unreadable is not invalid: the file may
+conform perfectly to a schema the reader has yet to obtain. A registry MUST NOT accept a
+release whose composed schema it does not hold (§16, **L140**), so the registry that serves
+a file can always serve, or name, the layers reading it needs.
 
-```text
-#!/usr/bin/env lira
-```
+### 5.3 Presentation and Media Type
 
-A file whose first line is absent, or differs in any byte from this string, is invalid
-(**L115**). The directive is part of the TEL presentation model but outside the semantic model:
-it participates in no hash and no signature, and needs neither — its byte-exactness is a
-validity condition checked before anything else (§16), so no conforming file can carry any other
-directive.
+The stored manifest is binary, but the format remains inspectable by construction: a tool
+that can read a `.lira` file holds its composed schema (§5.2), and the canonical text
+serialization (TEL §22.3) of the decoded semantic model is a complete TEL rendering of it.
+The `lira` tool's behavior is out of scope for this specification, except that its default
+action when invoked on a `.lira` file MUST at minimum present the manifest, and any TEL text
+that it — or any conforming tool — emits as the manifest's rendering MUST be the canonical
+serialization, so that two tools' renderings of one manifest are byte-identical. Throughout
+this specification, manifests and metadata blobs are _shown_ in TEL text; the stored form is
+always BinTEL.
 
-The directive makes every `.lira` file directly executable on POSIX systems: executing it
-invokes the PATH-resolved `lira` tool with the file's path as its argument. Users can therefore
-_expect_ to invoke a lira file. The `lira` tool's behavior is out of scope for this
-specification, except that its default action when invoked on a `.lira` file MUST at minimum
-present the manifest, and MAY additionally verify or analyse the file. Where `lira` is not
-installed, execution fails with the operating system's ordinary command-not-found error; the
-file remains fully readable as data.
-
-Producers MUST set the executable permission bit on emitted `.lira` files where the filesystem
-supports one. Transports that do not preserve permissions (e.g. HTTP) lose the bit, not the
-directive; installers SHOULD restore it.
-
-### 5.2 Sigil
-
-The `lira` schema declares no sigil, and a lira manifest MUST NOT specify a sigil in its pragma
-(**L116**): the resolved sigil is always the TEL default `#`, and the document separator is
-therefore always `##`. This fixes the byte layout of the file for non-TEL tooling — anything
-that can find the first line matching `##` exactly can split manifest from payload.
+The RECOMMENDED file extension is `.lira`; the media type is `application/lira`, whose
+registration is anticipated rather than yet granted. Neither the extension nor the media
+type distinguishes layered from unlayered manifests — the schema signature in the BinTEL
+header does.
 
 ## 6. Identity
 
@@ -291,9 +340,13 @@ implementation identities differ (§12.3).
 
 ## 7. Hashing
 
-All hashes in this specification are 256-bit BLAKE3. Wherever a hash appears in TEL text (the
-manifest or a metadata blob), it is BASE-256 encoded (32 characters). Wherever a hash appears in
-a binary context (snapshot computation, signing input), it is the raw 32 bytes.
+All hashes in this specification are 256-bit BLAKE3. A hash takes one of two forms, by
+context: in TEL text — this specification's examples, and any tool's rendering (§5.3) — it is
+BASE-256 encoded, 32 characters; in every binary context — the stored manifest and metadata
+blobs (via the `base-256-hash` codec, §14), snapshot computation (§12.1), and the signing
+input (§15.2) — it is the raw 32 bytes. The two forms are one value: BASE-256 is
+character-for-byte, the codec is its strict inverse, and no context ever re-encodes another's
+output.
 
 ### 7.1 Domain Separation
 
@@ -333,7 +386,8 @@ canonical signing encoding and so identifies content rather than bytes).
 
 ### 8.1 Compression Envelope
 
-The payload is a single Brotli stream. The compressed bytes participate in **no identity**:
+The payload is a single Brotli stream. The compressed bytes contribute to **no identity** of
+§6:
 `payload.hash` (§8.4), the snapshot (§12.1) and every signature (§15.2) cover the
 _decompressed_ blob stream, directly or transitively, so two files differing only in
 compressor output are the same release. A producer MUST be **self-deterministic** — the same
@@ -368,8 +422,9 @@ Content occurring in multiple sections is therefore stored exactly once, address
 
 ### 8.3 Metadata Blobs
 
-Certain blobs are **metadata blobs**: TEL documents (parsed in single-document mode) conforming
-to small schemas defined alongside the `lira` schema. This specification defines four:
+Certain blobs are **metadata blobs**: BinTEL documents in **external-schema mode** (BinTEL
+§6.1) conforming to small schemas defined alongside the `lira` schema. This specification
+defines four:
 
 - **Tree** (§9.2) — an entry table mapping paths to blobs for one section.
 - **Atoms** (§10.4) — the atom listing of the release for one discipline.
@@ -377,7 +432,13 @@ to small schemas defined alongside the `lira` schema. This specification defines
 - **Delta** (§12.3) — the atom-level change record for one lineage step.
 
 Metadata blobs are ordinary blobs: content-addressed, deduplicated, and hashed under
-`lira/1:blob`. Being TEL, they remain human-inspectable after decompression.
+`lira/1:blob`. External-schema mode is the format's only mode (§5.1), and for metadata blobs
+resolution is even simpler than §5.2's: the four schemas are normative constants of §14, so
+a reader compares a blob's schema signature against four known values; a blob whose
+signature matches none of them is malformed (**L139**). Pinning one mode is also what keeps
+blob identity canonical — the two modes differ in bytes, and one document with two hashes
+would defeat deduplication (§8.2) and the determinism of §17. Blobs remain inspectable on
+§5.3's terms: any conforming tool renders one as canonical TEL text.
 
 ### 8.4 Payload Hash
 
@@ -397,12 +458,15 @@ of its ecosystem; a TypeScript release's root would be its `js` section.
 Where a release offers several integrations (§9.5) the sections form a matrix, and the root is
 still one section of it: every other section, of whatever universe or integration, is an overlay
 on that one (§9.3). Producers SHOULD make the root the section of the most widely applicable
-integration, since overlays are minimal with respect to it.
+integration, since overlays are minimal with respect to it. The choice of root is the
+producer's own, recorded structurally as section order rather than declared anywhere: it
+affects how much the overlays carry — bytes, never meaning — and no judgment in this
+specification reads it. §17 asks only that a given toolchain choose deterministically.
 
 ### 9.2 Trees
 
-Each section's `tree` field references a **Tree metadata blob**: a TEL document whose rows map
-paths to blob hashes:
+Each section's `tree` field references a **Tree metadata blob** — stored as BinTEL (§8.3),
+shown here as its TEL rendering — whose rows map paths to blob hashes:
 
 ```tel
 tel 1.0  <lira-tree schema signature>
@@ -413,7 +477,11 @@ entry gossamer/Text.tasty       Cd34…
 ```
 
 Paths MUST be relative, `/`-separated, contain no empty, `.` or `..` segments, and be unique
-within a tree; rows MUST be sorted in ascending bytewise UTF-8 order of path (**L106**). Readers
+within a tree; no entry's path may extend another entry's path by a further `/`-separated
+segment — one name cannot be both a content item and a directory; and rows MUST be sorted in
+ascending bytewise UTF-8 order of path (**L106**). A tree lists content items only:
+directories exist exactly insofar as paths pass through them, and have no entries of their
+own (compare Appendix C, whose archives likewise carry none). Readers
 MUST reject trees violating these rules — the path rules exclude directory-traversal attacks by
 construction.
 
@@ -434,33 +502,44 @@ replacement spelled redundantly) — each is invalid (**L107**): overlays are mi
 construction, which makes divergence between platforms _visible_ in the manifest rather than
 buried in the payload.
 
+A tree maps paths to content and to nothing else: no permission bits, no timestamps, no
+per-item attributes exist anywhere in the format. Where a derivative container format needs
+such metadata, the canonical profile supplies constants (Appendix C); where an application
+needs it at run time, it belongs in the content, not the container.
+
 ### 9.4 Realms: Universes, `host`, `app`, and `env`
 
-Sections are keyed by **realm** (§4.1). The base schema (§14) defines the realm variants `jvm`,
-`sjsir`, and `nir` — the three universes of the motivating ecosystem — and the three realms
-that are not universes: `host`, `app`, and `env`. (The names `js`, `klib`, `component` and their kin are
+Sections are keyed by **realm** (§4.1), and the base schema (§14) expresses the realm axis
+structurally, in two places. The document's **kind** — a select whose `library`, `host`, `app`
+and `env` variants carry the fields and section shapes lawful for each kind of release —
+distinguishes the three realms that are not universes; within the `library` variant, a
+universe select keys each section's realm, with `jvm`, `sjsir`, and `nir` — the three
+universes of the motivating ecosystem — as its base variants. (The names `js`, `klib`,
+`wasmc` and their kin are
 reserved for the universes proper of other ecosystems, arriving as schema layers; a universe
 names the realm in which independently-published libraries compose, not a language's view of a
 target.) The
 universe vocabulary is open: new universes are introduced by TEL schema layers, which may append
-variants to a select but never remove them. A consumer knowing only the base schema can still
-parse a layered manifest (TEL §8.2); it MUST treat sections of unknown universes as opaque and
-MUST NOT attempt to materialize them.
+variants to a select but never remove them. Reading a layered manifest requires holding the
+composed schema (§5.2) — published layers, held on the same terms as the base — and holding
+a universe's schema is deliberately a lower bar than supporting the universe: a consumer
+MUST treat sections of universes it decodes but does not implement as opaque and MUST NOT
+attempt to materialize them.
 
 The first anticipated layer is the web layer, appending the two reserved universes this
 specification's disciplines already reach for: **`js`** — interface convention `.d.ts`
 ([`dts.md`](dts.md), whose domain SHOULD narrow to it in a `dts/2`), linkage by bundler and ESM
-resolution, capability model that of the host the bundle lands on — and **`component`** —
-interface convention WIT ([`wit.md`](wit.md)), linkage by component composition, capabilities
-declared by world imports. Each is a TEL schema layer appending a variant to the `Realm` select
-(TEL §8.2).
+resolution, capability model that of the host the bundle lands on — and **`wasmc`** — the WASM
+component universe: interface convention WIT ([`wit.md`](wit.md)), linkage by component
+composition, capabilities declared by world imports. Each is a TEL schema layer appending a
+variant to the library-section universe select (§14, TEL §8.2).
 
 A `host` section holds a **host contract**'s content — the carrier of a runtime environment's
-capability interface — and a release carrying one is a host contract rather than a library. Such
-a release MUST carry exactly that one section, MUST declare no integrations and no
-dependencies, and its section MUST carry no `requires` records (**L135**); a library release,
-conversely, never carries a
-`host` section, since L135 leaves no room for one beside its universe sections. Host sections
+capability interface — and a release carrying one is a host contract rather than a library.
+The shape is the schema's (**L135**, discharged by construction under §14): the `host` kind
+admits exactly one section and no integration, dependency or `requires` records, and no other
+kind admits a `host` section — a violating manifest is not a strange release but a
+non-conforming document (L101). Host sections
 are never materialized onto any artifact path (§13.5). The full treatment — what a host contract
 is, how libraries require one, and how requirements are satisfied — is the companion document
 [`hosts.md`](hosts.md).
@@ -470,11 +549,11 @@ either stored as ordinary tree content, or pinned by external content address wh
 artifact lives natively in another content-addressed store, as a container image lives in an
 OCI registry (the `artifact` field, §14). A pinned section's tree still carries the release's
 ancillary content — its interface descriptions (below) and probe metadata — never a copy of
-the artifact itself. A release carrying an `app` section is a deployable
-release and MUST carry only `app` sections (**L143**); it MAY declare integrations — one `app`
+the artifact itself. A release carrying an `app` section is a deployable release, and its
+shape too is the schema's (**L143**, discharged by construction): the `app` kind admits only
+`app` sections and no `dependency` records. It MAY declare integrations — one `app`
 section per integration, naming the alternative vectors of the egresses that produced the
-artifacts: labels for alternative closed builds, not dependency declarations — and it MUST NOT
-declare `dependency` records (also **L143**): its
+artifacts: labels for alternative closed builds, not dependency declarations. Its
 composition already happened, at the egress that produced it, and what it retains of that
 history divides: its `source` records (§17) may name the sources it was built from, while the
 _buildpath_ it was closed over remains a question of provenance attestation, deliberately out
@@ -483,7 +562,7 @@ sections carry `requires` records freely — indeed those records are much of it
 what a closed artifact asks of its environment is the whole of its remaining need. And,
 symmetrically, other modules' `requires` records may name a deployable module exactly as they
 name a host contract (§13.3, **L137**): host contracts and deployable releases are this
-specification's two kinds of **provider** — the capability an environment is _given_, and the
+specification's two kinds of **provider** — the capability an environment is _granted_, and the
 capability _deployed into_ it — recognizable by their `host` and `app` sections respectively.
 
 Content in an `app` or `env` section that no declared discipline claims is claimed
@@ -502,23 +581,26 @@ lineage is that surface's history, its evolution is graded by §12, and a requir
 satisfied by lineage membership exactly as a dependency is (§13.2). A deployable declaring no
 `api` records has an empty atom set and a degenerate API identity — legitimate for a leaf
 application nothing requires, useless for a service, so publishers SHOULD self-describe any
-module others are to require: an empty atom set can satisfy no requirement. (Such a release's
+module others are to require: an empty atom set can satisfy no requirement. (A command-line
+tool is today the honest degenerate case: its invocation surface is a contract no registered
+discipline yet atomizes, §11.3.) (Such a release's
 derived version, per §12.5, advances only in the patch position — the algebra's honest report
 that nothing it can see has changed.) The full treatment
 — deployable releases, requirements on services, environments, and deployment — is the
 companion document [`services.md`](services.md).
 
 An `env` section marks an **environment release**: the operator-signed statement of one
-environment's desired state (§13.7, [`environments.md`](environments.md)). Such a release
-MUST carry exactly that one section, MUST declare no integrations and no dependencies, and
-its section MUST carry no `requires` records (**L148**) — a `given` record (§14) states
-provision, not requirement, and is read by environment closure from the provision side. The
-environment's substance is not section content at all but the manifest's `given`, `deploy`
-and `binding` records, which any other release MUST NOT declare (also **L148**): the
-judgments that read them (§13.7) read manifests, never payloads, so the records live where
-every judgment input in this specification lives. An `env` section's tree carries only
+environment's desired state (§13.7, [`environments.md`](environments.md)). Its shape is
+likewise the schema's (**L148**, discharged by construction): the `env` kind admits exactly
+one section, no integration, dependency or `requires` records — a `grant` record (§14) states
+provision, not requirement, and is read by environment closure from the provision side — and
+alone admits the `grant`, `deploy`
+and `binding` records that are the
+environment's substance, which is not section content at all: the
+judgments that read those records (§13.7) read manifests, never payloads, so the records live
+where every judgment input in this specification lives. An `env` section's tree carries only
 ancillary content — probe metadata, operator notes — and MAY be empty. An environment
-release declares `environment/1` (§11.3), whose atoms are its bindings and givens; and an
+release declares `environment/1` (§11.3), whose atoms are its bindings and grants; and an
 environment module is _neither kind of provider_ — it carries no `host` and no `app` section
 — so no `requires` record can name one (**L137**) and no environment is ever a dependency
 (**L147**): environments are judged and consulted, never composed against.
@@ -542,7 +624,11 @@ content was ever built against.
 Dependency records are scoped to integrations exactly as they are scoped to universes (§13.2), so
 dependencies common to every integration are declared once and unscoped. A release declaring no
 integrations has exactly one, implicitly, and every section and dependency belongs to it; such a
-manifest is identical to one written before this mechanism existed.
+manifest is identical to one written before this mechanism existed. Tools MAY normalize the
+implicit integration internally — absent is a singleton — but it never appears in any stored
+form: requiring a declaration would force a synthetic identifier into every single-integration
+manifest, and that name would leak outward, into `deploy` records (§13.7) and canonical
+ordering (§13.3), becoming a compatibility surface nobody chose.
 
 Integrations do not weaken the API guarantee. Every cell of the matrix presents the same
 interface (§9.6), so a release still has exactly one API identity and integrations are invisible
@@ -569,12 +655,21 @@ it was built against, is two modules.)
 
 Holding the invariant across integrations is what keeps them cheap: because every integration
 presents one interface, the snapshot (§12.1), the lineage, dependency satisfaction (§13.2) and
-diamond resolution all remain single-valued and need no notion of integrations at all. The
-constraint bites on replaceable atoms, and publishers should know where: a public `inline` or
+diamond resolution all remain single-valued and need no notion of integrations at all.
+
+What makes this sound is that atoms carry _names_, not the structures behind them. Where a
+module X exposes a dependency Y's types in its own API — as parameter or return types — X's
+atoms encode those types by fully-qualified name (§11.2, A.2), and the name is the same
+whichever release of Y sat on the compile classpath; so X's atoms, and with them its API
+identity, are integration-invariant — X _appears_ compatible across integrations because it
+is: what its interface promises is the names. Whether the structures behind those names agree
+is Y's own question, answered by Y's atoms, and policed at the point of composition: X's
+used-set against Y (§13.4) and the buildpath rules (§13.3) decide whether the Y actually
+present matches what X compiled against. The constraint bites exactly where content, not
+names, crosses the module boundary: a public `inline` or
 macro body that splices integration-differing content has an integration-differing value hash,
 fails this invariant, and forces the module to be published as two. Rigid atoms are usually
-unaffected, since a signature naming a dependency's type names it identically whichever release
-of that dependency was on the compile classpath.
+unaffected, for the reason above.
 
 The invariant is scoped per discipline to the content that discipline claims. Content that a
 discipline claims **atomless** (§11.2) — derived binaries such as classfiles, whose interface
@@ -630,6 +725,12 @@ Every atom belongs to one of two classes:
   required to guarantee this (§11.2) — but leaves already-compiled consumers _behaviorally
   stale_ until recompiled; the delta record (§12.3) makes staleness computable.
 
+The two classes are the atom-level image of the first two guarantee levels (§11.5): rigid
+atoms carry what linkage and recompilation alike depend on, while replaceable atoms exist
+precisely for content whose replacement every discipline must keep linkage-safe yet
+recompilation cannot ignore — the copied content goes stale, which is a recompilation-level
+fact, and the reason staleness (§13.4) is computed rather than feared.
+
 ### 10.3 The Folding Principle
 
 Disciplines MUST atomize such that the compatibility rules of their language are _encoded in
@@ -649,8 +750,9 @@ never heard of methods or parameters; it computes `⊆`.
 
 ### 10.4 Atom Listings
 
-Each `api` record in the manifest (§14) references an **Atoms metadata blob**: a TEL document
-listing, for one discipline, every atom of the release — sorted by ascending value hash — with
+Each `api` record in the manifest (§14) references an **Atoms metadata blob** — stored as
+BinTEL (§8.3), shown here as its TEL rendering — listing, for one discipline, every atom of
+the release — sorted by ascending value hash — with
 its class, its value hash, and its key in human-readable form (for diagnostics; the key text
 does not participate in any hash):
 
@@ -824,8 +926,8 @@ This specification and its companion documents register the following discipline
   `resource/1`.
 
 - **`wit/1`** (informative here; normative specification in [`wit.md`](wit.md)): the WIT
-  discipline of the WebAssembly Component Model. Its domain is `{host, component}` — WASI-world
-  host contracts today, `component`-universe libraries when that reserved universe's schema
+  discipline of the WebAssembly Component Model. Its domain is `{host, wasmc}` — WASI-world
+  host contracts today, `wasmc`-universe libraries when that reserved universe's schema
   layer lands. Keying by declaration; certifies **recompilation**.
 - **`webidl/1`** (informative here; normative specification in [`webidl.md`](webidl.md)): the
   Web IDL discipline, for browser host contracts. Its domain is `{host}`; keying by
@@ -864,12 +966,12 @@ This specification and its companion documents register the following discipline
   [`environments.md`](environments.md)): the environment-topology discipline. Its domain is
   the single realm `{env}`; its keying is by declaration; it emits only rigid atoms and
   certifies **presence**, on `capability/1`'s terms. Like `resource/1`, its input reaches
-  beyond the tree (§11.4's precedent): it atomizes the manifest's `binding` and `given`
+  beyond the tree (§11.4's precedent): it atomizes the manifest's `binding` and `grant`
   records — one atom per binding, the value covering the address and provider module and
   deliberately **not** the selection (the `probe`-field precedent, hosts.md §5), and one per
-  given, covering the module name only — so an environment's lineage is the history of its
+  grant, covering the module name only — so an environment's lineage is the history of its
   _topology_: additions are minors, and removing an address, retargeting it to a different
-  module, or withdrawing a given is a major, behind **L110**'s explicit-major gate. Deploys,
+  module, or withdrawing a grant is a major, behind **L110**'s explicit-major gate. Deploys,
   selections and routes enter no atom and change at patch grade.
 - **`tels/1`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
   schema discipline, for releases whose content is a TEL schema document — including the
@@ -883,10 +985,12 @@ This specification and its companion documents register the following discipline
   names are the names a TEL pragma's `+` selections address.
 
 Anticipated future disciplines include one for Java source signatures where no `.class` files
-are shipped; a klib-metadata sibling of `kmeta/1` for Kotlin multiplatform; and
+are shipped; a klib-metadata sibling of `kmeta/1` for Kotlin multiplatform;
 `proto/1` over Protobuf descriptors — the `classfile/1` of the network family, since Protobuf's
 tag numbers and unknown-field rules are properties of the wire format itself, licensing a
-stronger linkage claim than `openapi/1` makes.
+stronger linkage claim than `openapi/1` makes; and a command-line invocation discipline over
+a command's parameter grammar, without which a CLI deliverable's release is honestly
+degenerate (§9.4) — its invocation surface is a contract nothing yet atomizes.
 Foreign content — JavaScript modules resolved at link time, C sources compiled by a downstream
 linker, and so on — is admissible in any section today under `opaque/1`.
 
@@ -1004,7 +1108,10 @@ identity means that a release whose source-level interface is unchanged but whos
 moved acquires a different API identity, breaking dependency satisfaction (§13.2) for every
 consumer, including those who only ever recompile. Keeping linkage predicates in a profile keeps
 the snapshot at the recompilation level, where it is the useful identity, and records
-linkage-level breakage separately, where it can be acted on by the consumers it actually affects.
+linkage-level breakage separately, where it can be acted on by the consumers it actually
+affects. The disparity between TASTy-level and classfile-level compatibility in the motivating
+ecosystem is exactly this split — one level the discipline's, one the profile's — worked
+through in §12.4 and Appendix D.
 
 ## 12. Snapshots, Lineage, and Versioning
 
@@ -1103,10 +1210,9 @@ the pin is lifted (**L118**).
 number the algebra dictates, and signing the result:
 
 1. compute the grade (§12.3) of the release against the module's previous published release
-   (a first release is assigned `0.1.0` with a fresh single-entry lineage);
+   (a first release is assigned `1.0.0` with a fresh single-entry lineage);
 2. derive the version — patch increments `z`, minor increments `y` and zeroes `z`, and an
-   explicitly-requested major increments `x` and zeroes both (in the `0` series, where the
-   minor conventionally carries breaking steps, a major increments `y`);
+   explicitly-requested major increments `x` and zeroes both;
 3. extend the lineage per §12.2 and §12.3 (**L110**);
 4. re-sign the manifest (§15).
 
@@ -1117,17 +1223,23 @@ projection of it.
 
 **Publication rules.** A publishing tool MUST refuse to publish a manifest that:
 
-- carries no version, or a non-numeric one (**L117**);
+- carries no version, a non-numeric one, or one with major `0` (**L117**): versions begin at
+  `1.0.0`, so every published version carries semantic versioning's stable-series guarantees —
+  the 0-series convention, in which the minor also carries breaking steps, is a semver
+  exception this specification does not admit, development state being already expressed by
+  the version's absence;
 - pins any dependency to a `build` (**L118**);
 - requires a snapshot that appears in no _published_ release's lineage for that module
   (**L119**);
-- for a stable series (`x ≥ 1`), carries a minor number that is not the count of minor steps
-  in its lineage (**L120**; the `0` series is exempt, since there the minor also carries
-  breaking steps and is not a projection of lineage length).
+- carries a minor number that is not the count of minor steps in its lineage (**L120**).
 
 Consumers still make every decision on hashes: to a consumer the version remains a
 human-readable projection, and any disagreement it observes (for example, a dependency's
-`version` hint against the resolved release) is a warning, never an error.
+`version` hint against the resolved release) is a warning, never an error. The asymmetry is
+verifiability, not distrust: a hash is recomputable by anyone holding the release, and
+lineage membership is checked at publish time (§16), while a version is testimony — assigned
+by a publishing tool, checkable only against the lineage it projects. Versions serve humans;
+hashes decide.
 
 ### 12.6 Tags
 
@@ -1156,7 +1268,10 @@ Each `tag` field names one tag (§14; the `tag-name` scalar). Tags are:
 
 Tagging after publication is the assignment pattern of §12.5 applied again: the payload is
 untouched, the manifest gains the tag, and the result is re-signed. The signed manifest is the
-tag record.
+tag record. Together the two patterns support the bless workflow: a development release
+circulates and is tested by its hashes alone, assignment stamps the version the algebra
+dictates, and a later re-signing adds the name the world will use — the payload untouched
+throughout, so what was tested is bit-for-bit what was blessed.
 
 ## 13. The Buildpath
 
@@ -1183,7 +1298,7 @@ A dependency record MAY additionally carry:
   with `universe sjsir` and `serves js`: the TypeScript release carries a `js` section, not an
   `sjsir` one, and the two universes meet at a bundler join. A dependency without `serves` is
   satisfied in the same universe it applies to. Whether two universes can in fact meet in one
-  application is a property of the application type's pipeline, declared by ecosystems rather
+  application is a property of the deliverable's pipeline, declared by ecosystems rather
   than by this specification (informatively,
   [`universes.md`](../design/universes.md) §4); the rules here need only know which universe the
   dependency's section is selected from (§13.3 rule 4, §13.5).
@@ -1399,13 +1514,17 @@ actually present is decided by probing at the third verification moment (hosts.m
 Satisfaction is lineage membership and spanning, unchanged.
 
 An environment is stated by an **environment release** (§9.4, **L148**): an operator-signed
-release of the `env` realm whose manifest carries `given` records — the platform contracts
+release of the `env` realm whose manifest carries `grant` records — the platform contracts
 the environment supplies — `deploy` records — the releases intended to run, each pinned by
 implementation identity and naming the `app` section deployed (its realm and integration,
 whose `requires` records are the applicable ones; the environment needs no assignment
 machinery beyond this choice) — and `binding` records, each associating an **address** with a
 provider module and a release **selection**: a snapshot, satisfied through the provider's
-lineage, or an exact implementation identity. Binding addresses MUST be pairwise disjoint —
+lineage, or an exact implementation identity. A deploy record is thus _precise_ where a
+release is _various_: the release declares every integration it offers, the deploy activates
+exactly one, and an environment running two integrations of one module is simply two deploy
+records — the concurrency of a rolling deployment, quantified over like any other (below).
+Binding addresses MUST be pairwise disjoint —
 neither equal to nor a path-prefix of one another, compared as authored strings on the `owns`
 precedent (**L149**): the address disambiguates at run time what uniqueness (rule 1, L111)
 disambiguates at build time, which is why the environment has no uniqueness rule of its own —
@@ -1413,7 +1532,7 @@ two releases of one module serving concurrently is the normal state of a rolling
 not an error.
 
 Environment validity (**L145**) transposes §13.3. Closure requires every module named by any
-deployed release's applicable `requires` records to be **provided** — by a given platform
+deployed release's applicable `requires` records to be **provided** — by a granted platform
 contract, by a deployed release of that module, or, where the requirement carries a used-set,
 by any provider whose atoms cover it (cross-module spanning, hosts.md §7). Satisfaction must
 hold against _every_ concurrently-serving release of a provider — refined per binding
@@ -1434,7 +1553,7 @@ carries no binding is _unaddressed_, an advisory fact rather than a failure, sin
 provider answers at an address. Reconciling the running world to the judged one is the
 orchestrator's business, exactly as invoking egress tools is the build's (§13.5).
 
-A **deploy** is a transition of an environment — any change to its release's `given`,
+A **deploy** is a transition of an environment — any change to its release's `grant`,
 `deploy` or `binding` records, a rebinding included — and a release is **deployable** into an
 environment iff the state after the transition — and, for a rolling deploy, the intermediate
 state in which old and new releases serve together — is valid (**L146**). Deployability is
@@ -1458,8 +1577,10 @@ runtime for the whole of that lifetime ([`environments.md`](environments.md)).
 
 ## 14. Manifest Schema
 
-The `lira` TEL schema, and the four companion schemas for metadata blobs. The scalar
-validators are normative: `base-256-hash` is exactly 32 BASE-256 characters; `module-name` is
+The `lira` TEL schema, and the four companion schemas for metadata blobs, shown in TEL text;
+stored instances are BinTEL (§5.1, §8.3). The scalar
+validators are normative: `base-256-hash` is exactly 32 BASE-256 characters; `base-256` is
+one or more BASE-256 characters; `module-name` is
 kebab-case segments joined by `/` or `.`; `namespace` is dotted package-style segments
 (letters, digits, `_`; no leading digit); `semver` is exactly `major.minor.patch`, each a
 decimal natural with no superfluous leading zero; `natural` is such a natural; `discipline-id`
@@ -1469,14 +1590,28 @@ compared as authored (environments.md §4); `tree-path` is a relative `/`-separa
 empty, `.` or `..` segments; `atom-class` is `rigid` or `replaceable`; `tag-name` is a
 letter followed by letters, digits, `-` and `.` (`jdk-19`, `scala-3.9`).
 
+The names `base-256-hash` and `base-256` are additionally bound as codecs (TEL §21.7),
+declared by the `Hash` and `SignatureValue` scalars respectively: `encode` is the
+strict-mode BASE-256 decoding (base256.md §9) of the text to its raw bytes — exactly 32 for
+`base-256-hash`, any positive count for `base-256` — and `decode` is the BASE-256 encoding
+of those bytes back to text. Strictness makes each pair image-exact, so one value has
+exactly one stored form (§7, §17) — and a several-kilobyte ML-DSA signature is stored as
+its bytes, never as the UTF-8 of its textual form.
+
 ```text
 tel 1.0
 
 name lira
 
 scalar Hash
-  description  A 256-bit BLAKE3 hash, BASE-256 encoded (32 characters).
+  description  A 256-bit BLAKE3 hash: 32 BASE-256 characters as text, the raw 32 bytes in BinTEL.
   validate     base-256-hash
+  encoding     base-256-hash
+
+scalar SignatureValue
+  description  A signature's bytes: BASE-256 text in renderings, raw bytes in BinTEL (§15).
+  validate     base-256
+  encoding     base-256
 
 scalar ModuleName
   validate module-name
@@ -1572,7 +1707,7 @@ scalar Address
   description  An environment address (§4.1): a DNS name or URL prefix, compared as authored — the owns precedent, no canonicalization (environments.md §4).
   validate     address
 
-record Given
+record Grant
   description  One platform contract this environment supplies (L148, environments.md §4).
 
   field module ModuleName               # a host-contract module
@@ -1610,14 +1745,54 @@ record Artifact
   field digest String                   # the foreign store's own content address, verbatim
   field locator String optional         # advisory retrieval hint; no authority
 
-record Section
-  select Realm
+record LibrarySection
+  select Universe  # the universe realm this section realizes (§9.4)
   field integration Identifier optional  # the integration realized (§9.5)
   field tree Hash  # Tree metadata blob
   field delete TreePath optional repeatable  # root paths removed in this overlay
   field derivative Hash optional  # canonical derivative artifact (§13.6)
-  field artifact Artifact optional  # closed-artifact pin (app sections only, §9.4)
   field requires Requires optional repeatable  # requirements on providers (§9.4)
+
+record HostSection
+  field tree Hash  # Tree metadata blob; no requires field — a contract states, it never asks (L135)
+
+record AppSection
+  field integration Identifier optional  # the integration realized (§9.4, §9.5)
+  field tree Hash  # Tree metadata blob
+  field delete TreePath optional repeatable  # root paths removed in this overlay
+  field artifact Artifact optional  # closed-artifact pin (§9.4)
+  field requires Requires optional repeatable  # requirements on providers (§9.4)
+
+record EnvSection
+  field tree Hash  # Tree metadata blob; ancillary content only, MAY be empty (§9.4)
+
+record Library
+  description  A library release: composable content in one or more universes (§9.4).
+
+  field owns Namespace optional repeatable
+  field resource Resource optional repeatable  # resource/1 claims (§11.4)
+  field integration Integration optional repeatable  # alternative dependency vectors (§9.5)
+  field dependency Dependency optional repeatable
+  field section LibrarySection repeatable  # first = root (§9.1); keyed (universe, integration)
+
+record HostContract
+  description  A host contract: a runtime environment's capability interface (§9.4, hosts.md).
+
+  field section HostSection  # exactly one: L135 by construction
+
+record Deployable
+  description  A deployable release: a closed artifact, what it serves, what it requires (§9.4, services.md).
+
+  field integration Integration optional repeatable  # alternative closed builds (§9.4)
+  field section AppSection repeatable  # first = root (§9.1); one per integration (§9.4)
+
+record Environment
+  description  An environment release: one environment's desired state (§9.4, §13.7, environments.md).
+
+  field grant Grant optional repeatable      # platform contracts supplied (L148, §13.7)
+  field deploy Deploy optional repeatable    # releases intended to run (L148, §13.7)
+  field binding Binding optional repeatable  # addresses bound (L148, L149, §13.7)
+  field section EnvSection  # exactly one: ancillary content, MAY be empty (L148)
 
 record Payload
   field  compression  Identifier          # brotli
@@ -1628,15 +1803,18 @@ record Signature
   field  signer     String
   field  algorithm  Identifier          # e.g. ml-dsa-65
   field  key        Hash                # public-key fingerprint (§15.3)
-  field  value      String              # BASE-256 signature
+  field  value      SignatureValue      # raw bytes in BinTEL; BASE-256 text in renderings
 
-select Realm
+select Universe
   variant  jvm    Flag
   variant  sjsir  Flag
-  variant  nir    Flag
-  variant  host   Flag                  # host-contract sections only (§9.4, hosts.md)
-  variant  app    Flag                  # deployable-release sections only (§9.4, services.md)
-  variant  env    Flag                  # environment-release sections only (§9.4, environments.md)
+  variant  nir    Flag                  # further universes arrive as schema layers (§9.4)
+
+select Kind
+  variant  library  Library             # a library release (§9.4)
+  variant  host     HostContract        # a host contract (§9.4, hosts.md)
+  variant  app      Deployable          # a deployable release (§9.4, services.md)
+  variant  env      Environment         # an environment release (§9.4, environments.md)
 
 select ResourceMode
   variant  export  Flag
@@ -1650,19 +1828,12 @@ document
   field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
   field source Source optional repeatable  # source identity claims (§17)
-  field owns Namespace optional repeatable
-  field resource Resource optional repeatable  # resource/1 claims (§11.4)
   field api Api repeatable
   field profile Profile optional repeatable
-  field integration Integration optional repeatable  # alternative dependency vectors (§9.5)
-  field dependency Dependency optional repeatable
-  field given Given optional repeatable      # environment releases only (L148, §13.7)
-  field deploy Deploy optional repeatable    # environment releases only (L148, §13.7)
-  field binding Binding optional repeatable  # environment releases only (L148, L149, §13.7)
   field delta Hash optional             # Delta metadata blob for this lineage step
-  field section Section repeatable     # first section = root (§9.1); keyed (realm, integration)
+  select Kind                           # the release's kind: library, host, app or env (§9.4)
   field payload Payload
-  field signature Signature optional repeatable
+  field signature Signature optional repeatable  # last member: §15.2 depends on it
 ```
 
 The four metadata-blob schemas:
@@ -1744,12 +1915,27 @@ document
 ```
 
 New universes, disciplines with schema-level needs, and future fields are introduced as TEL
-schema layers; the manifest's pragma signature encodes exactly which extensions a file uses.
+schema layers; the manifest's schema signature — carried in its BinTEL header (§5.1), and
+re-emitted as a pragma line in any TEL rendering — encodes exactly which extensions a file
+uses.
 Those layers are themselves **shipped through LIRA**: an extension layer is published as a
 release of a `tels/1` module ([`tels.md`](tels.md)), referenced as
 `‹domain›/‹name›:‹version›` (distribution design §2), its version derived from TEL's own
 compatibility relation — so LIRA's extensibility seam is delivered by LIRA itself, with the
-same naming, lineage, and verification as any other release.
+same naming, lineage, and verification as any other release. The seam is well-founded
+without further rule, at both levels where a cycle could be feared. Composition cannot
+cycle: schema references are content hashes (the signature, BinTEL §8), and no hash can
+include itself. Acquisition cannot cycle either, though for a different reason — two
+releases could each package the layer the other's manifest needs, no hash containing
+itself — but a reader decodes only under schemas already in hand (§5.2) and a registry
+accepts only releases it can read (§16, **L140**), so every schema a registry holds traces
+back, through releases accepted earlier, to the built-in base. A release whose manifest
+used the very layer it publishes is no paradox but a brick: unreadable to every consumer,
+therefore unpublishable to every registry. The argument leans on one premise worth naming:
+that a registry holds only the base and the schemas that arrived through releases it
+accepted. A registry configured to admit schemas out-of-band has chosen its own trust root
+— its prerogative, and outside this specification's jurisdiction, exactly as publisher key
+anchoring is (§15.3).
 
 ## 15. Signatures
 
@@ -1765,16 +1951,24 @@ algorithms. A release MAY carry multiple signatures (co-signing, algorithm diver
 The signed message is:
 
 ```text
-hash("lira/1:manifest", BinTEL(manifest with all signature fields removed))
+hash("lira/1:manifest", schema-signature ++ BinTEL-root(manifest with all signature fields removed))
 ```
 
-where `BinTEL(…)` is the canonical BinTEL encoding of the manifest's semantic model under the
-`lira` schema. Signing the canonical encoding — never the source text — makes signatures immune
-to reformatting, and removing `signature` fields first means signing and counter-signing never
-perturb the signed bytes. The payload is covered transitively through `payload.hash`; every
-metadata blob and section is covered through the hash tower. The interpreter directive (§5.1) is
-not covered and needs no coverage: its bytes are fixed by **L115**, so any substitution renders
-the file invalid before signatures are considered.
+where `schema-signature` is the manifest's length-prefixed schema signature exactly as stored
+(BinTEL §6.1) and `BinTEL-root(…)` is the document-root encoding (BinTEL §7.1) of the
+manifest's semantic model under its composed schema. Signing the root under its named schema —
+never the text of any rendering — makes signatures immune to re-rendering, and binds the
+schema itself: keyword indices mean nothing except under the composed schema, so the
+signature covers the schema signature, and through it the schema — the signature is a
+function of the composed schema's content (BinTEL §8), which is in any case a published
+constant (§5.2). Removing `signature` fields first means signing and
+counter-signing never perturb the signed bytes; and since `signature` is the document's last
+member, the signing input is derivable from the stored bytes alone — the manifest minus its
+BinTEL magic, with the root's trailing signature subtrees dropped and the root child count
+adjusted. The message is mode-independent (BinTEL §6), so no future change of stored mode
+could perturb a signature. The payload is covered transitively through
+`payload.hash`; every metadata blob and section is covered through the hash tower; the magic
+numbers, fixed by **L115**, need no coverage.
 
 ### 15.3 Keys
 
@@ -1788,9 +1982,11 @@ for trust-on-first-use deployments.
 Verification is re-execution of the construction, bottom-up. A full verifier, given a `.lira`
 file (and, where noted, additional artifacts):
 
-0. checks, before parsing anything, that the first line is byte-exactly the canonical
-   interpreter directive (§5.1, **L115**) and that the pragma specifies no sigil (§5.2,
-   **L116**);
+0. checks that the file begins with the fixed eight-byte header (§5.1, **L115**), resolves
+   the manifest's schema signature against the schemas it holds (§5.2 — an unresolvable
+   signature ends verification: the file is unreadable, not judged), decodes the manifest as
+   one embedded BinTEL document conforming to the `lira` schema (**L101**), and checks that
+   payload bytes follow (§5.1, **L116**);
 1. decompresses the payload within `payload.length` and checks `payload.hash` (§8.4);
 2. recomputes every blob hash while scanning the stream and checks sortedness and uniqueness
    (§8.2), and resolves every referenced blob (§8.3);
@@ -1802,11 +1998,10 @@ file (and, where noted, additional artifacts):
    (realm × integration) matrix (§9.6), that integration declarations are well-formed
    (**L131**) and each is realized (**L133**), that no declared discipline is inapplicable
    (**L127**), that content claiming follows the claiming order (**L134**, **L144**, §11.2),
-   that resource declarations are well-formed and effective (**L124**, **L125**, §11.4), that a
-   `host` section, where present, obeys the host-contract shape (**L135**, §9.4), that an
-   `app` section, where present, obeys the deployable-release shape (**L143**, §9.4), and
-   that an `env` section, where present, obeys the environment shape, including binding
-   disjointness and route validity (**L148**, **L149**, §9.4, §13.7)
+   that resource declarations are well-formed and effective (**L124**, **L125**, §11.4), and,
+   for an `env` release, binding disjointness and route validity (**L148**, **L149**, §9.4,
+   §13.7) — the rest of the kind shapes of §9.4 (**L135**, **L143**, L148's record
+   exclusions) have held since step 0, discharged by the schema (§14)
    — requires an implementation of each discipline (though `opaque/1`, `resource/1`,
    `capability/1` and `environment/1` are language-blind and implementable by every verifier;
    the last two atomize manifest records rather than tree content, §11.3);
@@ -1822,7 +2017,8 @@ file (and, where noted, additional artifacts):
 Steps 0–3, 5 (given the Atoms blobs) and 8 require no language knowledge and SHOULD be performed
 at installation. Steps 4, 6 and 7 are publish-time checks: a registry MUST perform them before
 accepting a release, since they are what make manifests trustworthy at use-time. A registry that
-cannot implement a declared discipline or profile MUST reject the release (**L140**) rather than
+cannot implement a declared discipline or profile — or that does not hold a release's
+composed schema (§5.2) — MUST reject the release (**L140**) rather than
 accept it unchecked — an unverifiable claim is worse than an absent one, because consumers cannot tell the
 two apart from the manifest. Every claim in a manifest is thus either recomputable locally or
 attested by signature over recomputable claims; nothing is trusted testimony — with two
@@ -1848,15 +2044,18 @@ declaration, and behavior remains behavior (§18).
 Producing a release twice from identical inputs **with the same producer toolchain** MUST yield
 byte-identical unsigned `.lira` files. To that end: all orderings in this specification are
 total (blobs by hash; tree entries by path; atoms by value hash; lineage by history); the
-interpreter directive is a fixed string (§5.1); no timestamps exist anywhere in the format;
+eight-byte header is a fixed byte string (§5.1); no timestamps exist anywhere in the format;
 atomization is required to be run-independent (§11.2); producers are required to be
-self-deterministic in their compression (§8.1); and manifests generated by tools MUST use LF
-endings and canonical TEL formatting.
+self-deterministic in their compression (§8.1); and the manifest needs no formatting rule at
+all: BinTEL is canonical by construction, and the encoding mode is pinned — external-schema,
+for the manifest and every metadata blob (§5.1, §8.3) — so one semantic model
+has exactly one stored byte sequence.
 
 Two qualifications bound the claim precisely. _Across_ producer toolchains, what is reproducible
-is the manifest's semantic model and the decompressed blob stream — every identity of §6 and
-§12 — while compressed bytes may differ (§8.1); implementation identity is defined over the
-decompressed stream for exactly this reason. And signing is excluded: the default ML-DSA
+is the manifest's stored bytes — BinTEL's canonicality is not per-toolchain — and the
+decompressed blob stream — every identity of §6 and
+§12 — while compressed payload bytes may differ (§8.1); implementation identity is defined over
+the decompressed stream for exactly this reason. And signing is excluded: the default ML-DSA
 signing mode is hedged (randomized), so re-signing yields different signature values over the
 same signed message; determinism claims apply to the file with its `signature` fields removed,
 which is also precisely the signing domain (§15.2).
@@ -1885,13 +2084,11 @@ to reproduce and attest a release.
   lineage membership; a registry that verifies lineage steps at publish time (§16) prevents an
   attacker from grafting a hostile "compatible" release onto another module's lineage without
   the signing keys of that module's publishers.
-- **Executable artifacts**: every `.lira` file is executable by design (§5.1), but the
-  execution surface is limited by construction: the directive is byte-fixed by **L115** — a
-  verifier or installer rejects any deviation before other processing — so the only code that
-  can run is whatever `lira` executable the _user's own_ PATH resolves. The residual risks are
-  those of running any local tool against untrusted input: users SHOULD verify files before
-  invoking them, and the `lira` tool itself MUST treat the file as untrusted data (enforcing
-  §8.1, §9.2 et al.).
+- **No execution surface**: a `.lira` file is binary data beginning with a non-ASCII magic
+  number (§5.1); it carries no interpreter directive, is never executable, and producers MUST
+  NOT set the executable permission bit. (An earlier draft made files self-executing; retiring
+  that removed the format's only execution-adjacent surface.) The `lira` tool MUST still
+  treat every file as untrusted data (enforcing §8.1, §9.2 et al.).
 - **Guarantee scope**: a grade is a claim at the levels the release's disciplines and declared
   profiles certify (§11.5), and at no others. Tools presenting a grade to a user SHOULD present
   the level with it; a "minor" reported without its level invites a consumer relying on linkage
@@ -1998,12 +2195,16 @@ representation that references them differently.
 
 ## Appendix B (Informative): Worked Example
 
+The manifest below is shown in its canonical TEL rendering (§5.3, TEL §22.3) — what the
+`lira` tool prints; the stored form is the LIRA header followed by the equivalent
+external-schema BinTEL document, the Brotli-compressed payload beginning at the byte after
+its last.
+
 ```text
-#!/usr/bin/env lira
 tel 1.0  <lira schema signature>
 
 module gossamer-core
-version 0.64.2
+version 1.2.0
 lineage Kx3f…
 lineage Lm81…
 lineage Pq44…
@@ -2011,12 +2212,6 @@ lineage Pq44…
 toolchain
   name scala
   version 3.9.0-RC4-p6
-
-owns gossamer
-
-# mode     # path
-resource export     gossamer/text-tables.conf
-resource scan       gossamer/templates
 
 api
   discipline tasty/1
@@ -2030,42 +2225,49 @@ profile
   id jvm/1
   breaks linkage
 
-integration
-  id rudiments1
-  rank 0
-integration
-  id rudiments0
-  rank 1
-  label  built against the rudiments 0.x line
-
-# module              # api     # version
-dependency anticipation-core      Ab12…     0.64.0
-dependency rudiments-core         Cd34…     0.64.1
-  integration rudiments1
-dependency rudiments-core         Ef90…     0.63.8
-  integration rudiments0
-
 delta Xy56…
 
-section jvm
-  integration rudiments1
-  tree Ef56…
-  derivative Tu78…
-  requires
-    module posix
-    api Wx56…
-    uses Yz78…
-section sjsir
-  integration rudiments1
-  tree Gh78…
-section nir
-  integration rudiments1
-  tree Ij90…
-  delete gossamer/JvmOnly.class
-section jvm
-  integration rudiments0
-  tree Kl12…
-  derivative Vw90…
+library
+  owns gossamer
+
+  # mode     # path
+  resource export     gossamer/text-tables.conf
+  resource scan       gossamer/templates
+
+  integration
+    id rudiments2
+    rank 0
+  integration
+    id rudiments1
+    rank 1
+    label  built against the rudiments 1.x line
+
+  # module              # api     # version
+  dependency anticipation-core      Ab12…     1.4.0
+  dependency rudiments-core         Cd34…     2.0.1
+    integration rudiments2
+  dependency rudiments-core         Ef90…     1.9.4
+    integration rudiments1
+
+  section jvm
+    integration rudiments2
+    tree Ef56…
+    derivative Tu78…
+    requires
+      module posix
+      api Wx56…
+      uses Yz78…
+  section sjsir
+    integration rudiments2
+    tree Gh78…
+  section nir
+    integration rudiments2
+    tree Ij90…
+    delete gossamer/JvmOnly.class
+  section jvm
+    integration rudiments1
+    tree Kl12…
+    derivative Vw90…
 
 payload
   compression brotli
@@ -2077,13 +2279,11 @@ signature
   algorithm ml-dsa-65
   key St34…
   value  <BASE-256 signature>
-##
-<Brotli-compressed blob stream>
 ```
 
 Reading this manifest alone, a tool can determine: the module's API history (three snapshots,
 two minor steps); that it satisfies any dependent requiring `Kx3f…`, `Lm81…` or `Pq44…`; which
-universes it supports; that it offers a `jvm` build against the `rudiments` 0.x line as well as
+universes it supports; that it offers a `jvm` build against the `rudiments` 1.x line as well as
 the preferred one, so a buildpath pinned to `Ef90…` resolves without a second artifact, while
 `sjsir` and `nir` are offered only under the preferred integration; that the `nir` view omits one
 root file; that the resource `gossamer/text-tables.conf` is contractually present on every

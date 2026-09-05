@@ -3,8 +3,8 @@
 The unified command-line tool for everything LIRA: inspecting and verifying `.lira` files,
 producing and versioning releases, maintaining a local content-addressed store with LRU
 retention, resolving and fetching dependencies, publishing, and running as a network node for a
-LIRA directory. The spec fixes only one behavior (§5.1: the PATH-resolved handler that a
-`.lira` file's interpreter directive invokes must at minimum present the manifest); everything
+LIRA directory. The spec fixes only one behavior (§5.3: the tool's default action when invoked
+on a `.lira` file must at minimum present the manifest, rendered as canonical TEL); everything
 else here is design.
 
 The organizing principle: **one program, one content-addressed store, composable roles.** The
@@ -64,16 +64,17 @@ build directory.
 
 ### 2.2 Layout
 
-`.lira` files are **decomposed** on ingest. Spec §5.2 fixes the byte layout — directive,
-manifest, `##` separator, payload — so the original file reconstructs byte-identically from
-its parts, and storing parts once buys deduplication everywhere it matters: a re-signed
+`.lira` files are **decomposed** on ingest. Spec §5 fixes the byte layout — the four-byte
+magic, the BinTEL manifest (self-delimiting), the Brotli payload — so the original file
+reconstructs byte-identically from its parts, and storing parts once buys deduplication
+everywhere it matters: a re-signed
 manifest (spec §12.5) shares its payload with its predecessor; successive releases share most
 of their blobs; a section's canonical derivative is stored once however many buildpaths use
 it.
 
 ```text
 store/
-  manifest/aa/<hash>     raw manifest bytes (the head of the file, directive included)
+  manifest/aa/<hash>     raw manifest bytes (the head of the file, after the magic)
   payload/aa/<hash>      the compressed payload, whole, keyed by payload.hash (spec §8.4)
   blob/aa/<hash>         individual decompressed blobs, keyed under lira/1:blob
   derivative/aa/<hash>   canonical derivative artifacts, keyed under lira/1:derivative
@@ -234,7 +235,7 @@ else stays a flat verb.
 
 | Command                                    | Semantics                                                        |
 | ------------------------------------------ | ---------------------------------------------------------------- |
-| `lira <file.lira>`                         | print the manifest (spec §5.1's minimum obligation)              |
+| `lira <file.lira>`                         | print the manifest (spec §5.3's minimum obligation)              |
 | `lira verify <file.lira>`                  | install-grade verification                                       |
 | `lira jar <universe> <file.lira>`          | canonical derivative JAR — now materializing *via* the store §2.5 |
 | `lira assign <file> [<prev>] [--major]`    | derive the next version (spec §12.5)                             |
@@ -333,7 +334,7 @@ two instances. Named, a **harvester** is three stages and a declaration:
 
 Everything downstream is generic and is exactly what `emit` already does: group by module
 across vendor releases, assemble lineages, grade each step, demand `+<tag>` sanction on
-majors, derive versions, stamp the shared tag, sign, set the executable bit (spec §5.1). Two
+majors, derive versions, stamp the shared tag, sign (spec §15). Two
 properties are load-bearing rather than accidental:
 
 1. **Purity after acquisition.** `releases` and `modules` are pure functions of the material

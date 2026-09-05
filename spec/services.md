@@ -35,7 +35,10 @@ the composition produces a thing — a JAR, a bundle, an image. A deployment com
 _processes_: services meet in a cluster, calls resolve between them at runtime, and the
 composition never produces an artifact at all. It produces a **state**, continuously linked and
 continuously re-linkable, in which the compatibility question is asked not once but at every
-deploy.
+deploy. A build's product is bytes at rest; a deployment's product looks, at first sight,
+like nothing but the memory of running processes — which is exactly why this document gives
+it a form at rest too: the environment release (§6, [`environments.md`](environments.md)),
+the state as signed bytes.
 
 The state of practice answers that question with disconnected point tools: a schema linter
 grades API diffs, a contract-testing broker records what consumers actually call, a schema
@@ -183,7 +186,7 @@ consumers here exactly as on the buildpath.
 ## 5. Requiring a Service
 
 A `requires` record may name either kind of **provider** (LIRA §9.4, **L137**): a host
-contract — capability the environment is _given_ — or a deployable module — capability
+contract — capability the environment is _granted_ — or a deployable module — capability
 _deployed into_ it. The two are recognizable by their `host` and `app` sections, and the
 satisfaction rules are LIRA §13.2's, verbatim:
 
@@ -223,10 +226,10 @@ position in the specification, bounded only by the behavior gap (§8).
 
 An **environment** is a set of deployable releases — the deployed set — together with a set of
 host contracts describing its platform: the orchestrator, the operating surface, the managed
-services (a database, an object store) that are _given_ rather than deployed. It is the
+services (a database, an object store) that are _granted_ rather than deployed. It is the
 runtime counterpart of the buildpath — a statement of **desired** state, since every rule
 below reads manifests and none inspects a process (LIRA §13.7) — and it is published: an
-operator-signed **environment release** whose manifest carries the givens, deploys and
+operator-signed **environment release** whose manifest carries the grants, deploys and
 bindings this section judges ([`environments.md`](environments.md), **L148**). A cluster's
 controller knows what is _running_; this document says what to check it against.
 
@@ -268,7 +271,7 @@ the algebra reasons about releases, not processes.
 
 ## 7. Deployment
 
-A **deploy** is a transition of an environment: any change to its release's `given`,
+A **deploy** is a transition of an environment: any change to its release's `grant`,
 `deploy` or `binding` records ([`environments.md`](environments.md) §7) — adding a release,
 removing one, replacing one with a successor, or rebinding an address. A release is
 **deployable** iff the posterior state is valid, and — for a
@@ -338,11 +341,11 @@ declaration, never the behavior behind it (LIRA §18), so the probe and the prom
 middle: manifests decide compatibility, probes decide presence, and behavior remains the
 publisher's signed word.
 
-The interpreter directive (LIRA §5.1) completes the picture: every `.lira` file is executable
-by design, and for a deployable release the natural behavior of `lira` invoked on it — after
-its mandatory presentation of the manifest — is to verify, probe the environment, and run the
-artifact. That behavior is a tool's business, not this specification's; the point of recording
-it is that the format was one step from runnable before this document existed.
+One remark completes the picture. A `.lira` file is data, never executable (LIRA §5.1, §18),
+but for a deployable release the natural behavior of `lira` invoked on it — after its
+mandatory presentation of the manifest (LIRA §5.2) — is to verify, probe the environment, and
+run the artifact. That behavior is a tool's business, not this specification's; the point of
+recording it is that the format is one tool invocation from runnable.
 
 ## 9. Spanning Is Consumer-Driven Contracting
 
@@ -419,10 +422,10 @@ contract test evidence against a named snapshot.
 
 The service, one module, self-described — a development release (LIRA §12.5), identified by
 its hashes, which is the natural currency of continuous deployment; promotion to a numbered
-release is version assignment, later, with the payload untouched:
+release is version assignment, later, with the payload untouched. In its canonical TEL
+rendering (LIRA §5.3):
 
 ```text
-#!/usr/bin/env lira
 tel 1.0 <lira schema signature>
 
 module checkout/payments
@@ -431,26 +434,31 @@ lineage Aa11…
 lineage Bb22…
 lineage Cc33…                 # the surface it serves today; two minor steps behind it
 
+toolchain
+  name scala
+  version 3.9.0
+
 api
   discipline openapi/1
   atoms Dd44…                 # atomized from the openapi.json its tree carries
 
-section app
-  tree Ee55…                  # holds openapi.json and probe metadata
-  artifact
-    format oci-image
-    digest sha256:1f2e3d…
-    locator ghcr.io/checkout/payments
-  requires
-    module checkout/orders
-    api Ff66…
-    uses Gg77…                # the six orders operations it actually calls
-  requires
-    module postgres
-    api Hh88…
-  requires
-    module kubernetes
-    api Ii99…
+app
+  section
+    tree Ee55…                # holds openapi.json and probe metadata
+    artifact
+      format oci-image
+      digest sha256:1f2e3d…
+      locator ghcr.io/checkout/payments
+    requires
+      module checkout/orders
+      api Ff66…
+      uses Gg77…              # the six orders operations it actually calls
+    requires
+      module postgres
+      api Hh88…
+    requires
+      module kubernetes
+      api Ii99…
 
 payload
   compression brotli

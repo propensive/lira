@@ -4,11 +4,6 @@ Terms used across the LIRA specification and the build tool design, defined brie
 cross-referenced. "Spec" is [`lira.md`](../spec/lira.md); "builds" is
 [`builds.md`](builds.md).
 
-**application type** — A pair of a closed artifact format and a host contract:
-`jvm-app`, `js-app`, `xeq-bundle`, `oci-image`, and the triple-parameterized families
-`native-exe/<triple>`, `native-image/<triple>`, `oci-image/<platform>`. What an egress
-produces. A registry object, never a manifest object.
-
 **assemble** — Build-file keyword naming the buildpath an egress closes over on an
 application module. Compiles to no dependency record (L143): it marks egress input, not
 composition.
@@ -48,6 +43,12 @@ context cells, presumptions, cell coordinates, settings.
 **coordinate** — `<domain>/<name>`: a module's globally-resolvable name, the domain
 DNS-proven. Manifests carry bare module names; the domain lives at resolution.
 
+**deliverable** — A pair of a closed artifact format and a host contract:
+`jvm-app`, `js-app`, `xeq-bundle`, `oci-image`, and the triple-parameterized families
+`native-exe/<triple>`, `native-image/<triple>`, `oci-image/<platform>`. What an egress
+produces. A registry object, never a manifest object. Distinct from **deployable
+release**, the `app`-realm release that carries one.
+
 **dependency** — A buildpath edge: content that materializes and composes into the
 consumer. Satisfied when the required snapshot appears in the candidate's lineage.
 Contrast **requires**.
@@ -73,7 +74,7 @@ the union is the maximum of the per-discipline grades (spec §11.1, non-normativ
 *input*, *context* and *output*, named by its output form (`scalac/sjsir`). Edge kinds
 (compiler, egress, join, packaging) are derivable from the node kinds at its ends.
 
-**egress** — A linking edge from a universe to an application type: the step that
+**egress** — A linking edge from a universe to a deliverable: the step that
 *closes over* a buildpath and produces an artifact. A library never chooses its egress;
 an application does.
 
@@ -81,13 +82,13 @@ an application does.
 build-file sense — writing a derivative to disk — is superseded by **extract**.)
 
 **extract** — Command step (and CLI operation): save a named entry — an artifact's
-application type, or a container format naming a §13.6 canonical derivative — from the
+deliverable, or a container format naming a §13.6 canonical derivative — from the
 hidden store into the project tree at a fully-authored path. The one way content leaves
 the store; a destination matched by any source glob is an error (feedback loop).
 
-**environment** — An `env`-realm release stating desired runtime state: givens, deploys,
+**environment** — An `env`-realm release stating desired runtime state: grants, deploys,
 bindings. In the build file, a delta-variation nested in a **topology**. Its atoms are
-exactly its bindings and givens — the topology is its API, deployment its
+exactly its bindings and grants — the topology is its API, deployment its
 implementation.
 
 **ephemeral** — Build-file flag marking a declaration (universe, case, cell) as
@@ -99,16 +100,16 @@ standalone atoms while additions which can break fold into their parent's value 
 grading is set arithmetic, never a rule engine.
 
 **form** — A node of the pipeline DAG: the kind content is *in* between tool
-invocations. Source forms (`scala`, `java`, `dockerfile`), universes, and application
-types are its species. One namespace; source forms avoid universe names.
-
-**given** — An environment record: a platform contract the environment supplies
-(a JDK, a database's protocol, a config contract). Provision, not requirement — the
-satisfied side of deployed releases' requires.
+invocations. Source forms (`scala`, `java`, `dockerfile`), universes, and deliverables
+are its species. One namespace; source forms avoid universe names.
 
 **grade** — The computed relation between successive releases: *patch* (same atoms),
 *minor* (rigid growth), *major* (anything else; a new lineage, behind L110's explicit
 gate). Versions are derived from grades, never chosen.
+
+**grant** — An environment record: a platform contract the environment supplies
+(a JDK, a database's protocol, a config contract). Provision, not requirement — the
+satisfied side of deployed releases' requires.
 
 **guarantee** — (1) Build-file keyword, the dual of `presume`: a provision declared by
 a topology, a machine (`local.tel`), or a packaging module — probe-verified, never
@@ -121,7 +122,7 @@ a running service (to its consumers).
 
 **host contract** — The published, verifiable statement of a host's capability
 interface, as a `host`-realm release with a lineage. Required via **requires**,
-supplied via **given**, coordinated across modules by tags (`jdk-19`).
+supplied via **grant**, coordinated across modules by tags (`jdk-19`).
 
 **hyperedge** — See **edge**: tool edges take multiple inputs in distinct roles, so
 path resolution is search over hyperedges, with parameters (a triple, a platform)
@@ -158,9 +159,9 @@ as signed release records with inclusion proofs. A verifiable memoization with
 authority over exactly one thing — when the world was sampled. Singular per project;
 plural only along the world dimension (a canary lock).
 
-**manifest** — The human-readable TEL head of a `.lira` file: identity, lineage,
-toolchain, sources, atoms, dependencies, requires, sections, payload identity,
-signatures. Every buildpath and environment judgment is decidable from manifests alone.
+**manifest** — The BinTEL head of a `.lira` file, rendered by tools as canonical TEL:
+identity, lineage, toolchain, sources, atoms, dependencies, requires, sections, payload
+identity, signatures. Every buildpath and environment judgment is decidable from manifests alone.
 
 **module** — (1) LIRA: a named library, host contract, deployable, or environment — one
 API lineage, many releases. (2) Build file: a buildable unit within a project,
@@ -265,7 +266,7 @@ instantiate as deltas. Corresponds to the atomized surface of env releases.
 into caches and serialized canonically into derivative artifacts.
 
 **universe** — A realm in which independently-published libraries compose (`jvm`,
-`sjsir`, `nir`; `js`, `klib`, `component`, `native/<triple>` reserved). That litmus
+`sjsir`, `nir`; `js`, `klib`, `wasmc`, `native/<triple>` reserved). That litmus
 test is the whole definition. A species of **form**.
 
 **workspace** — A per-invocation, ephemeral view: the invocation's declared inputs
