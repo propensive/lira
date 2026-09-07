@@ -199,7 +199,8 @@ turns a deliverable into composable content again.
 - **Release**: one published `.lira` file for a module.
 - **Section**: one compiled view of the release, keyed by realm and integration, stored as a
   tree of blobs.
-- **Integration**: one alternative dependency vector a release was built against (§9.5).
+- **Integration**: one alternative build context a release was built in — a dependency
+  vector, a host target, or both (§9.5).
 - **Assignment**: a choice of one integration per release on a buildpath, under which that
   buildpath's validity is decided (§13.3).
 - **Blob**: a byte string in the payload, identified by its hash (§7).
@@ -552,8 +553,10 @@ ancillary content — its interface descriptions (below) and probe metadata — 
 the artifact itself. A release carrying an `app` section is a deployable release, and its
 shape too is the schema's (**L143**, discharged by construction): the `app` kind admits only
 `app` sections and no `dependency` records. It MAY declare integrations — one `app`
-section per integration, naming the alternative vectors of the egresses that produced the
-artifacts: labels for alternative closed builds, not dependency declarations. Its
+section per integration, naming the alternative build contexts of the egresses that produced the
+artifacts — one deliverable per operating system is the canonical case, the per-OS `app`
+sections overlaid on a shared root so that common content is stored once — labels for
+alternative closed builds, not dependency declarations. Its
 composition already happened, at the egress that produced it, and what it retains of that
 history divides: its `source` records (§17) may name the sources it was built from, while the
 _buildpath_ it was closed over remains a question of provenance attestation, deliberately out
@@ -607,9 +610,11 @@ environment module is _neither kind of provider_ — it carries no `host` and no
 
 ### 9.5 Integrations
 
-A release MAY have been built against more than one dependency vector: against two majors of one
-dependency, for consumers who cannot move together, or against alternative dependencies
-altogether, where a consumer chooses a backend. Each such alternative is an **integration**,
+A release MAY have been built in more than one **build context**: against two majors of one
+dependency, for consumers who cannot move together; against alternative dependencies
+altogether, where a consumer chooses a backend; or against different **host targets** — a
+POSIX build and a Windows build of one library, same dependencies, different content and
+different `requires` (§9.4, hosts.md §6). Each such alternative is an **integration**,
 declared by an `integration` record (§14) with an identifier unique within the release.
 
 Sections are keyed by realm **and** integration: a section names the integration it realizes,
@@ -618,8 +623,8 @@ declares any integration, _every_ section MUST name one (also **L131**): an unla
 beside declared integrations belongs to no cell of the matrix and is ambiguous, not implicit. A release therefore
 carries a matrix of sections, one per universe per integration, though it need not be full — a
 universe may be offered under only some integrations. Every declared integration MUST have at
-least one section (**L133**); an integration realized by nothing is a dependency vector no
-content was ever built against.
+least one section (**L133**); an integration realized by nothing is a build context no
+content was ever built in.
 
 Dependency records are scoped to integrations exactly as they are scoped to universes (§13.2), so
 dependencies common to every integration are declared once and unscoped. A release declaring no
@@ -633,7 +638,11 @@ ordering (§13.3), becoming a compatibility surface nobody chose.
 Integrations do not weaken the API guarantee. Every cell of the matrix presents the same
 interface (§9.6), so a release still has exactly one API identity and integrations are invisible
 to consumers' compatibility reasoning: which integration a buildpath selects (§13.3) changes what
-else must be present, never what the module offers.
+else must be present, never what the module offers. Host-target integrations are chosen exactly
+as dependency-vector ones are: §13.3's rule 7 rejects, for a target's host contracts, any
+integration whose selected section carries a requirement they do not satisfy, so naming the
+Windows contract in the target selects the Windows integration, with no mechanism beyond the
+rules already there.
 
 Producers SHOULD prefer proving that a single compilation spans multiple dependency majors
 (§13.4) over emitting integrations. Spanning is a proof about used-sets that costs nothing at
@@ -1303,7 +1312,8 @@ A dependency record MAY additionally carry:
   [`universes.md`](../design/universes.md) §4); the rules here need only know which universe the
   dependency's section is selected from (§13.3 rule 4, §13.5).
 - **`integration`** entries, scoping the dependency to the named integrations (§9.5): the
-  dependency vectors that distinguish integrations are expressed exactly here. A dependency
+  dependency vectors that distinguish integrations are expressed here, and the host targets
+  that distinguish them by the sections' `requires` records (§9.4, hosts.md §6). A dependency
   without `integration` entries applies to every integration, which is how dependencies common to
   all of them are declared once. The two scopes are independent and conjunctive: a dependency
   applies to a (universe, integration) pair iff it applies to that universe and to that
@@ -1375,7 +1385,14 @@ buildpath is **valid for a target** iff some assignment makes it so (**L132**).
    [`hosts.md`](hosts.md) §7 (**L136**): the required snapshot appears in the lineage of the
    target's contract for that module, or the requirement's used-set is contained in a target
    contract's atom set (spanning, §13.4, including across modules per hosts.md §7);
-   requirements on one module from several releases are jointly judged per hosts.md §10. A
+   requirements on one module from several releases are jointly judged per hosts.md §10.
+   `requires` records sharing an `alternative` identifier within one section form a
+   **group**, an ungrouped record being a group of one (§14): a group is satisfied iff at
+   least one member is, resolution taking the first satisfied member in declaration order,
+   and only that member enters the aggregate. A group none of whose members is satisfied
+   fails this rule — unless a member is marked `optional`, in which case the group states a
+   preference, not a need: it is excluded from this rule and from aggregation, and resolves
+   to nothing, which provisioning and probing report rather than fail. A
    `requires` record naming a module whose releases are neither host contracts nor deployable
    releases (§9.4) is invalid (**L137**) — an environment release, carrying neither a `host`
    nor an `app` section, is neither kind, so no requirement ever names an environment. A requirement naming a _deployable_ module is not a
@@ -1540,17 +1557,29 @@ hold against _every_ concurrently-serving release of a provider — refined per 
 concurrently-serving releases _within that binding's selection_, releases behind other
 bindings being other providers; a provider deployed but unbound keeps the unrefined
 quantifier. Requirements aggregate across the environment by the rule of hosts.md §10.
+Closure and satisfaction quantify over **groups** (§14): `requires` records sharing an
+`alternative` identifier in one section are satisfied together iff at least one member is,
+an ungrouped record being a group of one, and only the member resolution selects (below)
+enters the quantifier and the aggregate. A group none of whose members is satisfied fails —
+unless a member is marked `optional`, in which case the group is a preference: it neither
+fails closure nor joins the quantifier or the aggregate, and resolves to nothing.
 
 Resolution is deterministic on the canonical-assignment pattern. A requirement's **candidate**
 bindings are those whose provider module and selection satisfy it ([`services.md`](services.md)
-§5, cross-module spanning included); tools MUST resolve each requirement to its first
-candidate in ascending (`rank`, `address`) order, unless a `route` pin on the consumer's
-deploy record names a candidate, which is then chosen — a `route` naming an address that is
-not a candidate for its requirement is invalid (also **L148**), else a pin could silently
-defeat satisfaction. **Provisioning** — the §13.5 analog — evaluates a valid environment into
+§5, cross-module spanning included); tools MUST resolve each group to its first member, in
+declaration order, that is satisfied, and that member to its first candidate in ascending
+(`rank`, `address`) order, unless a `route` pin on the consumer's deploy record names a
+candidate of some member, which member and candidate are then chosen — a `route` naming an
+address that is not a candidate for any member of its group is invalid (also **L148**), else
+a pin could silently defeat satisfaction. **Provisioning** — the §13.5 analog — evaluates a valid environment into
 a table from each requirement to its resolved binding's address; a requirement whose provider
 carries no binding is _unaddressed_, an advisory fact rather than a failure, since not every
-provider answers at an address. Reconciling the running world to the judged one is the
+provider answers at an address. A group none of whose members is satisfied — valid only
+where a member is `optional` — is likewise **unprovided**: recorded in the table as absent,
+so that the artifact's own fallback governs and probing (hosts.md §9) reports an absence
+rather than a failure; a provider that is present but would satisfy no member is not a
+candidate, and so counts as absent: an environment offers an optional capability only in a
+form that satisfies. Reconciling the running world to the judged one is the
 orchestrator's business, exactly as invoking egress tools is the build's (§13.5).
 
 A **deploy** is a transition of an environment — any change to its release's `grant`,
@@ -1689,19 +1718,21 @@ record Dependency
   field spans Hash optional repeatable  # snapshots provably spanned (§13.4)
 
 record Integration
-  description  One alternative dependency vector this release was built against (§9.5).
+  description  One alternative build context this release was built in: a dependency vector, a host target, or both (§9.5).
 
   field id Identifier
   field rank Natural optional  # canonical-assignment preference, lower first (§13.3)
   field label String optional  # human-readable note; no authority
 
 record Requires
-  description  One requirement of this section, on either kind of provider (hosts.md, services.md).
+  description  One requirement of this section, on either kind of provider (hosts.md, services.md); grouped by alternative, a preference where a member is marked optional (§13.7).
 
   field module ModuleName               # the provider's module name (host contract or deployable, L137)
   field api Hash                        # required contract snapshot (satisfied by lineage membership)
   field version Semver optional         # human-readable hint; no authority
   field uses Hash optional              # Uses metadata blob against the contract (hosts.md §7)
+  field alternative Identifier optional # group: records sharing an id need one member satisfied (§13.7)
+  field optional Flag optional          # the group is a preference: it may resolve to nothing (§13.7)
 
 scalar Address
   description  An environment address (§4.1): a DNS name or URL prefix, compared as authored — the owns precedent, no canonicalization (environments.md §4).
@@ -1771,7 +1802,7 @@ record Library
 
   field owns Namespace optional repeatable
   field resource Resource optional repeatable  # resource/1 claims (§11.4)
-  field integration Integration optional repeatable  # alternative dependency vectors (§9.5)
+  field integration Integration optional repeatable  # alternative build contexts (§9.5)
   field dependency Dependency optional repeatable
   field section LibrarySection repeatable  # first = root (§9.1); keyed (universe, integration)
 

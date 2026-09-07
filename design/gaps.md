@@ -42,6 +42,11 @@ Statements exist; the `dts.md`-pattern documents do not:
   application's computed per-module requirements name, yielding an image whose
   contract satisfies the aggregated requirement set by construction. No command
   surface, no worked example; pairs with artifact selection below.
+- **Windows and other non-POSIX host contracts** — a `windows` entry for catalog.md and a
+  capability vocabulary for process conventions (signal model, filesystem semantics),
+  including a portable OS surface — capabilities every OS contract publishes under identical
+  names, so cross-contract spanning has something to cover; hosts.md §6 and §11 state the
+  terms, deferred from the multi-platform round.
 - **The `run` settings model** — §10.3's design (side-effect class on the ephemeral
   environment) has no syntax; debugger attach is still inexpressible. Gates the rest
   of the deployment round.

@@ -8,7 +8,7 @@ when software built by strangers is composed into something that has to work.
 
 ## 1. The Question
 
-Every working developer has lived some version of these afternoons.
+Every working developer has met these failures.
 
 A transitive dependency releases version 2.4.1 — a *minor* bump, guaranteed compatible by
 convention — and your build breaks. Nothing in your code changed. The library's authors
@@ -35,9 +35,17 @@ existence nobody in the deploying team remembered — starts failing, because th
 relied on changed meaning or vanished. The runbook said which services must move together.
 The runbook was wrong.
 
-These look like five different problems, owned by five different tools — a build tool, a
-binary-compatibility linter, a dependency resolver, a container image, a contract-testing
-broker. LIRA begins from the observation that they are one problem. Independently-published
+Or the platform nobody tested: a command-line tool developed on Linux, where CI also runs,
+shipped for Windows too because the compiler can target it. The core is identical — parsing,
+planning, output — but the Windows build joins paths with the wrong separator, and the
+Ctrl-C handler that cancels cleanly on Linux, where an interrupt is a POSIX signal, hangs on
+Windows, where it is a console control event. Nothing in the build knew the two operating
+systems were different *hosts*; "cross-platform" was a folklore claim maintained by a matrix
+of virtual machines.
+
+These look like six different problems, owned by six different tools — a build tool, a
+binary-compatibility linter, a dependency resolver, a container image, a cross-compilation
+matrix, a contract-testing broker. LIRA begins from the observation that they are one problem. Independently-published
 software meets, and the question is always: **will these work together?** It is asked at two
 moments — at **build time**, when libraries meet on a classpath and must present compatible
 interfaces, and at **deploy time**, when running artifacts meet in an environment and must
@@ -61,7 +69,8 @@ adding a trait method recompiles every consumer cleanly while invalidating the c
 bytecode of subclasses built earlier. Neither implies the other. And no scheme of any kind
 certifies **behavior** — that unchanged interfaces compute unchanged results. A version
 number that says "compatible" without saying *at which level* is an equivocation, and the
-five afternoons of §1 are what equivocations cost.
+broken builds, runtime linkage errors, silent substitutions, environment mismatches, untested
+platforms, and production incidents of §1 are what equivocations cost.
 
 The industry's response has been to build checkers around the testimony: binary-compatibility
 linters, API-diff tools, contract brokers, schema registries. Each is good at its corner.
@@ -147,7 +156,7 @@ asks for one — the algebra will not let a breaking change slip into a compatib
 accident). The version number is then *derived* from the grades: a first release is
 `1.0.0`, a minor step increments the minor, and the minor component is required to equal
 the count of minor steps in the lineage — so the number is a projection of checkable
-history, and a lying version is a detectable error rather than a Friday surprise. Human
+history, and a lying version is a detectable error rather than a build failure discovered after the fact. Human
 names live in **tags** — immutable, signed labels like `jdk-19` — which carry the names
 the world already uses without acquiring any algebraic authority.
 
@@ -197,32 +206,29 @@ different things in one sentence.
 
 ## 6. Naming the Roles: Universes, Hosts, and Deliverables
 
-Ask a working developer what "platform" means and you will get, in one afternoon, four
-incompatible answers: the JVM (a place code *runs*), Scala.js (a compilation *target*),
-an executable jar (a *packaging*), and "the web" (an *ecosystem*). The confusion is not
-carelessness — the same artifact really does play different parts in different scenes.
-LIRA's response is to name the *roles*, at which point the tangle dissolves.
+LIRA retires the word "platform" — it names four different things at once — and gives each
+of them its own word, naming a **role** an artifact plays rather than a technology.
 
-A **format** is just a byte-level encoding — classfile, TASTy, `.d.ts`, WASM — with no
-intrinsic role at all; the same format means different things at different points of a
-pipeline.
+A **format** is a byte-level encoding — classfile, TASTy, `.d.ts`, WASM, PE, ELF — with no
+role of its own; the same bytes mean different things at different points of a pipeline.
 
-A **universe** is a place where *independently-published libraries compose*: `jvm`, where
+A **universe** is where *independently-published libraries compose*: `jvm`, where
 classloading composes arbitrary classfile sets; `sjsir` and `nir` for Scala.js and Scala
 Native; `js` and `wasmc` (the WASM component universe) reserved for the ecosystems that
-compose there. The litmus test is composition, and it is sharp: Android's DEX format fails
-it (libraries ship classfiles; dexing happens after the library phase closes), so DEX is
-not a universe, however platform-ish it feels.
+compose there. Composition is the test (Android's DEX is not a universe: nothing composes
+there — libraries ship classfiles, and dexing comes after).
 
 A **host** is a runtime environment that executes *closed* artifacts — artifacts past
-composition, awaiting linking with nothing: the JVM at a JDK version, a browser with its
-Web APIs, Node with its builtins, a WASI runtime with its world, an operating system with
-its libc. Nothing composes *in* a host; things run *on* it.
+composition, awaiting linking with nothing — and exposes a versioned capability interface:
+the JVM at a JDK version, a browser with its Web APIs, Node with its builtins, a WASI
+runtime with its world, an operating system with its libc or its Win32. Things run *on* a
+host.
 
 A **deliverable** is what a build produces: the pair of a closed artifact format and the
 host contract it targets — an executable jar on JDK ≥ 21, an ES-module bundle in a baseline
-browser, a WASM component in a WASI 0.2 world. It is a classification, not a thing (and
-not a "deployable release," which is a `.lira` file we will meet in §10).
+browser, a WASM component in a WASI 0.2 world, a PE executable on Windows, an ELF binary on
+glibc Linux. It is a classification; the `.lira` file that ships one is a *deployable
+release* (§10).
 
 Between these roles run exactly four kinds of edge: *dependencies* compose libraries
 within a universe; *joins* merge universes into one application (a bundler linking Scala.js
@@ -242,18 +248,20 @@ so. Because of that invariant, everything upstream — snapshot, lineage, satisf
 remains single-valued, and consumers never reason about platforms at all when they reason
 about compatibility.
 
-The same trick tames the other multiplicity: a release built against two majors of a
-dependency (for consumers who cannot move together) declares two **integrations** —
-alternative dependency vectors, forming a matrix with the universes. Integrations, too,
-are invisible to compatibility reasoning: every cell presents the same interface, so
-choosing one changes what else must be present on your buildpath, never what the module
-offers you.
+The same containment handles the other multiplicity. A release built in more than one
+**build context** — against two majors of a dependency, for consumers who cannot move
+together; against alternative backends; or against different *host targets*, a POSIX build
+and a Windows build of one library with the same dependencies but different content and
+different requirements — declares one **integration** per context, forming a matrix with
+the universes. Integrations, too, are invisible to compatibility reasoning: every cell
+presents the same interface, so choosing one changes what else must be present on your
+buildpath, or which host it will run on, never what the module offers you.
 
-**What this buys.** The word "platform" stops costing you thought. Each thing you deal
-with has one role with known edges, multiplicity is contained inside the artifact instead
-of multiplying artifacts (no `-js`, `-native`, `-legacy` suffix explosion in the
-namespace), and two whole dimensions — platform and integration — are provably irrelevant
-to the compatibility questions you ask every day.
+**What this buys.** Each thing you deal with has one role with known edges; multiplicity
+is contained inside the artifact instead of multiplying artifacts (no `-js`, `-native`,
+`-windows`, `-legacy` suffix explosion in the namespace); and two whole dimensions —
+platform and integration — are provably irrelevant to the compatibility questions you ask
+every day.
 
 ## 7. Both Sides of the Arrow: Used-Sets and Spanning
 
@@ -337,6 +345,15 @@ it. Requirements travel with used-sets too, so a library that needs only twelve 
 symbols is satisfied by any host covering those twelve — portability as a proof rather
 than a hope.
 
+The operating systems of §1's sixth failure enter here, as contracts like any other: a
+`glibc-x86-64-linux` module, a `darwin-arm64` module, a Windows module — each carrying its C
+surface under the header discipline and naming its process conventions as capabilities, so
+that a POSIX signal and a Windows console control event are two named things rather than one
+word, "interrupt," quietly meaning two behaviors. A library that touches only capabilities
+all three contracts cover is *provably portable*; one whose used-set names `signals:posix`
+is provably not deployable to Windows. Both facts are decided from manifests, before
+anything is built for the host in question.
+
 Requirements are the one thing in a manifest that cannot be recomputed from content — no
 analysis can verify what code will *need at runtime* — so LIRA labels them honestly as
 authorial and gives them their own verification moment: **probing**, at install or launch,
@@ -387,7 +404,8 @@ transition between environment states, and a release is *deployable* precisely w
 states the transition passes through — including the overlap — are valid. Decided from
 manifests, before anything moves.
 
-The payoffs land directly on §1's worst afternoon:
+The payoffs land directly on §1's worst failure — the production incident caused by the
+consumer nobody remembered:
 
 - The consumer nobody remembered is *found by closure*: removing or breaking a provider
   fails validity, and the judgment names the objecting consumers.
@@ -403,9 +421,9 @@ The payoffs land directly on §1's worst afternoon:
   answered by re-judgment, with a vocabulary for saying precisely what is wrong: which
   module, which snapshot, which address.
 
-And one payoff deserves its own paragraph, because it answers the afternoon §1 left out:
-*it worked in staging* — and production is supposed to be the same, except nobody can say
-in what sense. In LIRA, **one artifact serves many environments**, and both halves of that
+And one payoff deserves its own paragraph, because it answers a failure §1 left out: the
+release that passed in staging and failed in production — production being supposed to be
+the same, except that nobody can say in what sense. In LIRA, **one artifact serves many environments**, and both halves of that
 sentence are checkable. Your laptop, CI, staging, and production are environment releases
 describing one architecture. The software moving between them is *verifiably* the same,
 because deploy records pin exact bits and promotion never rebuilds — what staging
@@ -416,7 +434,11 @@ therefore not a leap of faith but a re-run of one judgment against the next envi
 statement: same manifests, different grants and bindings, decided before anything
 launches. Even the local case is nothing special: a development build, localhost bindings,
 the machine's own contracts as grants — an environment-of-one, judged and probed like any
-cluster.
+cluster. And the sixth failure of §1 is this same property with the operating system as the
+varying grant: a fleet of end-user machines is a family of environments differing only in the
+OS contract each grants, installation is deployment into one of them, and one deployable
+release carries the Windows, macOS, and Linux builds as three sections on a shared root — the
+right one selected by the same judgment, not by a download page.
 
 **What this buys.** The deploy-time question becomes the build-time question, answered by
 the same three objects — atoms, lineages, used-sets — from signed manifests, continuously,
@@ -470,7 +492,8 @@ shape for it.
 
 The arc, restated in one paragraph. The question *will these work together?* is today
 answered by testimony — version numbers, changelogs, runbooks, tribal memory — and §1's
-afternoons are what testimony costs. LIRA replaces testimony with arithmetic, by a chain
+failures — the broken build, the runtime crash, the silent substitution, the environment
+mismatch, the untested platform, the production incident — are what testimony costs. LIRA replaces testimony with arithmetic, by a chain
 of abstractions each of which removes a class of reasoning: **atoms** turn interfaces into
 values, so compatibility is set inclusion; **lineages** turn history into a verifiable
 list, so satisfaction is membership and versions are projections; **disciplines** and
@@ -481,9 +504,9 @@ multi-platform multiplicity stays inside one artifact and out of your reasoning;
 substitution are computations; the **buildpath** makes build-time composition an audit
 over manifests; **host contracts** bring the environment into the same algebra; and the
 **environment** transposes all of it to run time, where a running service is a host, a
-deploy is a judged transition, the consumer nobody remembered is a closure failure with a
-name, and laptop, staging, and production are one architecture under different signed
-statements. One question, two moments, three objects — atoms, lineages, used-sets — and
+deploy is a judged transition, an operating system is a host and an install is a deploy,
+the consumer nobody remembered is a closure failure with a name, and laptop, staging, and
+production are one architecture under different signed statements. One question, two moments, three objects — atoms, lineages, used-sets — and
 a single small algebra, carried in the artifact, checkable by anyone.
 
 ## Reading the Specification Suite
