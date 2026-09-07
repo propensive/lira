@@ -213,6 +213,39 @@ only in its `sjsir` one. This does not collide with the cross-section API invari
 presenting one interface while needing different things of their environments is ordinary, not a
 violation.
 
+Three things about requirements follow from what a manifest can see, and they are worth
+stating as rules rather than leaving as derivations. Requirements are judged by **set
+inclusion**, one member at a time (§7), and a disjunction is admitted in exactly one form,
+the **alternative group**: `requires` records sharing an `alternative` identifier within one
+section (LIRA §14) are satisfied together iff at least one of them is, resolution taking the
+first satisfied member in declaration order — so an artifact that genuinely carries several
+branches, a POSIX signal handler and a Windows console handler in one binary, declares the
+branches it carries and is judged on the one the host can satisfy. Where the branches differ
+in **content**, not merely in what they require, the disjunction is the section matrix
+instead: two integrations (LIRA §9.5), discharged by a choice with a name — the assignment of
+LIRA §13.3 rule 7 at build time, the deploy record at deploy time. And **portability is
+spanning**: one section runs on several hosts with no disjunction at all exactly when its
+used-set is covered by each of their contracts (§7) — a path separator chosen per call touches
+nothing host-specific, and needs no group.
+
+Those are the three moments at which a platform decision can be made — build, deploy, use —
+and each has its declaration: a use-time decision needs a portable envelope or a declared
+alternative group; a deploy-time decision is a section choice; a build-time decision is an
+egress over an assignment. The invariant across all three is the honest one: **every branch
+an artifact might take is declared, either as portable or as an alternative** — an undeclared
+branch is exactly the under-declaration that used-set tooling exists to catch. Deciding
+earlier is a preference rather than a rule, and it is the right preference when the
+alternatives differ in content rather than in requirements alone.
+
+Use-time adaptation has one more shape: graceful degradation — use a capability if the host
+has it, otherwise fall back. A member marked `optional` (LIRA §14) makes its group a
+preference, not a need: a group none of whose members is satisfied then neither fails
+satisfaction (LIRA §13.3 rule 7), aggregation (§10) nor environment closure (LIRA §13.7), but
+resolves to nothing — a present but unsatisfying provider is not a candidate — so the artifact
+learns, through provisioning and probing (§9), whether the capability is there in a form it
+can use, and its own fallback governs otherwise. An ungrouped requirement is a group of one,
+so `optional` alone reads as it looks.
+
 A section with no `requires` records imposes nothing on any host. That is the important default,
 and it is not a formality: a library whose sections depend only on other libraries — the
 pure-library case — runs wherever its universes' artifacts run, with nothing to probe and
@@ -305,7 +338,9 @@ resolve exactly as diamond dependencies do (some lineage contains both, LIRA §1
 spanning, the union of the used-sets must be contained in one contract's atom set. The
 aggregated set — "this application, on this target, needs a host providing these capabilities" —
 is the application's host contract in all but publication, and SHOULD be reported as such; a
-probing tool (§9) consumes it whole. Where the application is then published as a deployable
+probing tool (§9) consumes it whole. Only the resolved member of each alternative group enters
+the aggregate, and an unprovided optional group does not at all (§6) — a preference cannot make
+a host unsatisfying — though a probing tool SHOULD probe and report such groups beside it. Where the application is then published as a deployable
 release ([`services.md`](services.md)), tooling SHOULD record this aggregated set as the
 `requires` of its `app` section — the point at which the phrase "in all but publication" stops
 applying.
@@ -340,7 +375,11 @@ parameterize contract _modules_, not the format: an operating-system contract is
 triple family (`glibc-x86-64-linux`, or coarser where surfaces genuinely coincide), exactly as
 `sed:gnu` names a variant capability (§5) — satisfaction stays lineage membership and spanning,
 with no new mechanism, and a library's per-triple requirements are ordinary per-section
-`requires` records.
+`requires` records. Non-POSIX families are contracts on the same terms: a Windows contract
+carries the Win32 surface under `cheader/1` and names its process conventions — signal model,
+filesystem semantics — as capability atoms with variant names per §5, so a library's
+portability across operating systems is decided by cross-contract spanning (§7) before
+anything is built for the host in question.
 
 Who publishes these — a registry-blessed set, the platform vendors, or the community — is a
 governance question this specification deliberately does not answer

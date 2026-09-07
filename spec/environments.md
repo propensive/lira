@@ -172,11 +172,13 @@ A deployed consumer's requirement on module `M` has **candidate** bindings: thos
 provider module and selection satisfy it — by lineage membership or spanning, services.md §5
 verbatim, cross-module spanning included, so a mock's binding is a candidate for exactly the
 consumers whose used-sets it covers. Resolution is deterministic on the canonical-assignment
-pattern (LIRA §13.3): tools MUST resolve each requirement to its first candidate in
-ascending (`rank`, `address`) order, unless a `route` pin on the consumer's deploy record
-names a candidate binding, which is then chosen. A `route` naming an address that is not a
-candidate for its requirement is invalid (**L148**): a pin states a preference among
-satisfying options, never an escape from satisfaction. Routes live on deploy records — in
+pattern (LIRA §13.3): tools MUST resolve each alternative group (LIRA §14; an ungrouped
+requirement is a group of one) to its first satisfied member in declaration order, and that
+member to its first candidate in ascending (`rank`, `address`) order, unless a `route` pin on
+the consumer's deploy record names a candidate binding of some member, which member and
+binding are then chosen. A `route` naming an address that is not a candidate for any member
+of its group is invalid (**L148**): a pin states a preference among satisfying options, never
+an escape from satisfaction. Routes live on deploy records — in
 the environment release, authored by the operator — and never in any release manifest, which
 would weld the release to one environment (execution.md §4); the route is the buildpath's
 integration pin made a signed fact, per deployment.
@@ -186,7 +188,11 @@ from each deployed release's requirements to the addresses of their resolved bin
 consumer-facing answer to "where is my provider?", computed from manifests, handed to the
 runtime. A requirement whose provider carries no binding is **unaddressed**: an advisory
 fact, not a validity failure, since not every provider answers at an address (`kubernetes`
-is a grant nobody dials). What happens next divides on the sentence that has divided every
+is a grant nobody dials). A group none of whose members is satisfied — valid only where a
+member is `optional` (LIRA §14) — is **unprovided**: recorded in the table as absent, never a
+failure, since the group was a preference, so that the deployed release's own fallback
+governs; a present provider that would satisfy no member is not a candidate and counts as
+absent, because an environment offers an optional capability only in a form that satisfies. What happens next divides on the sentence that has divided every
 such question in this specification: provisioning produces the table, and *reconciling the
 running world to the judged one is the orchestrator's business*, exactly as invoking egress
 tools is the build's (LIRA §13.5).
@@ -250,6 +256,13 @@ environment-of-one, judged by services.md §6's validity before anything launche
 probed (hosts.md §9) while it runs. Nothing in this document distinguishes it from a
 cluster: "works on my machine" and "works in production" become the same sentence with a
 different environment release as its subject.
+
+The property's second instance has the operating system as the varying grant. A fleet of
+end-user machines is a family of environments differing only in the OS contract each grants
+(hosts.md §11); **installation is deployment** into one of them; and one deployable release
+carries one `app` section per operating-system integration (services.md §4), each machine's
+deploy record naming its section — so one artifact is deployable into every member of the
+family, and which build a machine receives is a computed fact rather than a download page.
 
 Expressing one environment as a
 minimal delta over another — test = prod with three substitutions, on the overlay calculus

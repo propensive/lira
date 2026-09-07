@@ -123,7 +123,9 @@ with like.
 
 A **deployable release** is a release carrying `app` sections and only `app` sections
 (**L143**, LIRA §9.4) — one per integration where integrations are declared, exactly as the
-section matrix requires (LIRA §9.5). It MUST NOT declare `dependency` records (also **L143**):
+section matrix requires (LIRA §9.5) — per-operating-system deliverables are the canonical case:
+Windows, macOS and Linux builds of one application as three `app` sections sharing a root,
+common content stored once. It MUST NOT declare `dependency` records (also **L143**):
 its composition already happened at the egress that produced it, and the record of _what_ it
 was built from is provenance — real, valuable, and deliberately deferred to a future
 attestation layer rather than half-expressed through a mechanism whose satisfaction semantics
@@ -256,6 +258,12 @@ release (LIRA §13.3, unchanged), iff:
    platform policy (every deployable pinned, every artifact signed by a release key, a
    readiness probe on every requirement) becomes a named, versioned, checkable object rather
    than an admission-controller configuration.
+
+Rules 1–3 quantify over alternative groups (LIRA §14, hosts.md §6): a group is satisfied iff
+one member is, only the resolved member enters the quantifier and the aggregate, and a group
+with no satisfied member fails — unless a member is `optional`, in which case the group is a
+preference, excluded from rules 1–3 and recorded as unprovided at provisioning
+([`environments.md`](environments.md) §6).
 
 There is deliberately **no uniqueness rule**: two releases of one module serving concurrently
 is the normal state of a rolling deployment. What replaces it is the binding (LIRA §13.7,
