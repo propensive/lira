@@ -53,6 +53,8 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   packaging, and the build-to-deployment continuum.
 - [`design/tool.md`](design/tool.md) — the unified `lira` tool: the content-addressed store,
   cache and retention, the command surface, and node roles.
+- [`design/fury.md`](design/fury.md) — the Fury build tool's roadmap: the ladder of
+  increments, the design item each depends on, and the assumption each tests.
 
 Status: specification and implementation in progress. The language-blind core — container,
 compatibility algebra, buildpath validation, signing, and canonical derivative artifacts — is

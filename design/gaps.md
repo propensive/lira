@@ -91,8 +91,8 @@ Statements exist; the `dts.md`-pattern documents do not:
 - **Remote sharing of the store** — team caches and build farms; presumably the
   online service, undesigned. Input-hash lookup (§3.1 addendum) joins the service's
   query list beside the commit reverse-lookup.
-- **The build tool ↔ `lira` CLI relationship** — `tool.md`'s "one program, composable
-  roles" suggests one binary; undecided.
+- ~~**The build tool ↔ `lira` CLI relationship**~~ — decided: two binaries sharing
+  library code, developed together in this repository ([`fury.md`](fury.md)).
 - **The `lira.tool` trait in earnest** — the real Scala surface in the project's own
   stack; descriptor extraction; the uses return path's file mechanics.
 - **Incremental correctness mechanics** — how often the warm-equals-cold law (§14.5)
