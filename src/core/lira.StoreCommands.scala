@@ -39,14 +39,14 @@ import charDecoders.utf8Decoder
 import charEncoders.utf8Encoder
 import columnAttenuation.ignoreAttenuation
 import environments.daemonClientEnvironment
-import filesystemBackends.virtualMachine
-import filesystemOptions.createNonexistentParents.enabled
-import filesystemOptions.deleteRecursively.enabled
-import filesystemOptions.dereferenceSymlinks.disabled
-import filesystemOptions.moveAtomically.enabled
-import filesystemOptions.overwritePreexisting.enabled
+import filesystemBackends.javaBaseFilesystem
+import filesystemOptions.createNonexistentParents
+import filesystemOptions.deleteRecursively
+import filesystemOptions.preserveSymlinks
+import filesystemOptions.moveAtomically
+import filesystemOptions.overwritePreexisting
 import logging.silentLogging
-import systems.javaSystem
+import systems.javaBaseSystem
 import tableStyles.thinRoundedTableStyle
 import textMetrics.uniformMetric
 import textSanitizers.strictSanitizer
@@ -65,7 +65,7 @@ private def stemOf(file: Text): Text =
 private def stemOf(file: Path on Local): Text = stemOf(file.encode)
 
 private def single(store: Store, prefix: Text)(using Stdio)
-:   Optional[Store.Release] raises IoError =
+:   Optional[Store.Release] raises Io.Error =
 
   store.releases().filter(_.hex.starts(prefix)).stdlib match
     case scala.List(release) => release

@@ -1,10 +1,6 @@
-# The required "build" status check (branch protection on main).
-#
-# The Scala build cannot yet run here: build.mill resolves a forked Scala toolchain and a
-# locally-published Soundness from the maintainer's soundness worktree (see settings.toolchainRepo;
-# overridable via LIRA_TOOLCHAIN_REPO / LIRA_SOUNDNESS_VERSION). Until those artifacts are
-# resolvable from CI, this job validates what can honestly be validated: the specification and
-# design documents. Add a `mill lira.compile` step once the toolchain is published.
+# The specification and design documents, which are most of this repository. The Scala build is
+# ci.yml's job — it runs the shared Soundness-application workflow and contributes the check
+# `scala / build`; this one contributes `build`. Both are worth requiring on main.
 name: build
 on:
   pull_request:

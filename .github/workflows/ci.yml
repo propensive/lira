@@ -1,0 +1,28 @@
+name: CI
+
+# Build and test every pull request and every merge into main, via the shared Soundness-application
+# workflow — see propensive/.github for what it does and what it expects of this repository (the
+# ./mill wrapper, etc/shared, and the pins in etc/refs).
+#
+# The launcher resolves lira-core as a published coordinate, so it is published locally first.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The job id is `scala`, not `build`: a check contributed by a reusable workflow is named
+# `<caller job> / <reusable job>`, and build.yml (the specification and design document checks)
+# already contributes a check called `build`. Naming this one `build` too would give two
+# confusable checks, leaving the required-check setting on main unable to tell them apart. This
+# one is `scala / build`.
+jobs:
+  scala:
+    uses: propensive/.github/.github/workflows/scala-ci.yml@main
+    with:
+      compile:       lira.core.compile
+      publish_local: lira.core
+      assembly:      lira.launcher.assembly
+      test_assembly: lira.test.assembly
+      test_main:     lira.runTests

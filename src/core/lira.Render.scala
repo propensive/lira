@@ -96,7 +96,7 @@ private def treeRows[entry]
       atomClass: entry => Text,
       detail:    entry => Text,
       marker:    entry => Text )
-    ( split: Text => Optional[Discipline.Decomposition] )
+    ( split: Text => Optional[Decomposition] )
 :   scala.List[TreeRow] =
 
   val grouped = entries.stdlib.groupBy { entry => split(key(entry)).let(_.owner).or(t"") }
