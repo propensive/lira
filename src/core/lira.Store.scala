@@ -35,16 +35,14 @@ package lira
 import soundness.*
 
 import alphabets.hexLowerCase
-import charDecoders.utf8Decoder
 import charEncoders.utf8Encoder
-import filesystemBackends.virtualMachine
-import filesystemOptions.createNonexistentParents.enabled
-import filesystemOptions.deleteRecursively.enabled
-import filesystemOptions.dereferenceSymlinks.disabled
-import filesystemOptions.moveAtomically.enabled
-import filesystemOptions.overwritePreexisting.enabled
+import filesystemBackends.javaBaseFilesystem
+import filesystemOptions.createNonexistentParents
+import filesystemOptions.deleteRecursively
+import filesystemOptions.preserveSymlinks
+import filesystemOptions.moveAtomically
+import filesystemOptions.overwritePreexisting
 import logging.silentLogging
-import textSanitizers.strictSanitizer
 
 // A store object failed re-verification, or an operation addressed an object the store does
 // not hold. Corruption is never repaired silently: `fsck` quarantines, and everything else
@@ -65,9 +63,9 @@ object Store:
 
   def manifestBytesHash(content: Data): Data =
     val prefix: Data = charEncoders.utf8Encoder.encoded(manifestBytesDomain)
-    val buffer = Array[Byte](prefix.length + 1 + content.length)
-    buffer.copyFrom(prefix, 0, 0, prefix.length)
-    buffer.copyFrom(content, 0, prefix.length + 1, content.length)
+    val buffer = Array.allocate[Byte](prefix.length + 1 + content.length)
+    buffer.place(prefix, 0, 0, prefix.length)
+    buffer.place(content, 0, prefix.length + 1, content.length)
     Blake3.hashOf(Array.freeze(buffer))
 
   // §5.2 fixes the byte layout, so splitting a file needs no TEL parsing: the separator is
@@ -85,8 +83,8 @@ object Store:
     Unset
 
   def slice(data: Data, from: Int, until: Int): Data =
-    val buffer = Array[Byte](until - from)
-    buffer.copyFrom(data, from, 0, until - from)
+    val buffer = Array.allocate[Byte](until - from)
+    buffer.place(data, from, 0, until - from)
     Array.freeze(buffer)
 
   enum Tier:
@@ -146,7 +144,7 @@ class Store(val root: Path on Linux):
   // Writes stage through a `.part` sibling and land by rename, so no partial object is ever
   // visible; an object that already exists is never rewritten (content-addressed names make
   // rewriting meaningless). Returns whether the object was new.
-  def put(tier: Tier, hex: Text, data: Data): Boolean raises IoError =
+  def put(tier: Tier, hex: Text, data: Data): Boolean raises Io.Error =
     val target = objectPath(tier, hex)
 
     if target.existent() then false else
@@ -158,7 +156,7 @@ class Store(val root: Path on Linux):
   // Verify-on-read (design/tool.md §2.4): the object's bytes must recompute the name they
   // are stored under. Payloads are not fetched here: their key is over the decompressed
   // stream, so they verify through the owning manifest (`blobStream`).
-  def fetch(tier: Tier, hex: Text): Data raises IoError raises StoreError =
+  def fetch(tier: Tier, hex: Text): Data raises Io.Error raises StoreError =
     val target = objectPath(tier, hex)
     if !target.existent() then abort(StoreError(t"no $hex in ${tier.dirName}"))
     val data = target.read[Data]
@@ -176,7 +174,7 @@ class Store(val root: Path on Linux):
 
   // The decompressed blob stream of a release, verified against the manifest's declared
   // length and hash on every read.
-  def blobStream(manifest: Lira.Manifest): Data raises IoError raises Lira.Error raises StoreError =
+  def blobStream(manifest: Lira.Manifest): Data raises Io.Error raises Lira.Error raises StoreError =
     val hex = manifest.payload.hash.serialize[Hex]
     val target = objectPath(Tier.Payload, hex)
     if !target.existent() then abort(StoreError(t"no $hex in payload"))
@@ -185,7 +183,7 @@ class Store(val root: Path on Linux):
   // Ingest (design/tool.md §2.2): verify eagerly at install grade, then decompose. The
   // manifest tier keeps the head bytes exactly as they arrived — directive, manifest, and
   // `##` separator — so the original file is a concatenation away.
-  def ingest(data: Data): Ingested raises IoError raises Lira.Error raises StoreError =
+  def ingest(data: Data): Ingested raises Io.Error raises Lira.Error raises StoreError =
     val lira = Lira.read(data)
     val report = Verification.install(lira)
 
@@ -208,13 +206,13 @@ class Store(val root: Path on Linux):
 
   // The journal is advisory (design/tool.md §3): append order is recency, torn lines are
   // skipped at read, and no lock is taken.
-  def journal(verb: Text, hex: Text): Unit raises IoError =
+  def journal(verb: Text, hex: Text): Unit raises Io.Error =
     if !journalPath.existent() then journalPath.create[File](CreateFlag.Parents): handle ?=> ()
 
     Eof(journalPath).open(Write): handle ?=>
       handle.write(Chain(t"$verb $hex\n".in[Data]))
 
-  def recency(): Map[Text, Int] raises IoError =
+  def recency(): Map[Text, Int] raises Io.Error =
     if !journalPath.existent() then Map() else
       val entries = journalPath.read[Data].utf8.cut(t"\n").stdlib.zipWithIndex.flatMap:
         (line, index) =>
@@ -224,20 +222,20 @@ class Store(val root: Path on Linux):
 
       Map.from(entries)
 
-  def pin(hex: Text, label: Text): Unit raises IoError =
+  def pin(hex: Text, label: Text): Unit raises Io.Error =
     val target = child(pinDir, hex)
 
     target.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
       handle.write(Chain(label.in[Data]))
 
-  def unpin(hex: Text): Unit raises IoError =
+  def unpin(hex: Text): Unit raises Io.Error =
     child(pinDir, hex).wipe()
 
-  def pins(): List[Text] raises IoError =
+  def pins(): List[Text] raises Io.Error =
     if !pinDir.existent() then List()
     else List.from(pinDir.children.stdlib.map(_.name))
 
-  private def objects(tier: Tier): List[Path on Linux] raises IoError =
+  private def objects(tier: Tier): List[Path on Linux] raises Io.Error =
     val dir = tierDir(tier)
 
     if !dir.existent() then List() else
@@ -253,7 +251,7 @@ class Store(val root: Path on Linux):
   // Every release in the store, sized by its payload object plus its manifest head. Blob
   // and derivative bytes are shared between releases, so they are accounted at sweep time,
   // not per release.
-  def releases(): List[Release] raises IoError =
+  def releases(): List[Release] raises Io.Error =
     val pinned = pins().stdlib.to(scala.collection.immutable.Set)
     val backend = summon[FilesystemBackend on Linux]
 
@@ -271,7 +269,7 @@ class Store(val root: Path on Linux):
   // GC (design/tool.md §3): pins are roots; the eviction unit is the release closure; the
   // budget bounds the bytes held by *unpinned* releases, least recently used first. Blobs
   // and derivatives survive if any retained release references them.
-  def gc(budget: Optional[Long]): Sweep raises IoError raises Lira.Error raises StoreError =
+  def gc(budget: Optional[Long]): Sweep raises Io.Error raises Lira.Error raises StoreError =
     val all = releases().stdlib
     val order = recency().stdlib
 
@@ -341,12 +339,12 @@ class Store(val root: Path on Linux):
 
   // Removes one release's manifest; the rest of its closure — payload, blobs, derivatives
   // not shared with a survivor — falls to the next `gc`.
-  def remove(hex: Text): Unit raises IoError raises StoreError =
+  def remove(hex: Text): Unit raises Io.Error raises StoreError =
     val target = objectPath(Tier.Manifest, hex)
     if !target.existent() then abort(StoreError(t"no $hex in manifest"))
     target.wipe()
 
-  def locate(prefix: Text): List[(Tier, Path on Linux)] raises IoError =
+  def locate(prefix: Text): List[(Tier, Path on Linux)] raises Io.Error =
     List.from:
       scala.List(Tier.Manifest, Tier.Payload, Tier.Blob, Tier.Derivative).flatMap: tier =>
         objects(tier).stdlib.filter(_.name.starts(prefix)).map { path => (tier, path) }
@@ -354,7 +352,7 @@ class Store(val root: Path on Linux):
   // Full re-audit (design/tool.md §2.4): every object is rehashed — including those never
   // read — and mismatches are quarantined, never deleted. Payloads verify through their
   // owning manifest; a payload no manifest owns is an orphan, not corruption.
-  def fsck(): Audit raises IoError raises StoreError =
+  def fsck(): Audit raises Io.Error raises StoreError =
     var count = 0
     var corrupted: List[Text] = List()
     var orphans: List[Text] = List()
@@ -389,7 +387,7 @@ class Store(val root: Path on Linux):
 
   // The bare-artifact lookup behind `lira id` (spec §13.6): hash the candidate under the
   // derivative domain and search stored manifests for a section that declares it.
-  def identify(data: Data): Optional[(Release, Section)] raises IoError =
+  def identify(data: Data): Optional[(Release, Section)] raises Io.Error =
     val hex = Lira.Hash(Lira.Hash.Domain.Derivative, data).serialize[Hex]
 
     val matches = releases().flatMap: release =>

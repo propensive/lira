@@ -1,5 +1,7 @@
 out/
+dist/
 .bloop/
 .metals/
+.bsp/
 lira.jar
 /lira

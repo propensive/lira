@@ -34,9 +34,9 @@ package lira
 
 import soundness.*
 
-import filesystemBackends.virtualMachine
+import filesystemBackends.javaBaseFilesystem
 import logging.silentLogging
-import systems.javaSystem
+import systems.javaBaseSystem
 import textSanitizers.strictSanitizer
 
 // `lira delta` (design/tool.md §5.1): what changed between two releases of one module, and what
@@ -90,7 +90,7 @@ private def delta(previous: Path on Local, next: Path on Local, blob: Optional[T
 
     val disciplineIds =
       (beforeReport.atomizations.stdlib.map(_.discipline)
-        ++ afterReport.atomizations.stdlib.map(_.discipline)).distinct.sorted
+        ++ afterReport.atomizations.stdlib.map(_.discipline)).distinct.sortBy(_.s)
 
     var changes = 0
 
@@ -153,7 +153,7 @@ private def compare(before: proscenium.List[Atom], next: proscenium.List[Atom])
   val old = index(before)
   val current = index(next)
 
-  val entries = (old.keySet ++ current.keySet).toList.sorted.flatMap: key =>
+  val entries = (old.keySet ++ current.keySet).toList.sortBy(_.s).flatMap: key =>
     (old.get(key), current.get(key)) match
       case (scala.None, scala.Some(atom)) => scala.List(Entry(key, atom.atomClass, Change.Added))
       case (scala.Some(atom), scala.None) => scala.List(Entry(key, atom.atomClass, Change.Removed))

@@ -37,9 +37,9 @@ import java.nio.file as jnf
 import soundness.*
 
 import charDecoders.utf8Decoder
-import filesystemBackends.virtualMachine
+import filesystemBackends.javaBaseFilesystem
 import logging.silentLogging
-import systems.javaSystem
+import systems.javaBaseSystem
 import textSanitizers.strictSanitizer
 
 // `lira atoms` (design/tool.md §5.2): the atom listing of a release or of a bare artifact.
@@ -58,24 +58,55 @@ import textSanitizers.strictSanitizer
 // The disciplines lira can name, in claiming order (§11.4). `classfile/1` precedes `jsig/1`, which
 // also claims `.class`, and both precede `tasty/1`, which holds derived binaries atomless: in the
 // other order a jar of classfiles would list nothing at all.
+//
+// The spec drafts a discipline per language — `dts/1` (spec/dts.md), `webidl/1`, `wit/1`,
+// `cheader/1` and `kotlin-metadata/1` — and this list once named all of them. None is implemented
+// in Soundness yet, so none can be named here; `lira atoms --discipline` reports what lira knows,
+// which is exactly this list. Add each back as reliquary gains it.
 private val knownDisciplines: proscenium.List[Discipline] =
-  proscenium.List(ClassfileDiscipline, JsigDiscipline, Tasty, DtsDiscipline, WebIdlDiscipline,
-    WitDiscipline, CHeaderDiscipline, KotlinMetadataDiscipline, CapabilityDiscipline)
+  proscenium.List(ClassfileDiscipline, JsigDiscipline, TastyDiscipline, CapabilityDiscipline)
 
-// How a discipline decomposes its own keys (LIRA §10.4; `Discipline.decompose`), by id. A
-// discipline lira cannot name decomposes nothing, and its atoms list flat — which is the same
-// outcome as a discipline that states no decomposition, and needs no special case.
+// How an atom key divides into the thing that owns it and the member it names (§10.4). The spec is
+// explicit that key text is diagnostic, so this — and the grouping in `treeRows` that reads it —
+// is presentation only: nothing about a grade or a comparison depends on it.
+private case class Decomposition(owner: Text, member: Text)
+
+// The key syntax each discipline mints, by id. `classfile/1` and `jsig/1` append a selector to the
+// owning class's name — `#<name>:<descriptor>` for a method, `.<name>:<descriptor>` for a field
+// (mandible.ClassSurface.Member.selector) — so the first `#` or `.` that precedes a `:` divides
+// them, and a class's own atom, which is the bare name, does not divide at all. `tasty/1` keys are
+// `<owner>.<member><signature>` (degustation.Atomizer.keyOf), so the last `.` before the signature
+// divides them. A discipline not named here decomposes nothing and its atoms list flat, which is
+// what `resource/1` and `opaque/1` want anyway: their keys are paths, not members.
 private def decomposer(discipline: Text, resources: proscenium.List[Lira.Manifest.Resource])
-:   Text => Optional[Discipline.Decomposition] =
+:   Text => Optional[Decomposition] =
 
-  val implementation: Optional[Discipline] =
-    val resource = reliquary.ResourceDiscipline(resources)
+  def jvmSplit(key: Text): Optional[Decomposition] =
+    val text = key.s
+    val hash = text.indexOf('#')
+    val colon = text.indexOf(':')
 
-    if discipline == resource.id then resource
-    else if discipline == OpaqueDiscipline.id then OpaqueDiscipline
-    else knownDisciplines.stdlib.find(_.id == discipline).getOrElse(Unset)
+    // A field selector's `.` is the one that precedes the descriptor's colon; a package-qualified
+    // class name has no colon at all, so nothing divides.
+    val at = if hash >= 0 then hash else if colon >= 0 then text.lastIndexOf('.', colon) else -1
 
-  key => implementation.let { discipline => discipline.decompose(key) }
+    if at <= 0 then Unset
+    else Decomposition(text.substring(0, at).nn.tt, text.substring(at).nn.tt)
+
+  def tastySplit(key: Text): Optional[Decomposition] =
+    val text = key.s
+
+    // The erased signature is parenthesized and always trails, so the dividing `.` is the last one
+    // before it. A key with no signature is a type's own atom, which does not divide.
+    val signature = text.indexOf('(')
+    val at = text.lastIndexOf('.', if signature >= 0 then signature else text.length - 1)
+
+    if at <= 0 then Unset
+    else Decomposition(text.substring(0, at).nn.tt, text.substring(at + 1).nn.tt)
+
+  if discipline == ClassfileDiscipline.id || discipline == JsigDiscipline.id then jvmSplit(_)
+  else if discipline == TastyDiscipline.id then tastySplit(_)
+  else _ => Unset
 
 private def atomsCommand
     ( file:      Path on Local,
@@ -120,7 +151,7 @@ private def computed
       only:      Optional[Text],
       owner:     Optional[Text] )
     (using Cli, Stdio)
-:   Exit raises Lira.Error raises DisciplineError =
+:   Exit raises Lira.Error raises Discipline.Error =
 
   val where: Text = realm.or(t"jvm")
 

@@ -40,11 +40,11 @@ import backstops.silentBackstop
 import charDecoders.utf8Decoder
 import classloaders.threadContextClassloader
 import environments.daemonClientEnvironment
-import executives.completions
+import executives.completionsExecutive
 import hyphenations.englishHyphenation
 import interpreters.posixInterpreter
 import logging.silentLogging
-import systems.javaSystem
+import systems.javaBaseSystem
 import textSanitizers.strictSanitizer
 import threading.platformThreading
 
@@ -155,7 +155,11 @@ private def flagText(flag: Flag of Text, label: Text)
     def interpret(arguments: List[Argument]): Optional[Text] =
       arguments.stdlib.headOption.map(_()).getOrElse(Unset)
 
-  flag().or:
+  // In the pure section — which is where every flag is read, so that it registers in time to
+  // appear in this subcommand's completions — `Flag#apply` yields a `Prospective` handle rather
+  // than the value: resolution is eager, and `value` is the `Optional` it resolved to. Applying
+  // the handle would need the `Effectful` capability only an `execute` block has.
+  flag().value.or:
     val commandline = interpreter.interpret(cli.arguments)
     interpreter.find(commandline, flag).stdlib.toList.headOption.map(_()).getOrElse(Unset)
 
@@ -164,92 +168,98 @@ private def flagText(flag: Flag of Text, label: Text)
 // value-taking flag be understood rather than mistaken for a positional argument. Reading them
 // inside the `execute` block would register them too late to appear, and reading every flag up
 // front would offer `--major` to `verify`.
-@main
-def main(): Unit = cli:
-  // `Pathname` resolves a relative argument against the ambient `WorkingDirectory`, and under the
-  // daemon the ambient one is the daemon's — which is wherever it happened to be started. The
-  // client's is forwarded on the `Cli`, and is the only one a user's relative path can mean.
-  given WorkingDirectory = summon[Cli].workingDirectory
-  val cli0 = summon[Cli]
+//
+// The tool's entry point, as an object rather than a bare `@main`: the `@main` itself lives in
+// the `launcher` module (src/launcher/lira_launcher.scala), which wraps this call in burdock's
+// `externalize` so the released executable downloads its dependencies on demand rather than
+// carrying them. Keeping the dispatch here — in the published `lira-core` — is what lets the
+// launcher be the four lines it is.
+object LiraTool:
+  def run(): Unit = cli:
+    // `Pathname` resolves a relative argument against the ambient `WorkingDirectory`, and under the
+    // daemon the ambient one is the daemon's — which is wherever it happened to be started. The
+    // client's is forwarded on the `Cli`, and is the only one a user's relative path can mean.
+    given WorkingDirectory = summon[Cli].workingDirectory
+    val cli0 = summon[Cli]
 
-  // The dispatch is a named block because the usage text is derived from it: `Executive.help`
-  // re-runs it in tab-completion mode against synthesized argument prefixes, discovering the
-  // subcommands and their flags from the same patterns that dispatch them. `execute` takes its
-  // body as a context function and evaluates nothing in completion mode, so those runs do no IO
-  // and this does not recur into itself.
-  //
-  // Lazy, because building the tree walks every subcommand: a command that never prints usage
-  // never pays for it.
-  lazy val help: Optional[Help] =
-    executives.completions.help
-      (t"lira", cli0.environment, cli0.workingDirectory, cli0.stdio, cli0.login)(dispatch)
+    // The dispatch is a named block because the usage text is derived from it: `Executive.help`
+    // re-runs it in tab-completion mode against synthesized argument prefixes, discovering the
+    // subcommands and their flags from the same patterns that dispatch them. `execute` takes its
+    // body as a context function and evaluates nothing in completion mode, so those runs do no IO
+    // and this does not recur into itself.
+    //
+    // Lazy, because building the tree walks every subcommand: a command that never prints usage
+    // never pays for it.
+    lazy val help: Optional[Help] =
+      executives.completionsExecutive.help
+        (t"lira", cli0.environment, cli0.workingDirectory, cli0.stdio, cli0.login)(dispatch)
 
-  def dispatch(using Cli): Execution = positional match
-    case Verify() :: Pathname(file) :: Nil => execute(verify(file))
-    case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
-    case Cache() :: rest          => execute(cache(rest.map(_())))
-    case Pin() :: target :: Nil   => execute(pin(target(), true))
-    case Unpin() :: target :: Nil => execute(pin(target(), false))
+    def dispatch(using Cli): Execution = positional match
+      case Verify() :: Pathname(file) :: Nil => execute(verify(file))
+      case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
+      case Cache() :: rest          => execute(cache(rest.map(_())))
+      case Pin() :: target :: Nil   => execute(pin(target(), true))
+      case Unpin() :: target :: Nil => execute(pin(target(), false))
 
-    case Gc() :: _                =>
-      val budget = flagText(Budget, t"bytes")
-      execute(gcCommand(budget))
+      case Gc() :: _                =>
+        val budget = flagText(Budget, t"bytes")
+        execute(gcCommand(budget))
 
-    case Fsck() :: _              => execute(fsck())
-    case Id() :: Pathname(file) :: Nil => execute(identify(file))
+      case Fsck() :: _              => execute(fsck())
+      case Id() :: Pathname(file) :: Nil => execute(identify(file))
 
-    // The flags are read against the subcommand itself, not inside a branch that needs every
-    // operand present: a flag registers where it is read, so reading it here is what puts it in
-    // the completions from `lira assign <TAB>` onwards, and what lets `Executive.help` find it
-    // when it probes this subcommand with no operands at all.
-    case Assign() :: rest =>
-      val major = Major()
+      // The flags are read against the subcommand itself, not inside a branch that needs every
+      // operand present: a flag registers where it is read, so reading it here is what puts it in
+      // the completions from `lira assign <TAB>` onwards, and what lets `Executive.help` find it
+      // when it probes this subcommand with no operands at all.
+      case Assign() :: rest =>
+        val major = Major()
 
-      rest match
-        case Pathname(file) :: Nil => execute(assign(file, Unset, major.present))
+        rest match
+          case Pathname(file) :: Nil => execute(assign(file, Unset, major.present))
 
-        case Pathname(file) :: Pathname(previous) :: Nil =>
-          execute(assign(file, previous, major.present))
+          case Pathname(file) :: Pathname(previous) :: Nil =>
+            execute(assign(file, previous, major.present))
 
-        case _ => execute(usage(help, Exit.Fail(1)))
+          case _ => execute(usage(help, Exit.Fail(1)))
 
-    case Delta() :: rest =>
-      val blob = flagText(Blob, t"file")
+      case Delta() :: rest =>
+        val blob = flagText(Blob, t"file")
 
-      rest match
-        case Pathname(previous) :: Pathname(next) :: Nil =>
-          execute(delta(previous, next, blob))
+        rest match
+          case Pathname(previous) :: Pathname(next) :: Nil =>
+            execute(delta(previous, next, blob))
 
-        case _ => execute(usage(help, Exit.Fail(1)))
+          case _ => execute(usage(help, Exit.Fail(1)))
 
-    case AtomsCmd() :: rest =>
-      val realm = flagText(Realm, t"realm")
-      val classpath = flagText(Classpath, t"a:b")
-      val discipline = flagText(Only, t"discipline")
-      val owner = flagText(Owner, t"prefix")
+      case AtomsCmd() :: rest =>
+        val realm = flagText(Realm, t"realm")
+        val classpath = flagText(Classpath, t"a:b")
+        val discipline = flagText(Only, t"discipline")
+        val owner = flagText(Owner, t"prefix")
 
-      rest match
-        case Pathname(file) :: Nil =>
-          execute(atomsCommand(file, realm, classpath, discipline, owner))
+        rest match
+          case Pathname(file) :: Nil =>
+            execute(atomsCommand(file, realm, classpath, discipline, owner))
 
-        case _ => execute(usage(help, Exit.Fail(1)))
+          case _ => execute(usage(help, Exit.Fail(1)))
 
-    case Harvest() :: kind :: Pathname(out) :: rest =>
-      execute(harvest(kind(), out, rest.map(_())))
+      case Harvest() :: kind :: Pathname(out) :: rest =>
+        execute(harvest(kind(), out, rest.map(_())))
 
-    case Install() :: _           => execute(installCompletions())
-    case Help() :: _              => execute(usage(help, Exit.Ok))
-    case Quit() :: _              => execute(quit())
+      case Install() :: _           => execute(installCompletions())
+      case Help() :: _              => execute(usage(help, Exit.Ok))
+      case Quit() :: _              => execute(quit())
 
-    // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand. Since
-    // Soundness #1784, `Pathname` composes its suggestions with the subcommands' rather than
-    // replacing them, so the first word completes as both.
-    case Pathname(file) :: Nil =>
-      execute(manifest(file))
+      // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand. Since
+      // Soundness #1784, `Pathname` composes its suggestions with the subcommands' rather than
+      // replacing them, so the first word completes as both.
+      case Pathname(file) :: Nil =>
+        execute(manifest(file))
 
-    case _ => execute(usage(help, Exit.Fail(1)))
+      case _ => execute(usage(help, Exit.Fail(1)))
 
-  dispatch
+    dispatch
 
 // `helpTree` builds the tree from the *suggestions* each argument position offers, and a position
 // taking a path offers the working directory's contents — indistinguishable, at that point, from
@@ -303,7 +313,7 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
 
   given Stdio = cli.stdio
   import errorDiagnostics.stackTracesDiagnostics
-  import workingDirectories.javaWorkingDirectory
+  import workingDirectories.javaBaseWorkingDirectory
 
   given entrypoint: (Entrypoint^{service}) = service
 
@@ -311,11 +321,11 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
   // guards against is everything that is not one — a `NoClassDefFoundError` from a jar rebuilt
   // under a running daemon is the case that motivated it (see `parasite` #1743). Installation
   // classloads late and lazily, in the daemon's long-lived JVM, and a `Throwable` that escapes
-  // here reaches the worker's failure path, where it is easy to lose entirely. `InstallError` —
+  // here reaches the worker's failure path, where it is easy to lose entirely. `Install.Error` —
   // an error, and therefore trackable — is recovered, not caught.
   try
     recover:
-      case error: InstallError =>
+      case error: exoskeleton.Install.Error =>
         Out.println(t"lira: could not install tab-completions")
         Exit.Fail(2)
 
@@ -339,8 +349,8 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
 // raise; adding a call that raises something else is a compile error until it is handled here or
 // in the command itself, which is the point.
 private def command(using cli: Cli)
-    ( block: (Tactic[Lira.Error], Tactic[StoreError], Tactic[IoError], Tactic[Path.Error],
-              Tactic[DisciplineError], Tactic[Name.Error], Tactic[StreamError]) ?->{cli} Exit )
+    ( block: (Tactic[Lira.Error], Tactic[StoreError], Tactic[Io.Error], Tactic[Path.Error],
+              Tactic[Discipline.Error], Tactic[Name.Error], Tactic[Truncation.Error]) ?->{cli} Exit )
 :   Exit =
 
   given Stdio = cli.stdio
@@ -348,11 +358,11 @@ private def command(using cli: Cli)
   recover:
     case error: Lira.Error      => report(error.message)
     case error: StoreError      => report(error.message)
-    case error: IoError         => report(error.message)
+    case error: Io.Error         => report(error.message)
     case error: Path.Error      => report(error.message)
-    case error: DisciplineError => report(error.message)
+    case error: Discipline.Error => report(error.message)
     case error: Name.Error      => report(error.message)
-    case error: StreamError     => report(error.message)
+    case error: Truncation.Error     => report(error.message)
 
   . protect(block)
 
@@ -371,15 +381,15 @@ private def resolve(file: Text)(using cli: Cli)(using Tactic[Path.Error]): Path 
   safely(file.as[Path on Local]).or:
     t"${cli.workingDirectory.directory()}/$file".as[Path on Local]
 
-private def load(file: Path on Local)(using Cli)(using Tactic[IoError], Tactic[StreamError])
+private def load(file: Path on Local)(using Cli)(using Tactic[Io.Error], Tactic[Truncation.Error])
 :   Data =
-  import filesystemBackends.virtualMachine
+  import filesystemBackends.javaBaseFilesystem
   file.read[Data]
 
-private def save(file: Path on Local, data: Data)(using Cli)(using Tactic[IoError]): Unit =
-  import filesystemBackends.virtualMachine
-  import filesystemOptions.createNonexistentParents.enabled
-  import filesystemOptions.overwritePreexisting.enabled
+private def save(file: Path on Local, data: Data)(using Cli)(using Tactic[Io.Error]): Unit =
+  import filesystemBackends.javaBaseFilesystem
+  import filesystemOptions.createNonexistentParents
+  import filesystemOptions.overwritePreexisting
 
   file.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
     handle.write(Chain(data))
@@ -578,45 +588,13 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
 
         if emit(t"android", releases) then Exit.Ok else Exit.Fail(1)
 
-      // Declaration carriers, one contract module: `.d.ts` under `dts/1` (a Node-builtins
-      // contract), `.wit` under `wit/1` (a WASI world). The atomizers are xenophile's — the
-      // same implementations `lira atoms` already names — so a harvested contract's atoms are
-      // exactly what a verifier recomputes.
-      case carrier @ ("dts" | "wit") =>
-        val (discipline, suffix) = carrier match
-          case "dts" => (DtsDiscipline, t".d.ts")
-          case _     => (WitDiscipline, t".wit")
-
-        sources match
-          case module :: rest if !rest.stdlib.isEmpty =>
-            var good = true
-
-            val releases = rest.map: source =>
-              val path = resolve(source)
-              val name = path.name
-
-              val tag =
-                if name.s.endsWith(suffix.s) then Text(name.s.dropRight(suffix.s.length))
-                else name
-
-              val content = HostTree.surface(path.encode, suffix)
-
-              if content.stdlib.isEmpty then
-                Out.println(t"lira: no *$suffix files found at $source")
-                good = false
-              else Out.println(t"harvested $tag (${content.stdlib.size} files)")
-
-              HostRelease(tag, content)
-
-            if !good then Exit.Fail(1)
-            else if emit(module, releases, discipline) then Exit.Ok
-            else Exit.Fail(1)
-
-          case _ =>
-            Out.println(t"lira: pass a module name, then one source (a directory or a single")
-            Out.println(t"      *$suffix file) per vendor release, in succession order")
-            Exit.Fail(1)
+      // `harvest dts` and `harvest wit` belong here — declaration carriers, one contract
+      // module: `.d.ts` under `dts/1` (a Node-builtins contract), `.wit` under `wit/1` (a WASI
+      // world). Both are specified (spec/dts.md, spec/wit.md) but neither discipline exists in
+      // Soundness yet, and a harvested contract's atoms must be exactly what a verifier
+      // recomputes — which only the real atomizer can produce. Restore the branch, and `dts`
+      // and `wit` below, once reliquary gains them.
 
       case other =>
-        Out.println(t"lira: unknown host kind '$other' (expected jdk, android, dts or wit)")
+        Out.println(t"lira: unknown host kind '$other' (expected jdk or android)")
         Exit.Fail(1)

@@ -62,3 +62,30 @@ implemented as the [`reliquary`](https://github.com/propensive/soundness) module
 and the Scala discipline (`tasty/1`) as its `degustation` module; the `lira`
 command-line tool (in this repository, built on Soundness) covers the artifact commands today,
 with its full design — store, cache, and node — in [`design/tool.md`](design/tool.md).
+
+## Building the `lira` tool
+
+The tool is a Mill build over three modules: `core`, the command surface and the store, published
+as `dev.propensive:lira-core`; `launcher`, the one-line invocation point; and `test`. It depends on
+Soundness alone — `reliquary` for the format, `degustation` for the Scala discipline — and is not
+a Pyrocosm application. The Soundness release it builds against is pinned in
+[`etc/refs`](etc/refs), and the tools it runs (fume, flair) in [`etc/tools`](etc/tools).
+
+```sh
+make sync-deps   # install the pinned Soundness release into ~/.ivy2/local
+make tools       # install fume and flair
+make test        # run the suite with fume  (make test-plain uses plain java)
+make lira        # build the native executable for this machine
+make install     # copy it to ~/.local/bin, which is what a `.lira` file's `#!` line resolves
+make check       # check the sources with flair
+```
+
+A release — the `lira-core` jar, then the per-platform executables built from it — is published to
+GitHub Releases by `make release VERSION=X.Y.Z`, after bumping `liraVersion` in `build.mill`,
+exactly as fume, flair, flame and tel are released.
+
+Two commands are narrower than [`design/tool.md`](design/tool.md) describes, because the
+disciplines they need are specified but not yet implemented in Soundness: `lira atoms` names
+`classfile/1`, `jsig/1`, `tasty/1` and `capability/1` only, and `lira harvest` takes `jdk` and
+`android` but not `dts` or `wit`. Both are marked in the source, to be restored as reliquary gains
+each discipline.
