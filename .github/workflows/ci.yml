@@ -4,7 +4,8 @@ name: CI
 # workflow — see propensive/.github for what it does and what it expects of this repository (the
 # ./mill wrapper, etc/shared, and the pins in etc/refs).
 #
-# The launcher resolves lira-core as a published coordinate, so it is published locally first.
+# Each launcher resolves its library (lira-core, fury-core, fever-core) as a published coordinate,
+# so every publishing module is published locally first (`__.publishLocal`).
 
 on:
   pull_request:
@@ -21,8 +22,8 @@ jobs:
   scala:
     uses: propensive/.github/.github/workflows/scala-ci.yml@main
     with:
-      compile:       lira.core.compile
-      publish_local: lira.core
-      assembly:      lira.launcher.assembly
+      compile:       lira.core.compile lira.tool.compile fury.core.compile fever.core.compile
+      publish_local: __
+      assembly:      lira.launcher.assembly fury.launcher.assembly fever.launcher.assembly
       test_assembly: lira.test.assembly
       test_main:     lira.runTests

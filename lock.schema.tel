@@ -1,0 +1,57 @@
+tel 1.0 specification.tel/tels:1.0.0
+name lock
+
+# Draft TEL schema for build.lock (fury.md §12; builds.md §9.2): a verifiable
+# memoization of resolution, with authority over exactly one thing — when the world
+# was sampled. One entry per (coordinate, selector) that resolution touched across the
+# whole declared space, so different cases resolving different selectors of one module
+# coexist. Each entry is a distribution.md §5 Release record with its inclusion proof
+# against a signed tree head recorded once per directory. Written deterministically
+# (entries sorted by coordinate then selector; proofs in leaf order) so diffs are
+# meaningful. A selector in build.tel with no entry, or an entry whose selector no
+# longer matches, is a stale lock: an error unless --update.
+
+scalar Coordinate
+  description  A <domain>/<name> index coordinate
+  validate     module-ref
+
+scalar Selector
+  description  A version prefix x[.y[.z]], or a tag-name where not version-shaped (§12.6)
+  validate     selector
+
+scalar Hash
+  description  A domain-separated hash (spec §7.1), as the format prints it
+  validate     hash
+
+# The signed tree head (distribution.md §4) the entries below were proved against.
+record Head
+  description  One directory's tree head at sampling time
+
+  field directory String
+  field size String
+  field root Hash
+  field sampled String
+
+# The bounded Release record (distribution.md §5) plus its Merkle proof.
+record Entry
+  description  One resolution, `<kind> <coordinate> <selector>`, and the release it landed on
+
+  field coordinate Coordinate
+  field selector Selector
+  field version String optional
+  field snapshot Hash
+  field manifest Hash
+  field payload Hash
+  field location String
+  field publisher Hash
+  field directory String
+  field leaf String
+  field proof Hash optional repeatable
+
+document
+  field head Head optional repeatable
+  field dependency Entry optional repeatable  # include selectors
+  field tool Entry optional repeatable        # tool version selectors (builds.md §9.1 gap 1)
+  field component Entry optional repeatable   # per-edge component selectors
+  field host Entry optional repeatable        # host-contract tag resolutions (hosts.md §3)
+  field registry Entry optional repeatable    # registry layers (fury.md §7)

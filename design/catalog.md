@@ -4,7 +4,7 @@ The companion to [`glossary.md`](glossary.md): where the glossary defines the ta
 *categories*, this catalog names the *instances* — specific tools, forms, contracts,
 disciplines and schemas mentioned across the LIRA specification and the build tool
 design, each identified by what kind of thing it is. It is the prose precursor of the
-machine-readable registry (`universes.tel`, universes.md §6).
+machine-readable registry (`registry.tel`, universes.md §6).
 
 ## Source forms
 
@@ -159,6 +159,9 @@ tables, CA trust roots, the MIME database.
 | `build` (`build.schema.tel`) | The build-file schema, registered locally; publishable as a `tels/1` module |
 | `lira-inputs` | Planned: the input-closure document whose digest is the `inputs/1` source scheme (builds.md §3.1 addendum) |
 | `tool` (`tool.schema.tel`) | Tool descriptors, extracted at publish (builds.md §14.3); registered; worked instance `scalac.tool.tel` |
+| `local` (`local.schema.tel`) | The per-checkout and user-global local file (fury.md §11); draft |
+| `lock` (`lock.schema.tel`) | `build.lock`: Release records with proofs per (coordinate, selector) (fury.md §12); draft |
+| `registry` (`registry.schema.tel`) | `registry.tel`, this catalog's machine-readable form (fury.md §7); draft |
 
 ## Overloaded words, disambiguated
 

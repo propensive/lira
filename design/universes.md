@@ -246,7 +246,7 @@ deliverable **T**:
    host. These are ordinary versioned-interface constraints on the host axis.
 4. Execute the pipeline: materialize sections, run the egress tool, run join tools.
 
-The DAG should ultimately be machine-readable — a TEL document (`universes.tel`) shipping with
+The DAG should ultimately be machine-readable — a TEL document (`registry.tel`, once `universes.tel`) shipping with
 the toolchain, registering universes, egresses, joins, and the tools implementing each edge —
 so that step 4 is data-driven and new universes/egresses are registry entries, not code
 changes. Steps 1–3 are now normative as the **target** and `serves` rules of spec §13.2–§13.3
@@ -449,7 +449,7 @@ Still proposed:
    application axis, the triple-parameterized families `native-exe/<triple>` and
    `native-image/<triple>` (§1, §2). The application axis is not a schema object, so this half
    is a registry concern rather than a spec one.
-2. The machine-readable pipeline registry (`universes.tel`) driving §4.1 step 4, so that
+2. The machine-readable pipeline registry (`registry.tel`) driving §4.1 step 4, so that
    egresses, joins and the tools implementing them are registry entries rather than build-tool
    code. Application-to-application packaging edges (`jar → xeq-bundle`,
    `wasi-component → wasi-oci`) belong in it on the same footing as the egresses out of a

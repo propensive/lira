@@ -1,0 +1,91 @@
+tel 1.0 specification.tel/tels:1.0.0
+name local
+
+# Draft TEL schema for local.tel (fury.md §11) — the file with one role: this
+# checkout's deviations from the shared build, or, in its user-global instance at
+# ~/.config/lira/local.tel, who this person is and what this machine provides for
+# every project. Every record here is justified by that role; anything about how the
+# Fury program runs (daemon, web, swarm) belongs in Fury's own config.tel, and anything
+# identity-affecting belongs in build.tel. Precedence: tool built-ins → user-global
+# local.tel → build.tel → project local.tel → command → command line.
+
+scalar ModuleRef
+  description  A project-local module name, or a <domain>/<name> index coordinate
+  validate     module-ref
+
+scalar Path
+  description  A /-separated file path, ~ permitted for the home directory
+  validate     path
+
+scalar Kind
+  description  A registered presumption kind: envvar, command, file, dataset, ...
+  validate     kind
+
+# Transport override for a repository declared in build.tel: never identity or
+# version authority.
+record Repository
+  field name Identifier
+  field origin String
+
+# A default option selection for local builds; commands and the command line override.
+record Selection
+  description  A default option selection, `set <option> <case>`
+
+  field option Identifier
+  field case Identifier
+
+record Signer
+  description  The signer identity and where this machine keeps its key
+
+  field identity String
+  field key Path
+
+record Given
+  description  A platform contract this machine provides, `given <name> [<version>]`
+
+  field name Identifier
+  field version String optional
+
+record Presumption
+  description  A guarantee this machine makes, `guarantee <kind> <name> [<predicate>]`
+
+  field kind Kind
+  field name String
+  field predicate String optional
+
+record Downstream
+  description  A consumer of this project's releases, run as a test case for local changes
+
+  field name Identifier
+  field origin String
+  field run String
+
+# The npm-link workflow (builds.md §9.1 gap 4): a coordinate resolved to a local path,
+# a commit, or a .lira file regardless of selector. Compiles to a build pin, so L118
+# fences publication with no new rule.
+record Pin
+  description  Resolve a coordinate locally, `pin <coordinate> <origin>`
+
+  field module ModuleRef
+  field origin String
+
+# The store is a machine fact (builds.md §14.5): its location, read-only lower tiers
+# (tool.md §2.1), and byte budget (tool.md §3). `project` redirects the store into the
+# project directory for a checkout that wants its outputs beside its sources
+# (fury.md §4) — a per-checkout record, never build.tel.
+record Store
+  field path Path optional
+  field tier Path optional repeatable
+  field budget String optional
+  field project Flag optional
+
+document
+  field repository Repository optional repeatable
+  field set Selection optional repeatable
+  field signer Signer optional
+  field given Given optional repeatable
+  field guarantee Presumption optional repeatable
+  field downstream Downstream optional repeatable
+  field pin Pin optional repeatable
+  field store Store optional
+  field budget String optional  # the scheduler's local budget or scaling factor (fury.md §5)

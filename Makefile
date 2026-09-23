@@ -1,7 +1,7 @@
 # Publish the library to the local ~/.ivy2 (the launcher resolves `lira-core` from there; burdock
 # will NOT externalize a locally-published copy unless its bytes match a release asset).
 publishLocal:
-	./mill lira.core.publishLocal
+	./mill __.publishLocal
 
 # Build the invocation-point `launcher` module as a plain (clean, no shell-preamble) assembly JAR.
 # `launcher` depends on lira-core as a PUBLISHED coordinate resolved from ~/.ivy2/local, so the
@@ -9,9 +9,14 @@ publishLocal:
 # last published (a release's jar, say, whose bytes then externalize to that release's download,
 # and local changes never reach the executable). `clean lira.launcher` for the same reason: the
 # coordinate is fixed, so Mill's cached resolution would not notice the fresh publish.
+# One `./mill` invocation per launcher, deliberately: asked for two launcher assemblies at once,
+# Mill 1.1.5 produces only the first jar (observed with `fury.launcher.assembly
+# fever.launcher.assembly`), and xeq will happily wrap a jar that does not exist.
 assembly: publishLocal
-	./mill clean lira.launcher
+	./mill clean lira.launcher fury.launcher fever.launcher
 	./mill lira.launcher.assembly
+	./mill fury.launcher.assembly
+	./mill fever.launcher.assembly
 
 # Publish lira to GitHub Releases: the lira-core jar first, then — once its digest is indexed — the
 # repackaged `lira` executables, added to the same release. See release-launcher.sh in
@@ -43,6 +48,32 @@ lira.jar: assembly
 # without burdock externalization; the released executables are built exactly this way.
 lira: lira.jar xeq-fetch
 	dist/xeq build --jar lira.jar --out lira
+
+# The same path for fury and fever (design/fury.md §14): repackage each launcher's assembly, then
+# build a native executable from it. Pyrocosm IS among the hints here, since both depend on it.
+fury.jar: assembly
+	cp out/fury/launcher/assembly.dest/out.jar fury.jar
+	java -cp fury.jar soundness.repackage --github propensive/lira,propensive/soundness,propensive/proscala,propensive/pyrocosm
+
+fever.jar: assembly
+	cp out/fever/launcher/assembly.dest/out.jar fever.jar
+	java -cp fever.jar soundness.repackage --github propensive/lira,propensive/soundness,propensive/proscala,propensive/pyrocosm
+
+fury: fury.jar xeq-fetch
+	dist/xeq build --jar fury.jar --out fury
+
+fever: fever.jar xeq-fetch
+	dist/xeq build --jar fever.jar --out fever
+
+install-fury: fury
+	-./fury quit 2>/dev/null || true
+	rm -f ${HOME}/.local/bin/fury
+	cp fury ${HOME}/.local/bin/
+
+install-fever: fever
+	-./fever quit 2>/dev/null || true
+	rm -f ${HOME}/.local/bin/fever
+	cp fever ${HOME}/.local/bin/
 
 # Fetch the pinned `xeq` builder script into dist/xeq.
 xeq-fetch:
@@ -104,6 +135,6 @@ snapshot-prune:
 	./etc/shared snapshot-prune.sh lira $(DAYS)
 
 dev:
-	./mill -w lira.core.compile
+	./mill -w __.compile
 
-.PHONY: publishLocal assembly release xeq-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev
+.PHONY: publishLocal assembly release xeq-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev fury fever install-fury install-fever

@@ -20,7 +20,7 @@
 > half-designed — run settings, artifact selection, precedence order, local.tel
 > completion, environment deltas, command args, multi-parent assemble, parameterized
 > edges in practice; 4: untouched — build.lock, the publishing workflow,
-> universes.tel, diagnostics, codegen, remote store, CLI relationship, the real
+> registry.tel (then universes.tel), diagnostics, codegen, remote store, CLI relationship, the real
 > trait, warm-equals-cold mechanics; 5: verification debt — the module core manifest
 > hand-derivation FIRST, the two leak-checks, the local.tel gitignore question).
 > Update gaps.md as items land rather than growing this handover further.
@@ -95,7 +95,7 @@
 > extensions), design/glossary.md (~60 terms, LIRA + build-tool vocabulary), and
 > design/catalog.md (instances by category: source forms, universes, application
 > types, carriers, disciplines, tools with their edges, host contracts, presumption
-> kinds, schemas — the prose precursor of universes.tel; ends with the
+> kinds, schemas — the prose precursor of registry.tel (then universes.tel); ends with the
 > overloaded-words disambiguation: WASM is four things, JAR two, WASIp2 a host
 > contract, JavaScript a universe). builds.md §12.2 + guarantees.schema.tel (new,
 > registered as lira-guarantees): the guarantee interchange format — canonical BinTEL,
@@ -382,7 +382,7 @@ what an egress does; an environment merely **coheres**. Don't let the two words 
 4. **js / wasm are not universes for Scala.** `sjsir` is the universe; js-app,
    wasm-browser and wasi-component are *egress products* from that one section. Likewise
    `nir` is the universe and elf/pe/macho per architecture are application types.
-5. **The `toolchain` block is `universes.tel`** — the machine-readable pipeline registry
+5. **The `toolchain` block is `registry.tel`** — the machine-readable pipeline registry
    still listed as proposed in `universes.md` §6. Jon's DAG comment (tools as edges, formats
    as nodes, path resolution between any format pair) is almost word-for-word `universes.md`
    §4. It should eventually distinguish edge *kinds*: compiler edges into universes, egress

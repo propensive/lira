@@ -5,9 +5,11 @@
 # build reads this file (`deps` in build.mill); `make sync-deps` and CI install what it names.
 # See propensive/.github for the whole flow.
 #
-# Lira depends on Soundness alone — and specifically on reliquary, which is the language-blind
-# implementation of the LIRA format this repository specifies; the `lira` command here is only its
-# front end. It is NOT a Pyrocosm application: nothing compiles against pyrocosm-model or its
-# frontends, and nothing should. The flair plugin and fume, which this repository merely runs, are
-# tools rather than dependencies: see etc/tools.
-propensive/soundness	0.67.0
+# The `lira` tool depends on Soundness alone — specifically on reliquary, the language-blind
+# implementation of the LIRA format this repository specifies; the command is only its front end,
+# and is NOT a Pyrocosm application. `fury` and `fever`, the build tool and the Scala compiler
+# service developed beside it (design/fury.md, design/fever.md), ARE Pyrocosm tools, hence the
+# second pin; Pyrocosm's own pin of Soundness is what fixes the first. The flair plugin and fume,
+# which this repository merely runs, are tools rather than dependencies: see etc/tools.
+propensive/soundness	0.68.0
+propensive/pyrocosm	0.3.0
