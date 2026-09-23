@@ -212,7 +212,9 @@ A build tool resolving a buildpath:
    declare integrations (spec §9.5) this step also *searches* for a valid assignment rather than
    merely checking one; the index is unaffected, since integrations live in the manifest already
    fetched at step 2 and not in the bounded `Release` record.
-4. **Download** full artifacts; verify `payload.hash`; materialize sections into the
+4. **Download** full artifacts — or, for a release whose predecessor the store already holds
+   and whose host offers one, an increment against it (spec `increment.md`), which is
+   applied and verified to the same `payload.hash`; materialize sections into the
    content-addressed cache (spec §13.5).
 
 Steps 2–4 hit GitHub/CDN, not the index; the index's per-build cost is a handful of
@@ -245,6 +247,9 @@ sub-millisecond datagrams. Organizations can run a caching mirror with zero trus
 - Rate limiting and abuse handling on the HTTPS registration path.
 - Whether the index should also serve `uses`/delta blob summaries so staleness queries
   (spec §13.4) can be answered without fetching predecessors.
+- Whether `Release` records, or a naming convention for release assets, should advertise the
+  increments a publisher has uploaded (spec `increment.md`; tool.md §10) — the record is
+  bounded, so at most a count or a flag would fit, and the asset listing may be enough.
 - Mirror/witness protocol details (log range format, gossip envelope) — partially answered by
   the store API of tool.md §7 (`SET-ROOT` commitments plus want/have blob sync); the gossip
   envelope remains open.

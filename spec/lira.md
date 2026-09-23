@@ -381,7 +381,9 @@ never collide: `lira/1:leaf` and `lira/1:node` (the transparency log, distributi
 `lira/1:set-leaf` and `lira/1:set-node` (a node's published-set commitment, tool.md §7); and
 `lira/1:manifest-bytes` (the raw bytes of a manifest as stored, served, and pinned by
 distribution records, tool.md §2.2 — distinct from `lira/1:manifest`, which hashes the
-canonical signing encoding and so identifies content rather than bytes).
+canonical signing encoding and so identifies content rather than bytes). One companion
+deliberately reserves none: an increment ([`increment.md`](increment.md)) has no identity
+(**L156**) and is designated by the two payload hashes it connects.
 
 ## 8. Payload
 
@@ -400,6 +402,14 @@ as a hard limit during decompression and MUST reject a payload whose decompresse
 not exactly the declared value (**L102**) — the upper bound is what bounds
 decompression-bomb exposure. A payload whose compressed bytes do not decode as a Brotli stream
 is malformed (**L139**).
+
+A release MAY also be transferred as an **increment** relative to a release the receiver
+already holds ([`increment.md`](increment.md)): a file carrying this manifest verbatim and a
+command stream that reconstructs this blob stream from the other's, changed blobs compressed
+in the context of their predecessors. What it yields is the decompressed blob stream, verified
+under this section and §8.2–§8.4 as any payload is (**L155**); the receiver's own envelope
+over it is as good as the publisher's, which is exactly what this section's indifference to
+compressed bytes provides for.
 
 ### 8.2 Blob Stream
 
@@ -1607,7 +1617,9 @@ runtime for the whole of that lifetime ([`environments.md`](environments.md)).
 ## 14. Manifest Schema
 
 The `lira` TEL schema, and the four companion schemas for metadata blobs, shown in TEL text;
-stored instances are BinTEL (§5.1, §8.3). The scalar
+stored instances are BinTEL (§5.1, §8.3). A fifth companion schema, `lira-increment`, is
+defined by [`increment.md`](increment.md) §4 for the header of an increment file, and is held
+by readers on the same terms. The scalar
 validators are normative: `base-256-hash` is exactly 32 BASE-256 characters; `base-256` is
 one or more BASE-256 characters; `module-name` is
 kebab-case segments joined by `/` or `.`; `namespace` is dotted package-style segments
@@ -2018,7 +2030,10 @@ file (and, where noted, additional artifacts):
    signature ends verification: the file is unreadable, not judged), decodes the manifest as
    one embedded BinTEL document conforming to the `lira` schema (**L101**), and checks that
    payload bytes follow (§5.1, **L116**);
-1. decompresses the payload within `payload.length` and checks `payload.hash` (§8.4);
+1. decompresses the payload within `payload.length` and checks `payload.hash` (§8.4) — a
+   receiver applying an increment reaches this step's result by reconstruction instead
+   ([`increment.md`](increment.md) §7, **L152**, **L155**), having verified the embedded
+   manifest (steps 0 and 8) first, and continues identically;
 2. recomputes every blob hash while scanning the stream and checks sortedness and uniqueness
    (§8.2), and resolves every referenced blob (§8.3);
 3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3), and recomputes
@@ -2089,7 +2104,9 @@ decompressed blob stream — every identity of §6 and
 the decompressed stream for exactly this reason. And signing is excluded: the default ML-DSA
 signing mode is hedged (randomized), so re-signing yields different signature values over the
 same signed message; determinism claims apply to the file with its `signature` fields removed,
-which is also precisely the signing domain (§15.2).
+which is also precisely the signing domain (§15.2). Increment files are excluded altogether:
+they are transport, self-deterministic per toolchain but reproducible across none, and carry
+no identity ([`increment.md`](increment.md) §8, **L156**).
 
 Reproduction needs the inputs named. A release's `source` records (§14) state, per producer
 claim, which sources its toolchain consumed: a scheme (`git-commit`, a tree-hash scheme), the
@@ -2107,7 +2124,12 @@ to reproduce and attest a release.
 
 ## 18. Security Considerations
 
-- **Decompression bombs**: bounded by mandatory enforcement of `payload.length` (§8.1).
+- **Decompression bombs**: bounded by mandatory enforcement of `payload.length` (§8.1); for
+  an increment, by bounds derived from the same signed value before any body is decoded
+  ([`increment.md`](increment.md) §7, **L152**).
+- **Increment tampering**: an increment's header is unsigned, but its manifest is verbatim
+  and signed and its result is verified as a payload, so no alteration can yield a release
+  other than the one signed; a tampered increment fails (**L155**) rather than misleads.
 - **Path traversal**: excluded by tree path rules (§9.2).
 - **Hash agility**: deliberately absent within an epoch; BLAKE3-256 is the only hash, and any
   future change is an epoch change (§7.1). Signature agility is present but explicit (§15.1).

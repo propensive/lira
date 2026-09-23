@@ -39,7 +39,7 @@ import logging.silentLogging
 import systems.javaBaseSystem
 import textSanitizers.strictSanitizer
 
-// `lira delta` (design/tool.md §5.1): what changed between two releases of one module, and what
+// `lira diff` (design/tool.md §5.1): what changed between two releases of one module, and what
 // grade the change carries. The grade is the whole of the compatibility question — `Grade.between`
 // is set arithmetic over atoms and needs no listing to reach its verdict (LIRA §10.3) — so the
 // listing below exists purely to answer the reader's next question, which is *what* changed.
@@ -62,7 +62,7 @@ private enum Change:
 
 private case class Entry(key: Text, atomClass: Atom.Class, change: Change)
 
-private def delta(previous: Path on Local, next: Path on Local, blob: Optional[Text])
+private def diff(previous: Path on Local, next: Path on Local, blob: Optional[Text])
     (using cli: Cli)
 :   Exit = command:
   given Stdio = cli.stdio
@@ -72,7 +72,7 @@ private def delta(previous: Path on Local, next: Path on Local, blob: Optional[T
 
   if before.manifest.module != after.manifest.module then
     Out.println(t"lira: ${before.manifest.module} and ${after.manifest.module} are different")
-    Out.println(t"      modules; a delta compares two releases of one module")
+    Out.println(t"      modules; a diff compares two releases of one module")
     Exit.Fail(1)
   else
     val beforeReport = Verification.install(before)

@@ -113,6 +113,20 @@ The loose blobs are what deduplication, materialization, and want/have sync (§7
 blob tier is derived data: `gc` may evict loose blobs of a release whose payload is retained
 and re-extract them on demand.
 
+A release that arrived as an increment (spec [`increment.md`](../spec/increment.md)) breaks
+the first half of this: the receiver reconstructs the decompressed stream and never sees the
+publisher's envelope. The store therefore distinguishes a **published** envelope — the bytes
+the publisher uploaded, hash-pinned by the `Release` record's total byte-length
+(distribution.md §5) — from a **local** one, the store's own encoding of a reconstructed
+stream. Both live under `payload/<hash>`, since the key is the decompressed stream's; a local
+envelope is marked as such, satisfies every verification the store performs (§2.4 — stamps
+are over the decompressed stream and are unaffected), reconstructs a `.lira` file that is
+the same release, but is never offered as the published asset, never checked against the
+record's total byte-length, and is replaced by the published envelope if one is later
+fetched. A node serving the host or mirror role that holds only a local envelope for a
+release serves its blobs and its manifest, and fetches the published envelope before serving
+*that*.
+
 ### 2.4 Integrity
 
 - **Eager on write**: every object is hashed before it is linked into place; nothing enters
@@ -239,11 +253,12 @@ else stays a flat verb.
 | `lira verify <file.lira>`                  | install-grade verification                                       |
 | `lira jar <universe> <file.lira>`          | canonical derivative JAR — now materializing *via* the store §2.5 |
 | `lira assign <file> [<prev>] [--major]`    | derive the next version (spec §12.5)                             |
-| `lira delta <prev> <next> [--blob <file>]` | what changed between two releases, and its grade (§5.1 below)    |
+| `lira diff <prev> <next> [--blob <file>]`  | what changed between two releases, and its grade (§5.1 below)    |
+| `lira delta <module> <from> <to> [--out <file>]` | write a delta carrying the cached release `<to>` relative to `<from>` (spec increment.md §8) |
 | `lira atoms <file> [--realm …]`            | the atom listing of a release, or of a bare artifact (§5.2)      |
 | `lira harvest jdk\|android …`              | host-contract lineages from `ct.sym` / `android.jar` (§5.3)      |
 
-#### 5.1 `delta`
+#### 5.1 `diff`
 
 `Grade.between` is the whole compatibility question and answers it without a listing — the check
 is set arithmetic over atoms (spec §10.3). The listing answers the reader's *next* question: the
@@ -371,7 +386,8 @@ seam (spec §14), while the interface stays here.
 | Command                                            | Semantics                                        |
 | --------------------------------------------------- | ------------------------------------------------ |
 | `lira resolve <coord>[@<ver>] [--compat <snapshot>] [--from <source>]` | release record + evidence; `--compat` is the spec §13.2 primitive |
-| `lira fetch <coord\|hash>`                          | resolve, download the closure into the store, print the payload hash |
+| `lira fetch <coord\|hash>`                          | resolve, download the closure into the store, print the payload hash; prefers an increment (§7) against a held release where the source offers one |
+| `lira add <file…>`                                  | ingest whole `.lira` files, or deltas, reconstructed against their cached base and verified (spec increment.md §7); `cache add` is the same |
 | `lira id <artifact>`                                | rehash under the appropriate domain, look up the release (§2.5) |
 
 ### Identity commands (new)
@@ -441,6 +457,15 @@ carries a signature.
   have-set intersects in one merge pass, and cross-version delta fetch is free because
   successive releases share most blobs. Belongs on streaming transports only; the 1232-byte
   UDP ceiling (distribution.md §6) excludes it from the datagram path.
+- **`INCREMENT <base>:<target>`** — the caller names two payload hashes, the base it holds
+  and the target it wants; the responder streams an increment file (spec
+  [`increment.md`](../spec/increment.md)), or declines. Where want/have skips the blobs two
+  releases share, an increment additionally compresses each changed blob against its
+  predecessor, which for compiled code is most of the remaining bytes. The responder may
+  serve a stored increment the publisher produced or compute one on demand from its loose
+  blobs — an increment has no identity (L156), so the two are indistinguishable and equally
+  good — and the caller verifies the result as a payload (L155), so a responder is trusted
+  for nothing. Streaming transports only, as want/have.
 - **`SET-ROOT`** — a node commits its published set as a Merkle tree over the sorted object
   hashes it serves, and answers difference queries against the root. Mirrors sync by root
   comparison plus want/have for the difference. This is the third Merkle structure of
@@ -491,3 +516,18 @@ may only restrict (§4).
    rather than an open-ended one. Who holds the privilege remains open.
 2. **Referral depth**: one hop is the design (§4); whether real partner-chain topologies
    ever justify more, or whether the explicit-act-per-hop friction is exactly right.
+3. **Increments against a have-set**: spec increment.md names one base by payload hash and
+   references its records by ordinal. A variant that names priming context by blob hash
+   would let an `update` draw on any blob in the caller's loose-blob tier — a receiver
+   holding releases _n_−1 and _n_−2 but not _n_ — at 32 bytes per reference instead of one
+   or two; whether real update patterns ever leave a consumer without the immediate
+   predecessor is the question.
+4. **Who produces increments**: the publisher at publish time, uploaded beside the `.lira`
+   asset for the lineage predecessor and perhaps a few releases back; or a host-role node on
+   demand, from loose blobs, cached by (base, target) pair. Both are valid (an increment has
+   no identity); the first suits GitHub-hosted assets, the second suits nodes. Producing one
+   needs an encoder that can continue from a preloaded window: the tool carries a port of
+   pneumatic-brotli's encoder with that mode (`lira.Priming`), which belongs in pneumatic
+   itself once it gains one (its output already depends on the window alone, so the mode is a
+   preloaded hash chain and an offset, not a new algorithm); applying one needs nothing
+   beyond an RFC 7932 decoder.
