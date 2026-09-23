@@ -13,7 +13,10 @@ command dev    # continuous compilation, watching all changes
     set optimization debug   # option selection; overridable at the command line
 
 command test   # run the tests
-  run example/test
+  # A declared argument (fury.md §12): `fury test only=Foo`; undeclared arguments are
+  # errors, and there is no passthrough tail. Occasion-class: it enters no identity.
+  arg only *
+  run example/test $only
 
 # Extraction is the one way content leaves the hidden store: entries are named by
 # build-file vocabulary (an artifact's application type, or a container format for
@@ -301,10 +304,15 @@ project example # a project with the id "example"
   # (universes.md §1) — the triple is part of the type, so there is no elf/pe/macho.
   module app
     assemble core
-    artifact native-exe/x86_64-linux-gnu example
-    artifact native-exe/aarch64-linux-gnu example
-    artifact native-exe/x86_64-windows-msvc example.exe
-    artifact native-exe/aarch64-apple-darwin example
+
+    # Every artifact is named, and selection is by name only — `fury build app
+    # --artifact linux-x86`, or `artifact linux-x86` under a command's `build`; with
+    # several artifacts and no selection the build is an error, never a build of all
+    # (fury.md §12). The name is also the entry `extract` takes.
+    artifact linux-x86 native-exe/x86_64-linux-gnu example
+    artifact linux-arm native-exe/aarch64-linux-gnu example
+    artifact windows-x86 native-exe/x86_64-windows-msvc example.exe
+    artifact macos-arm native-exe/aarch64-apple-darwin example
 
   # A docker image: a packaging module, and a frozen environment-of-one
   # (builds.md §15) — it supplies givens to the application packaged inside it,
@@ -338,14 +346,14 @@ project example # a project with the id "example"
     # chain backward — oci-image/<platform> needs native-exe/<matching triple>,
     # binding the earlier-phase egress (platform↔triple mapping is registry
     # data). nir cells are architecture-agnostic: one cell, N links.
-    artifact oci-index
+    artifact index oci-index
       platform linux/amd64
       platform linux/arm64
 
   module test
     assemble core
     source src/test/*.scala
-    artifact xeq-bundle    # the registry's name for the format (was `xeq`)
+    artifact bundle xeq-bundle    # the registry's name for the format (was `xeq`)
 
       # an egress setting: build-tool config only — closed
       # artifacts are identified by digest, so this never
@@ -363,7 +371,7 @@ project example # a project with the id "example"
   module scalac-fork
     source src/compiler/*.scala
     include soundness.dev/compiler-core 2.1
-    artifact lira-tool
+    artifact plugin lira-tool
 
   # A module electing the forked compiler: per-module toolchain selection.
   module fork-test

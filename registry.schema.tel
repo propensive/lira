@@ -1,0 +1,125 @@
+tel 1.0 specification.tel/tels:1.0.0
+name registry
+
+# Draft TEL schema for registry.tel (fury.md §7; formerly universes.tel), the
+# machine-readable registry whose prose precursor is design/catalog.md: forms,
+# parameters, presumption kinds, tools, host-contract families and the schemas the
+# tool ships. One document; each built-in tool's descriptor is a sibling
+# <name>.tool.tel under tool.schema.tel, referenced by name. Edge kinds are not
+# stored — compiler, egress, join and packaging derive from the node kinds at an
+# edge's ends (builds.md §14.2). Extension is by published layers under this same
+# schema, merged additively; a later layer redefining an entry is a lint.
+
+scalar Form
+  description  A registered form name (builds.md §14.1), possibly with a <parameter> placeholder
+  validate     form
+
+scalar DisciplineId
+  description  A discipline identifier, e.g. tasty/1 (spec §11.1)
+  validate     discipline-id
+
+scalar ModuleRef
+  description  A <domain>/<name> index coordinate
+  validate     module-ref
+
+scalar Path
+  description  A /-separated file path
+  validate     path
+
+# --- Forms -----------------------------------------------------------------------
+
+record Source
+  description  A source form and the file extensions inferred to it (builds.md §14.4)
+
+  field name Form
+  field extension Identifier optional repeatable
+
+record Carrier
+  description  An interface-bearing artifact kind within a universe, and its discipline
+
+  field name Identifier
+  field discipline DisciplineId
+
+record Universe
+  description  A form whose content composes, with its carriers
+
+  field name Form
+  field carrier Carrier optional repeatable
+
+# A closed form paired with a host contract (universes.md §1); a parameterized family
+# names its parameter, bound by backward flow (builds.md §15.2).
+record Deliverable
+  field name Form
+  field format Identifier
+  field host ModuleRef
+  field parameter Identifier optional
+
+# --- Parameters -------------------------------------------------------------------
+
+record Parameter
+  description  A parameter domain, `parameter <name>`, listing its values
+
+  field name Identifier
+  field value Identifier optional repeatable
+
+record Mapping
+  description  A platform↔triple correspondence used by the backward flow
+
+  field platform Identifier
+  field triple Identifier
+
+# --- Presumption kinds -------------------------------------------------------------
+
+record Kind
+  description  A presumption kind word and the discipline governing it (many-to-one)
+
+  field name Identifier
+  field discipline DisciplineId
+
+# --- Tools ------------------------------------------------------------------------
+
+record Tool
+  description  A built-in tool, `tool <name> <descriptor>`, its descriptor a sibling .tool.tel
+
+  field name Identifier
+  field descriptor Path
+
+# A LIRA-distributed tool family (fury.md §6): a built-in name resolves to a coordinate
+# whose release is chosen by a rule over the locked version of another tool — `scalac`
+# to the Fever family by compiler version.
+record Family
+  description  A distributed tool family, `family <name> <coordinate>`, and its selection rule
+
+  field name Identifier
+  field coordinate ModuleRef
+  field by Identifier optional
+
+# --- Host contracts ---------------------------------------------------------------
+
+record Host
+  description  A host-contract family with its default steward and tag scheme (hosts.md §3)
+
+  field name Identifier
+  field steward String optional
+  field tags String optional
+
+# --- Schemas ----------------------------------------------------------------------
+
+record Schema
+  description  A TEL schema the tool ships, with its published coordinate
+
+  field name Identifier
+  field file Path
+  field coordinate ModuleRef optional
+
+document
+  field source Source optional repeatable
+  field universe Universe optional repeatable
+  field deliverable Deliverable optional repeatable
+  field parameter Parameter optional repeatable
+  field mapping Mapping optional repeatable
+  field kind Kind optional repeatable
+  field tool Tool optional repeatable
+  field family Family optional repeatable
+  field host Host optional repeatable
+  field schema Schema optional repeatable

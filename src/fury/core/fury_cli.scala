@@ -30,46 +30,56 @@
 ┃                                                                                                  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
                                                                                                   */
-package lira
-
-import java.lang as jl
-import java.util.concurrent.atomic as juca
+package fury
 
 import soundness.*
-import probably.TestEvent
 
-// lira's own suite, run WITHOUT fume: a `Suite` has no `main` of its own (the host — normally fume —
-// drives it through `invoke`), so this is the plain-`java` entry point `make test-plain` uses,
-// printing one line per completed test and exiting with the suite's status (0 = passed,
-// 1 = failures, 2 = the suite threw). `fume run -c <test jar>` (`make test`, and CI) remains the
-// full experience, discovering the suite from the assembly's `META-INF/services/probably.Suite`
-// index, which the beneficence plugin writes.
-@main
-def runTests(): Unit =
-  val passes = juca.AtomicInteger(0)
-  val failures = juca.AtomicInteger(0)
-  val out = jl.System.out.nn
+// `pyrocosm.Tool` is imported explicitly, so that it outranks the `Tool` the `soundness.*`
+// wildcard exports (anthology's); `standard` is a package-level extension on it.
+import backstops.silentBackstop
+import executives.completionsExecutive
+import interpreters.posixInterpreter
+import pyrocosm.Tool
+import systems.javaBaseSystem
+import threading.platformThreading
 
-  // Both suites run, lira's then fury's, and the worse status is the exit status.
-  def handle(event: TestEvent): Unit = event match
-    case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
-      if outcome.outcome == t"pass" || outcome.outcome == t"aspire-pass" then passes.incrementAndGet()
-      else failures.incrementAndGet()
-      out.println(t"[${outcome.outcome}] ${test.path.join(t" / ")}".s)
+// Fury as a Pyrocosm tool (fury.md): `about`, `install`, `quit` and `--version` come from `Tool`,
+// as does its configuration — the flag, then a `fury.`-prefixed system property, a `FURY_`-
+// prefixed environment variable, the project's `.pyrocosm/fury/config.tel` and the user's
+// `~/.config/fury/config.tel`. That file has one role — how the Fury program runs on this
+// machine (daemon, web front-end, swarm membership) — and never affects what a build produces
+// (fury.md §11). This is the skeleton of ladder step 0: the daemon and the standard commands;
+// `check` arrives with step 1.
+val Fury: Tool =
+  Tool
+    ( t"fury",
+      prose = t"Fury is the LIRA build tool: it reads a build file, plans a static DAG of steps " +
+        t"and runs them through tools, memoized in the content-addressed store, on this " +
+        t"machine or across a swarm of them." )
 
-    case TestEvent.DetailMessage(_, message) =>
-      out.println(t"    $message".s)
+// Exit statuses are declared as objects (soundness#1811), so that an `execute` block's result
+// type documents the precise union in the manpage's EXIT STATUS section.
+object UsageError extends Status(2, t"the command line was not understood")
 
-    case TestEvent.DetailCompare(_, expected, found, _) =>
-      out.println(t"    expected: $expected".s)
-      out.println(t"    found:    $found".s)
+object ui:
+  val Check = Subcommand("check", "parse and validate the build file")
 
-    case TestEvent.RunTerminated(error, _, _) =>
-      out.println(t"suite threw: ${error.components.map(_.message).join(t"; ")}".s)
+def run(): Unit =
+  cli:
+    Fury.standard:
+      arguments match
+        case ui.Check() :: _ =>
+          execute:
+            given Stdio = summon[Invocation].stdio
+            Check.run(summon[Invocation].workingDirectory.directory())
 
-    case _ => ()
-
-  val status = jl.Math.max(Tests.invoke(t"", handle), fury.Tests.invoke(t"", handle))
-
-  out.println(t"${passes.get} passed, ${failures.get} failed".s)
-  jl.System.exit(status)
+        case _ =>
+          execute:
+            given Stdio = summon[Invocation].stdio
+            Out.println(t"Usage: fury <subcommand>")
+            Out.println(t"")
+            Out.println(t"  check      parse and validate the build file")
+            Out.println(t"  about      show this tool's name, version and daemon")
+            Out.println(t"  install    install shell tab-completions and the manpage")
+            Out.println(t"  quit       stop the background daemon")
+            UsageError

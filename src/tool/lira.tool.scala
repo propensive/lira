@@ -32,44 +32,78 @@
                                                                                                   */
 package lira
 
-import java.lang as jl
-import java.util.concurrent.atomic as juca
-
 import soundness.*
-import probably.TestEvent
 
-// lira's own suite, run WITHOUT fume: a `Suite` has no `main` of its own (the host — normally fume —
-// drives it through `invoke`), so this is the plain-`java` entry point `make test-plain` uses,
-// printing one line per completed test and exiting with the suite's status (0 = passed,
-// 1 = failures, 2 = the suite threw). `fume run -c <test jar>` (`make test`, and CI) remains the
-// full experience, discovering the suite from the assembly's `META-INF/services/probably.Suite`
-// index, which the beneficence plugin writes.
-@main
-def runTests(): Unit =
-  val passes = juca.AtomicInteger(0)
-  val failures = juca.AtomicInteger(0)
-  val out = jl.System.out.nn
+import anthology.Format
 
-  // Both suites run, lira's then fury's, and the worse status is the exit status.
-  def handle(event: TestEvent): Unit = event match
-    case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
-      if outcome.outcome == t"pass" || outcome.outcome == t"aspire-pass" then passes.incrementAndGet()
-      else failures.incrementAndGet()
-      out.println(t"[${outcome.outcome}] ${test.path.join(t" / ")}".s)
+// `lira.tool`: the contract lives in an object under the `lira` package, so that plugins name it as
+// `lira.tool.Tool` while the package itself stays a single segment.
+object tool:
 
-    case TestEvent.DetailMessage(_, message) =>
-      out.println(t"    $message".s)
+  // The plugin contract (builds.md §14.3; fury.md §6; fever.md §3): what a tool tells the build
+  // tool about itself, and what one invocation of it exchanges. The information model is
+  // tool.schema.tel's, verbatim — a descriptor is the data `tool.tel` is extracted from at
+  // publish — and the invocation and outcome are BinTEL documents, so that the same payload
+  // crosses a method call, a UNIX socket to a tool daemon, or the swarm channel unchanged. Forms
+  // are anthology's `Format`s: the contract is built on anthology's types rather than
+  // duplicating them (fury.md §6), at the accepted cost of a Scala-oriented dependency for now.
+  //
+  // This is the skeleton the ladder's step 0 establishes; step 5 fills it in with the BinTEL
+  // codecs and the first implementation (Fever's `scalac` edges). One evolution rule from day
+  // one (builds.md §14.3): plugins IMPLEMENT `Tool`, so an abstract addition is a major under
+  // `tasty/1`; the trait grows by defaulted methods or optional side-traits, never by abstract
+  // members.
 
-    case TestEvent.DetailCompare(_, expected, found, _) =>
-      out.println(t"    expected: $expected".s)
-      out.println(t"    found:    $found".s)
+  // Whether a setting affects the output bytes (and so belongs in manifests and in the step's
+  // `inputs/1` identity) or has side effects only (and is never recorded).
+  enum Effect:
+    case Output, Nothing
 
-    case TestEvent.RunTerminated(error, _, _) =>
-      out.println(t"suite threw: ${error.components.map(_.message).join(t"; ")}".s)
+  // A setting SPECIFICATION — key and classification — never a value; values are configured in
+  // build.tel and, where output-affecting, recorded in section-scoped Tool records.
+  case class Setting(key: Text, affects: Effect)
 
-    case _ => ()
+  // A source-side form an edge consumes, required unless `optional`.
+  case class Input(form: Format, optional: Boolean = false)
 
-  val status = jl.Math.max(Tests.invoke(t"", handle), fury.Tests.invoke(t"", handle))
+  // One invocation kind, named by its output form unless stated (builds.md §14.2): the roles are
+  // `inputs` (consumed), `contexts` (dependency cells read, by universe, with the disciplines the
+  // edge `employs` over them and the carriers it `emits`), and the output.
+  case class Edge
+    ( output:     Format,
+      name:       Optional[Text]     = Unset,
+      parameter:  Optional[Text]     = Unset,
+      inputs:     List[Input]        = Nil,
+      contexts:   List[Format]       = Nil,
+      employs:    List[Text]         = Nil,
+      emits:      List[Text]         = Nil,
+      components: List[Text]         = Nil,
+      settings:   List[Setting]      = Nil ):
 
-  out.println(t"${passes.get} passed, ${failures.get} failed".s)
-  jl.System.exit(status)
+    // Edge ids default to the output form: `scalac/jvm`, `scalac/sjsir`.
+    def id: Text = name.or(output.id)
+
+  case class Descriptor(name: Text, edges: List[Edge], settings: List[Setting] = Nil)
+
+  // The target cell: universe, integration case and option case.
+  case class Cell
+    ( universe: Text, integration: Optional[Text] = Unset, option: Optional[Text] = Unset )
+
+  case class Diagnostic(severity: Text, message: Text, path: Optional[Text] = Unset)
+
+  // The accumulated context of one step, exchanged as a BinTEL document: input trees by form and
+  // context cells by universe are named by their store hashes — nothing but hashes ever crosses a
+  // process boundary (fury.md §1) — with the merged tool and edge settings and the cell.
+  case class Invocation
+    ( edge:     Text,
+      inputs:   Map[Text, Text],
+      context:  Map[Text, List[Text]],
+      settings: Map[Text, Text],
+      cell:     Cell )
+
+  // Outputs by form, as store hashes, and the diagnostics the tool produced.
+  case class Outcome(outputs: Map[Text, Text], diagnostics: List[Diagnostic])
+
+  trait Tool:
+    def descriptor: Descriptor
+    def invoke(invocation: Invocation): Outcome

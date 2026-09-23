@@ -30,46 +30,36 @@
 ┃                                                                                                  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
                                                                                                   */
-package lira
-
-import java.lang as jl
-import java.util.concurrent.atomic as juca
+package fury
 
 import soundness.*
-import probably.TestEvent
 
-// lira's own suite, run WITHOUT fume: a `Suite` has no `main` of its own (the host — normally fume —
-// drives it through `invoke`), so this is the plain-`java` entry point `make test-plain` uses,
-// printing one line per completed test and exiting with the suite's status (0 = passed,
-// 1 = failures, 2 = the suite threw). `fume run -c <test jar>` (`make test`, and CI) remains the
-// full experience, discovering the suite from the assembly's `META-INF/services/probably.Suite`
-// index, which the beneficence plugin writes.
-@main
-def runTests(): Unit =
-  val passes = juca.AtomicInteger(0)
-  val failures = juca.AtomicInteger(0)
-  val out = jl.System.out.nn
+import charEncoders.utf8Encoder
+import errorDiagnostics.emptyDiagnostics
 
-  // Both suites run, lira's then fury's, and the worse status is the exit status.
-  def handle(event: TestEvent): Unit = event match
-    case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
-      if outcome.outcome == t"pass" || outcome.outcome == t"aspire-pass" then passes.incrementAndGet()
-      else failures.incrementAndGet()
-      out.println(t"[${outcome.outcome}] ${test.path.join(t" / ")}".s)
+// A schema Fury ships could not be read: a defect of the build, never of a user's file.
+case class SchemaError(detail: Text)(using Diagnostics) extends Error(m"schema: $detail")
 
-    case TestEvent.DetailMessage(_, message) =>
-      out.println(t"    $message".s)
+// The TEL schemas Fury validates against (fury.md §14): copied by the build from the repository
+// root into the `schemas/` resource directory, and reconstructed into stratiform's `Tels` — the
+// document's shape by `Reconstructor`, then the schema-validity battery by `Validation` — on
+// demand. Read through the thread-context classloader, never the system one, which under Burdock
+// sees only the slim pre-repackage jar (fume's `Suites` carries the same note).
+object Schemas:
+  private def resource(name: Text): Optional[Text] =
+    val loader = Thread.currentThread.nn.getContextClassLoader.nn
 
-    case TestEvent.DetailCompare(_, expected, found, _) =>
-      out.println(t"    expected: $expected".s)
-      out.println(t"    found:    $found".s)
+    Optional(loader.getResourceAsStream(name.s)).let: stream =>
+      String(stream.readAllBytes(), "UTF-8").tt
 
-    case TestEvent.RunTerminated(error, _, _) =>
-      out.println(t"suite threw: ${error.components.map(_.message).join(t"; ")}".s)
+  def load(name: Text): Tels raises SchemaError =
+    val text: Text =
+      resource(t"schemas/$name").or(abort(SchemaError(t"$name is not among the shipped schemas")))
 
-    case _ => ()
+    mitigate:
+      case error: Tel.Error => SchemaError(t"$name is malformed: ${error.message}")
 
-  val status = jl.Math.max(Tests.invoke(t"", handle), fury.Tests.invoke(t"", handle))
+    . protect:
+        Tels.Validation.validate(Tels.Reconstructor.fromTel(text.read[Tel]))
 
-  out.println(t"${passes.get} passed, ${failures.get} failed".s)
-  jl.System.exit(status)
+  def build: Tels raises SchemaError = load(t"build.schema.tel")

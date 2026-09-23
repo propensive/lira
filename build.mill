@@ -49,6 +49,24 @@ object settings:
   // `publishVersion` (below), never here.
   val liraVersion = "0.1.0"
 
+  // The version a Pyrocosm tool reports (`fury --version`), written by its build into the
+  // `META-INF/pyrocosm/<name>/version` resource `pyrocosm.Tool` reads: the release version when
+  // `<NAME>_RELEASE_VERSION` drives a release, else `<pinned>-<12 hex of the filtered tree>`,
+  // with `-dirty` when the worktree has changes — exactly as fume and flame version themselves.
+  def buildVersion(env: Map[String, String], name: String, pinned: String): String =
+    env.get(s"${name.toUpperCase}_RELEASE_VERSION").filter(_.nonEmpty).getOrElse:
+      val root = mill.api.BuildCtx.workspaceRoot
+
+      val tree: String =
+        scala.util.Try:
+          os.proc("./etc/shared", "filtered_tree.py", "HEAD").call(cwd = root).out.text().trim
+        . getOrElse(os.proc("git", "rev-parse", "HEAD^{tree}").call(cwd = root).out.text().trim)
+
+      val dirty: Boolean =
+        os.proc("git", "status", "--porcelain").call(cwd = root).out.text().trim.nonEmpty
+
+      s"$pinned-${tree.take(12)}${if dirty then "-dirty" else ""}"
+
   val scalaOptions = Seq(
     // The fork's opt-in behaviours, enabled by name, exactly as the Soundness build enables them —
     // lira compiles Soundness idioms from Soundness's own TASTy, so it needs the same repairs.
@@ -113,7 +131,8 @@ object settings:
   // so the rest of the surface `import soundness.*` touches arrives transitively.
   //
   // Note what is absent: Pyrocosm. lira is not a Pyrocosm application — nothing here compiles
-  // against pyrocosm-model or its frontends. See etc/refs.
+  // against pyrocosm-model or its frontends; `fury` and `fever` (below) are, and take
+  // `pyrocosmDeps` in addition. See etc/refs.
   def soundnessDeps(soundness: String) = Seq(
     mvn"dev.propensive:burdock-core:$soundness",            // externalize + the repackager
     mvn"dev.propensive:degustation-lira:$soundness",         // the Scala (TASTy) discipline
@@ -135,6 +154,19 @@ object settings:
     mvn"dev.propensive:reliquary-derive:$soundness",         // manifest derivation
     mvn"dev.propensive:stratiform-binary:$soundness",        // BinTEL manifests
     mvn"dev.propensive:stratiform-core:$soundness")          // the canonical TEL rendering
+
+  // The `lira.tool` contract is built on anthology's types (fury.md §6), and Fever drives the
+  // compiler through anthology's Scala driver (fever.md §1).
+  def anthologyDeps(soundness: String) = Seq(
+    mvn"dev.propensive:anthology-core:$soundness",           // Format, Universe, Edge, Toolchain
+    mvn"dev.propensive:anthology-scala:$soundness")          // Scalac and its driver
+
+  // The Pyrocosm family's standard command line (`Tool.standard`: about, install, quit, config
+  // cascade) for fury and fever, and the web front-end fury's daemon serves (fury.md §10).
+  def pyrocosmDeps(pyrocosm: String) = Seq(
+    mvn"dev.propensive:pyrocosm-cli:$pyrocosm",
+    mvn"dev.propensive:pyrocosm-model:$pyrocosm",
+    mvn"dev.propensive:pyrocosm-web:$pyrocosm")
 
   // The test module's extra surface: a `Suite` and the BinTEL event stream a host reads.
   def testDeps(soundness: String) = soundnessDeps(soundness) ++ Seq(
@@ -291,6 +323,7 @@ object deps extends Module:
     pins().getOrElse(name, sys.error(s"etc/refs has no pin for $name"))
 
   def soundness: T[String] = Task(version("soundness")())
+  def pyrocosm: T[String] = Task(version("pyrocosm")())
 
 trait Project extends Module:
   def moduleDir = super.moduleDir / os.up / "src"
@@ -380,10 +413,88 @@ object lira extends Project:
   // `META-INF/services/probably.Suite` index a host reads to discover suites, so the plugin must run
   // on this module or `fume run -c` finds nothing. `lira.runTests` is a plain-`java` entry point
   // that drives `Tests.invoke` in-process, for `make test-plain` and for CI's `test_main`.
-  object test extends Component(core):
-    def mvnDeps = Task(settings.testDeps(deps.soundness()))
+  // One test module for the repository: lira's suite and fury's (src/test/fury.Tests.scala) run
+  // together, since the shared CI workflow drives a single test assembly.
+  object test extends Component(core, fury.core):
+    def mvnDeps = Task(settings.testDeps(deps.soundness()) ++ settings.pyrocosmDeps(deps.pyrocosm()))
     def scalacPluginMvnDeps = Task(Seq(mvn"dev.propensive:beneficence-plugin:${deps.soundness()}"))
     def finalMainClass = "lira.runTests"
+
+  // The plugin contract (`src/tool`, package `lira.tool`; builds.md §14.3, fury.md §6): the
+  // descriptor, invocation and outcome types a tool implements, built on anthology's forms.
+  // Published as `dev.propensive:lira-tool`, the host contract both `fury` (which loads tools
+  // against it) and every tool, `fever` first, compile against.
+  object tool extends Component(core), Publishing:
+    def mvnDeps = Task(settings.soundnessDeps(deps.soundness()) ++ settings.anthologyDeps(deps.soundness()))
+
+// A Pyrocosm tool's published module: its sources, plus the version resource `pyrocosm.Tool`
+// reports through `--version` and `about`.
+trait Pyrocosmic(name: String) extends Component:
+  def buildVersion = Task.Input(settings.buildVersion(Task.env, name, settings.liraVersion))
+
+  override def resources = Task:
+    val file = Task.dest / "META-INF" / "pyrocosm" / name / "version"
+    os.write.over(file, buildVersion() + "\n", createFolders = true)
+    super.resources() ++ Seq(PathRef(Task.dest))
+
+// Fury, the build tool (design/fury.md), rooted at `src/fury/` so that its `core` and `launcher`
+// modules do not collide with lira's at `src/core` and `src/launcher`. Language-agnostic by
+// design: nothing here compiles against a compiler; Scala arrives through `fever` as a
+// `lira.tool` plugin.
+object fury extends Project:
+  override def moduleDir = super.moduleDir / "fury"
+
+  // Released as `dev.propensive:fury-core`: the engine, the model, the daemon's commands.
+  object core extends Component(lira.core, lira.tool), Pyrocosmic("fury"), Publishing:
+    def mvnDeps = Task:
+      settings.soundnessDeps(deps.soundness()) ++ settings.pyrocosmDeps(deps.pyrocosm())
+
+    // The schemas fury validates against (fury.md §14) are the repository's own, copied into a
+    // `schemas/` resource directory so that `fury check` reads build.schema.tel from its jar.
+    def schemaFiles = Task.Sources(
+      Seq("build.schema.tel", "tool.schema.tel", "guarantees.schema.tel", "local.schema.tel",
+          "lock.schema.tel", "registry.schema.tel", "scalac.tool.tel")
+        .map(mill.api.BuildCtx.workspaceRoot / _)*)
+
+    // Mill gives an overriding task its own dest (the parent's is `resources.super/…`), so the
+    // copies land in this task's dest, which is added to the parent's list rather than replacing it.
+    override def resources = Task:
+      val directory = Task.dest / "schemas"
+      schemaFiles().foreach(ref => os.copy.over(ref.path, directory / ref.path.last, createFolders = true))
+      super.resources() ++ Seq(PathRef(Task.dest))
+
+  // The invocation point, depending on `fury-core` as a PUBLISHED coordinate for the same reason
+  // lira's launcher does (above): the released bytes externalize; a local copy inlines.
+  object launcher extends Component():
+    def mvnDeps = Task:
+      mvn"dev.propensive:fury-core:${settings.liraVersion}"
+        +: (settings.soundnessDeps(deps.soundness()) ++ settings.pyrocosmDeps(deps.pyrocosm()))
+
+    def finalMainClass = "fury.fury"
+    def prependShellScript = ""
+
+// Fever, the Scala compiler service (design/fever.md), rooted at `src/fever/`. One module until a
+// second Scala version is needed; then one `core` per compiler, each built against its API.
+object fever extends Project:
+  override def moduleDir = super.moduleDir / "fever"
+
+  // Released as `dev.propensive:fever-core`: the compile library, the `lira.tool` implementation
+  // and the daemon's commands.
+  object core extends Component(lira.tool), Pyrocosmic("fever"), Publishing:
+    def mvnDeps = Task:
+      settings.soundnessDeps(deps.soundness())
+        ++ settings.anthologyDeps(deps.soundness())
+        ++ Seq(mvn"dev.propensive:pyrocosm-cli:${deps.pyrocosm()}")
+
+  object launcher extends Component():
+    def mvnDeps = Task:
+      mvn"dev.propensive:fever-core:${settings.liraVersion}"
+        +: (settings.soundnessDeps(deps.soundness())
+            ++ settings.anthologyDeps(deps.soundness())
+            ++ Seq(mvn"dev.propensive:pyrocosm-cli:${deps.pyrocosm()}"))
+
+    def finalMainClass = "fever.fever"
+    def prependShellScript = ""
 
 // The release: the library module's jar, with its POM and ivy.xml embedded under
 // `META-INF/maven/<group>/<artifactId>/`, named `<artifactId>-<version>.jar`, exactly as the
@@ -391,7 +502,7 @@ object lira extends Project:
 // (propensive/.github) reconstructs the ivy2 layout coursier resolves from, which is how `make
 // snapshot` publishes an unreleased build for a dependent repository to pin.
 object release extends Module:
-  def modules: Seq[PublishModule] = Seq(lira.core)
+  def modules: Seq[PublishModule] = Seq(lira.core, lira.tool, fury.core, fever.core)
 
   private def withDescriptors(source: os.Path, target: os.Path, entries: Seq[(String, os.Path)])
   :   Unit =

@@ -30,46 +30,15 @@
 ┃                                                                                                  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
                                                                                                   */
-package lira
-
-import java.lang as jl
-import java.util.concurrent.atomic as juca
+package fury
 
 import soundness.*
-import probably.TestEvent
 
-// lira's own suite, run WITHOUT fume: a `Suite` has no `main` of its own (the host — normally fume —
-// drives it through `invoke`), so this is the plain-`java` entry point `make test-plain` uses,
-// printing one line per completed test and exiting with the suite's status (0 = passed,
-// 1 = failures, 2 = the suite threw). `fume run -c <test jar>` (`make test`, and CI) remains the
-// full experience, discovering the suite from the assembly's `META-INF/services/probably.Suite`
-// index, which the beneficence plugin writes.
+// The invocation point, alone in its own build module. `externalize` (from burdock, re-exported
+// through `soundness.*`) records the SHA-256 of every jar on THIS module's compile classpath into
+// `META-INF/burdock.deps` at compile time; because the `launcher` module depends on `fury-core`
+// as a PUBLISHED coordinate (see build.mill), the released jar bytes on the classpath match the
+// published ones, and `soundness.repackage` externalizes them into an on-demand download rather
+// than inlining. The whole command dispatch lives in `fury.run` in the published `core` module.
 @main
-def runTests(): Unit =
-  val passes = juca.AtomicInteger(0)
-  val failures = juca.AtomicInteger(0)
-  val out = jl.System.out.nn
-
-  // Both suites run, lira's then fury's, and the worse status is the exit status.
-  def handle(event: TestEvent): Unit = event match
-    case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
-      if outcome.outcome == t"pass" || outcome.outcome == t"aspire-pass" then passes.incrementAndGet()
-      else failures.incrementAndGet()
-      out.println(t"[${outcome.outcome}] ${test.path.join(t" / ")}".s)
-
-    case TestEvent.DetailMessage(_, message) =>
-      out.println(t"    $message".s)
-
-    case TestEvent.DetailCompare(_, expected, found, _) =>
-      out.println(t"    expected: $expected".s)
-      out.println(t"    found:    $found".s)
-
-    case TestEvent.RunTerminated(error, _, _) =>
-      out.println(t"suite threw: ${error.components.map(_.message).join(t"; ")}".s)
-
-    case _ => ()
-
-  val status = jl.Math.max(Tests.invoke(t"", handle), fury.Tests.invoke(t"", handle))
-
-  out.println(t"${passes.get} passed, ${failures.get} failed".s)
-  jl.System.exit(status)
+def fury(): Unit = externalize(run())

@@ -52,8 +52,12 @@ scalar AppType
   validate     app-type
 
 scalar Entry
-  description  An extractable named entry: an application-type name from an artifact line, or a container-format name for a §13.6 canonical derivative (jar)
+  description  An extractable named entry: an artifact's name, or a container-format name for a §13.6 canonical derivative (jar)
   validate     entry
+
+scalar Platform
+  description  A value of a parameterized application-type family's parameter, e.g. linux/amd64 (builds.md §15.2)
+  validate     form
 
 # Output-affecting settings enter the manifest (pending the Tool-record spec
 # change); side-effect settings never do.
@@ -103,12 +107,17 @@ record Selection
   field option Identifier
   field case Identifier
 
+# Artifact selection is by name only (fury.md §12): a module with several artifacts
+# and no selection is an error, not a build of all; there is no host-triple default.
 record Build
   field module ModuleRef
+  field artifact Identifier optional repeatable
   field set Selection optional repeatable
 
+# Arguments reach a run as `$name` references to the command's declared `arg`s.
 record Run
   field module ModuleRef
+  field argument String optional repeatable
   field set Selection optional repeatable
 
 record Watch
@@ -124,8 +133,19 @@ record Extract
   field entry Entry
   field path Path
 
+# A declared command argument (fury.md §12): occasion-class, entering no identity,
+# unless `option` names an axis — then supplying it is a selection with a CLI `set`'s
+# standing. Undeclared `key=value` arguments are errors; there is no passthrough tail.
+record Argument
+  description  One named argument, `arg <name> [<default>]`, optionally selecting an option axis
+
+  field name Identifier
+  field default String optional
+  field option Identifier optional
+
 record Command
   field name Identifier
+  field arg Argument optional repeatable
   field build Build optional repeatable
   field run Run optional repeatable
   field watch Watch optional repeatable
@@ -184,12 +204,15 @@ record Include
 # identified by digest, so they never need a manifest home. Platforms instantiate
 # a parameterized application-type family, the parameter flowing backward through
 # the packaging chain (builds.md §15.2).
+# Every artifact is named (fury.md §12): the name is the whole selection mechanism,
+# unique per module (lint), and the entry `extract` takes.
 record Product
-  description  An egress to a registry application type, `artifact <app-type> [<filename>]`
+  description  An egress to a registry application type, `artifact <name> <app-type> [<filename>]`
 
+  field name Identifier
   field type AppType
   field filename String optional
-  field platform Identifier optional repeatable
+  field platform Platform optional repeatable
   field set Setting optional repeatable
 
 # --- Overlay grammar -------------------------------------------------------------
@@ -252,6 +275,7 @@ record Module
   field include Include optional repeatable
   field assemble Assembly optional
   field artifact Product optional repeatable
+  field generate Identifier optional repeatable  # codegen tools, verified against form-based resolution (fury.md §12)
   field integration Axis optional repeatable
   field option Axis optional repeatable
   field universe Universe optional repeatable
@@ -294,6 +318,15 @@ record Environment
   field guarantee Presumption optional repeatable
   field service Service optional repeatable
 
+# A published registry layer (fury.md §7): resolved by coordinate, locked like a
+# dependency, merged additively over the shipped registry.tel. The only way to extend
+# the registry; entries never appear directly in this file.
+record Registry
+  description  A registry layer, `registry <coordinate> [<selector>]`
+
+  field coordinate ModuleRef
+  field selector Selector optional
+
 record Topology
   field name Identifier
   field service Service optional repeatable
@@ -301,6 +334,7 @@ record Topology
   field environment Environment optional repeatable
 
 document
+  field registry Registry optional repeatable
   field command Command optional repeatable
   field toolchain Toolchain optional repeatable
   field repository Repository optional repeatable

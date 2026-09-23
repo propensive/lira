@@ -3,7 +3,7 @@
 The open items of the build tool design, tiered by how designed they already are. A
 living checklist: items move up as they are worked, and off as they land. Section
 references are to [`builds.md`](builds.md) unless qualified. Last revised alongside the
-input-identity round (§3.1 addendum).
+Fury/Fever design round ([`fury.md`](fury.md) §13).
 
 ## 1. Designed — awaiting spec-side application
 
@@ -50,22 +50,23 @@ Statements exist; the `dts.md`-pattern documents do not:
 - **The `run` settings model** — §10.3's design (side-effect class on the ephemeral
   environment) has no syntax; debugger attach is still inexpressible. Gates the rest
   of the deployment round.
-- **Artifact selection** — artifacts are anonymous; no host-triple default; no
-  per-invocation naming. `extract` sharpened the need without solving invocation-time
-  selection.
-- **The precedence order** — six configuration layers (tool built-ins → user-global
-  local → build.tel → project local.tel → command → CLI), never written as one list;
-  plus the cross-file refinement rule (local.tel may refine `environment local` with
-  system/occasion content only).
-- **`local.tel` completion** — the `pin` record (described §9.1, absent from file and
-  schema); machine-configuration shape (tool paths, cache location, parallelism); its
-  own TEL schema (currently validates as bare syntax only).
+- ~~**Artifact selection**~~ — decided: every `artifact` line is named and selection is
+  by name only, with no host default ([`fury.md`](fury.md) §12); `build.schema.tel`
+  updated; `build.tel`'s specimen artifacts to be named.
+- ~~**The precedence order**~~ — written as one list in [`fury.md`](fury.md) §11, with
+  the layer-legality rule and the one-role-per-file allocation; awaiting application to
+  builds.md §9.1.
+- **`local.tel` completion** — designed in [`fury.md`](fury.md) §11: `pin`, `store`,
+  `budget`, the user-global file's role, `local.schema.tel` drafted at the repo root;
+  raw local tool paths deferred with local binaries (fury.md §6). Awaiting the worked
+  file and the schema's registration.
 - **Environment deltas** — the schema's `Environment` record holds only an address
   override; deploy deltas, given deltas, and the staging-mock worked example remain
   (original open items 5–7/10), with `serve` → `api` extraction details and the
   `service database` given semantics.
-- **Command arguments** — passthrough ("run just this one test") so occasions never
-  require edits.
+- ~~**Command arguments**~~ — decided: declared named arguments only, no passthrough
+  tail, option arguments by explicit declaration ([`fury.md`](fury.md) §12); schema
+  updated.
 - **Multi-parent `assemble`** — repeatable-with-paths, deferred until a real example
   lands (§15.1); the static layer-disjointness lint comes with it.
 - **Parameterized edges in practice** — the descriptor supports the parameter; no
@@ -74,29 +75,35 @@ Statements exist; the `dts.md`-pattern documents do not:
 
 ## 4. Genuinely untouched
 
-- **`build.lock`** — its content is known (Release records + inclusion proofs; §9.2)
-  but there is no schema file, no `update` command design, no alternate-lock
-  (`--lock canary.lock`) surface.
+- **`build.lock`** — designed in [`fury.md`](fury.md) §12: content (dependency, tool,
+  component and host resolutions with proofs and STH), the stale-lock rule, `--update`,
+  `--lock`; `lock.schema.tel` drafted. Awaiting the worked file.
 - **The publishing workflow** — the largest undesigned area: the publish command's
   UX, signing, version-assignment flow, promotion of development releases,
   multi-module publication ordering (co-publication, §5 question 4).
-- **`universes.tel`** — the machine-readable registry ([`catalog.md`](catalog.md) is
-  its prose precursor): format, and how built-in tool definitions, extension→form
-  mappings and kind→discipline tables ship.
+- **`registry.tel`** (formerly `universes.tel`) — designed in [`fury.md`](fury.md) §7:
+  one document, sibling `.tool.tel` descriptors, published layers for extension;
+  `registry.schema.tel` drafted. Awaiting the content transcribed from
+  [`catalog.md`](catalog.md).
 - **Diagnostics as a design surface** — validity failures are rich judgments (which
   rule, which cell, which missing guarantee); the reporting model is unspecified.
-- **Codegen** — source→source edges (annotation processors, protocol compilers):
-  admitted by the DAG in principle, exercised by nothing; interacts with the
-  feedback-loop lint (generated sources live in trees, never the project root).
-- **Remote sharing of the store** — team caches and build farms; presumably the
-  online service, undesigned. Input-hash lookup (§3.1 addendum) joins the service's
-  query list beside the commit reverse-lookup.
-- ~~**The build tool ↔ `lira` CLI relationship**~~ — decided: two binaries sharing
-  library code, developed together in this repository ([`fury.md`](fury.md)).
-- **The `lira.tool` trait in earnest** — the real Scala surface in the project's own
-  stack; descriptor extraction; the uses return path's file mechanics.
-- **Incremental correctness mechanics** — how often the warm-equals-cold law (§14.5)
-  is spot-checked, and by whom.
+- **Codegen** — decided for form-changing edges: declared with `generate <tool>`,
+  verified against form-based resolution, outputs as store trees ([`fury.md`](fury.md)
+  §12); same-form edges (annotation processors) excluded for now and still open.
+- **Remote sharing of the store** — the swarm ([`fury.md`](fury.md) §8) covers a
+  user's own machines: memo hits on any member are hits. Team caches and build farms
+  beyond a swarm remain undesigned; input-hash lookup (§3.1 addendum) joins the online
+  service's query list beside the commit reverse-lookup.
+- ~~**The build tool ↔ `lira` CLI relationship**~~ — decided: three binaries (`lira`,
+  `fury`, `fever`) sharing library code, developed together in this repository
+  ([`fury.md`](fury.md), [`fever.md`](fever.md)).
+- **The `lira.tool` trait in earnest** — its home (the `lira-tool` module), base
+  (anthology's types) and carrier (BinTEL) are decided ([`fury.md`](fury.md) §6,
+  [`fever.md`](fever.md) §3); the Scala surface, descriptor extraction and the uses
+  return path's file mechanics land at ladder step 5.
+- ~~**Incremental correctness mechanics**~~ — moot: compiles are cold and tools hold
+  no incremental state ([`fury.md`](fury.md) §4); reopens only if incremental
+  compilation is ever adopted.
 
 ## 5. Verification debt
 
@@ -107,5 +114,6 @@ Statements exist; the `dts.md`-pattern documents do not:
   Tool-record proposal is applied — which is itself informative. **Do this first.**
 - **The two leak-checks** — does anything tempt `project` or `topology` into the
   format? (§5 question 2; §10.4.)
-- **The `.gitignore` question** — `local.tel` is committed as a worked example but
-  designed to be per-user; decide its status before it misleads.
+- ~~**The `.gitignore` question**~~ — decided: at the self-hosting step the specimen
+  moves under `design/` and the root `local.tel` is gitignored ([`fury.md`](fury.md)
+  §11).

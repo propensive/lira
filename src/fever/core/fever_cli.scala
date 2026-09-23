@@ -30,46 +30,63 @@
 ┃                                                                                                  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
                                                                                                   */
-package lira
-
-import java.lang as jl
-import java.util.concurrent.atomic as juca
+package fever
 
 import soundness.*
-import probably.TestEvent
 
-// lira's own suite, run WITHOUT fume: a `Suite` has no `main` of its own (the host — normally fume —
-// drives it through `invoke`), so this is the plain-`java` entry point `make test-plain` uses,
-// printing one line per completed test and exiting with the suite's status (0 = passed,
-// 1 = failures, 2 = the suite threw). `fume run -c <test jar>` (`make test`, and CI) remains the
-// full experience, discovering the suite from the assembly's `META-INF/services/probably.Suite`
-// index, which the beneficence plugin writes.
-@main
-def runTests(): Unit =
-  val passes = juca.AtomicInteger(0)
-  val failures = juca.AtomicInteger(0)
-  val out = jl.System.out.nn
+// `pyrocosm.Tool` is imported explicitly, so that it outranks the `Tool` the `soundness.*`
+// wildcard exports (anthology's).
+import backstops.silentBackstop
+import executives.completionsExecutive
+import interpreters.posixInterpreter
+import pyrocosm.Tool
+import systems.javaBaseSystem
+import threading.platformThreading
 
-  // Both suites run, lira's then fury's, and the worse status is the exit status.
-  def handle(event: TestEvent): Unit = event match
-    case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
-      if outcome.outcome == t"pass" || outcome.outcome == t"aspire-pass" then passes.incrementAndGet()
-      else failures.incrementAndGet()
-      out.println(t"[${outcome.outcome}] ${test.path.join(t" / ")}".s)
+// Fever as a Pyrocosm tool (fever.md): the Scala compiler service — a resident daemon that
+// performs compilations and other source-code operations, `scalac` but faster, and in time most
+// of an LSP server's work. Everything that knows what a `.scala` file is lives here, never in
+// Fury, which reaches Fever only through the `lira.tool` contract. One Fever is released per
+// Scala version, against that compiler's API. This is the skeleton of ladder step 0; the first
+// edge — `scalac/jvm` through the contract — arrives with step 5.
+val Fever: Tool =
+  Tool
+    ( t"fever",
+      prose = t"Fever is the Scala compiler service for Fury and for editors: a resident daemon " +
+        t"that compiles Scala through the lira.tool contract, one release per Scala " +
+        t"version." )
 
-    case TestEvent.DetailMessage(_, message) =>
-      out.println(t"    $message".s)
+object UsageError extends Status(2, t"the command line was not understood")
+object Unimplemented extends Status(10, t"this subcommand is not yet implemented")
 
-    case TestEvent.DetailCompare(_, expected, found, _) =>
-      out.println(t"    expected: $expected".s)
-      out.println(t"    found:    $found".s)
+object ui:
+  val Compile = Subcommand("compile", "compile Scala sources once, as scalac would")
+  val Lsp = Subcommand("lsp", "run the language server over stdio")
 
-    case TestEvent.RunTerminated(error, _, _) =>
-      out.println(t"suite threw: ${error.components.map(_.message).join(t"; ")}".s)
+def run(): Unit =
+  cli:
+    Fever.standard:
+      arguments match
+        case ui.Compile() :: _ =>
+          execute:
+            given Stdio = summon[Invocation].stdio
+            Out.println(t"fever compile is not yet implemented")
+            Unimplemented
 
-    case _ => ()
+        case ui.Lsp() :: _ =>
+          execute:
+            given Stdio = summon[Invocation].stdio
+            Out.println(t"fever lsp is not yet implemented")
+            Unimplemented
 
-  val status = jl.Math.max(Tests.invoke(t"", handle), fury.Tests.invoke(t"", handle))
-
-  out.println(t"${passes.get} passed, ${failures.get} failed".s)
-  jl.System.exit(status)
+        case _ =>
+          execute:
+            given Stdio = summon[Invocation].stdio
+            Out.println(t"Usage: fever <subcommand>")
+            Out.println(t"")
+            Out.println(t"  compile    compile Scala sources once, as scalac would")
+            Out.println(t"  lsp        run the language server over stdio")
+            Out.println(t"  about      show this tool's name, version and daemon")
+            Out.println(t"  install    install shell tab-completions and the manpage")
+            Out.println(t"  quit       stop the background daemon")
+            UsageError
