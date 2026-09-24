@@ -74,9 +74,13 @@ val Assign =
   Subcommand
    ("assign", "assign the next derived version to a development release", group = Artifacts)
 
+val Diff =
+  Subcommand
+   ("diff", "show what changed between two releases, and its grade", group = Artifacts)
+
 val Delta =
   Subcommand
-   ("delta", "show what changed between two releases, and its grade", group = Artifacts)
+   ("delta", "write a delta carrying one cached release relative to another", group = Artifacts)
 
 val AtomsCmd =
   Subcommand
@@ -84,6 +88,10 @@ val AtomsCmd =
 
 val Id =
   Subcommand("id", "identify a bare artifact by its derivative hash", group = Artifacts)
+
+val Add =
+  Subcommand
+   ("add", "add a .lira file, or a delta against a cached base, to the store", group = StoreCommands)
 
 val Cache =
   Subcommand
@@ -111,6 +119,7 @@ val Quit = Subcommand("quit", "shut down the background daemon", group = Houseke
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
 val Blob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
+val Output = Flag[Text]("out", false, Nil, "write the delta file to this path")
 val Realm = Flag[Text]("realm", false, Nil, "the realm to atomize a bare artifact in")
 val Classpath = Flag[Text]("classpath", false, Nil, "dependency classpath for membership keying")
 val Only = Flag[Text]("discipline", false, Nil, "restrict the listing to one discipline")
@@ -118,7 +127,7 @@ val Owner = Flag[Text]("owner", false, Nil, "restrict the listing to keys with t
 
 // Every flag lira declares that takes a value, and takes exactly one.
 private val valueFlags: scala.List[Flag] =
-  scala.List(Budget, Blob, Realm, Classpath, Only, Owner)
+  scala.List(Budget, Blob, Output, Realm, Classpath, Only, Owner)
 
 // The POSIX interpreter's own reading of the commandline. `arguments` is the raw list, flags and
 // all, so a command matching an exact arity would fail the moment a flag appeared among them;
@@ -127,7 +136,7 @@ private val valueFlags: scala.List[Flag] =
 // The interpreter gives a flag *every* argument that follows it until the next flag, since in
 // general a flag may be repeatable or variadic. None of lira's are: each takes one operand, so
 // the surplus is not the flag's — it is the command's, and returning it (in the order it was
-// typed) is what lets `delta a.lira --blob out b.lira` mean what it plainly says.
+// typed) is what lets `diff a.lira --blob out b.lira` mean what it plainly says.
 private def positional(using cli: Cli, interpreter: Interpreter { type Topic = Commandline })
 :   List[Argument] =
 
@@ -197,6 +206,7 @@ object LiraTool:
     def dispatch(using Cli): Execution = positional match
       case Verify() :: Pathname(file) :: Nil => execute(verify(file))
       case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
+      case Add() :: rest if !rest.stdlib.isEmpty => execute(addCommand(rest.map(_())))
       case Cache() :: rest          => execute(cache(rest.map(_())))
       case Pin() :: target :: Nil   => execute(pin(target(), true))
       case Unpin() :: target :: Nil => execute(pin(target(), false))
@@ -223,14 +233,21 @@ object LiraTool:
 
           case _ => execute(usage(help, Exit.Fail(1)))
 
-      case Delta() :: rest =>
+      case Diff() :: rest =>
         val blob = flagText(Blob, t"file")
 
         rest match
           case Pathname(previous) :: Pathname(next) :: Nil =>
-            execute(delta(previous, next, blob))
+            execute(diff(previous, next, blob))
 
           case _ => execute(usage(help, Exit.Fail(1)))
+
+      case Delta() :: rest =>
+        val out = flagText(Output, t"file")
+
+        rest match
+          case coord :: from :: to :: Nil => execute(deltaCommand(coord(), from(), to(), out))
+          case _                          => execute(usage(help, Exit.Fail(1)))
 
       case AtomsCmd() :: rest =>
         val realm = flagText(Realm, t"realm")
@@ -290,7 +307,10 @@ private def usage(help: Optional[Help], exit: Exit)(using cli: Cli): Exit =
   Out.println(t"")
   Out.println(t"Operands:")
   Out.println(t"  verify, atoms, id, jar   a .lira file, or for `atoms` and `id` a bare artifact")
-  Out.println(t"  delta                    two .lira files, previous first")
+  Out.println(t"  diff                     two .lira files, previous first")
+  Out.println(t"  delta                    a module, then the cached base and target versions;")
+  Out.println(t"                           writes <name>-<base>-<target>.lira unless --out is given")
+  Out.println(t"  add                      .lira files, or deltas whose base is already cached")
   Out.println(t"  assign                   a .lira file, optionally its predecessor")
   Out.println(t"  harvest                  jdk|android|dts|wit, an output directory, then the")
   Out.println(t"                           sources; `dts` and `wit` take a module name first,")
@@ -349,8 +369,9 @@ private def installCompletions()(using cli: Cli, service: DaemonService[?])
 // raise; adding a call that raises something else is a compile error until it is handled here or
 // in the command itself, which is the point.
 private def command(using cli: Cli)
-    ( block: (Tactic[Lira.Error], Tactic[StoreError], Tactic[Io.Error], Tactic[Path.Error],
-              Tactic[Discipline.Error], Tactic[Name.Error], Tactic[Truncation.Error]) ?->{cli} Exit )
+    ( block: (Tactic[Lira.Error], Tactic[StoreError], Tactic[DeltaError], Tactic[Io.Error],
+              Tactic[Path.Error], Tactic[Discipline.Error], Tactic[Name.Error],
+              Tactic[Truncation.Error]) ?->{cli} Exit )
 :   Exit =
 
   given Stdio = cli.stdio
@@ -358,6 +379,7 @@ private def command(using cli: Cli)
   recover:
     case error: Lira.Error      => report(error.message)
     case error: StoreError      => report(error.message)
+    case error: DeltaError      => report(error.message)
     case error: Io.Error         => report(error.message)
     case error: Path.Error      => report(error.message)
     case error: Discipline.Error => report(error.message)

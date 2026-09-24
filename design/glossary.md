@@ -132,6 +132,11 @@ unified along the path.
 The lockfile's currency, the deploy pin's target, and the discriminator between patch
 siblings. Contrast **snapshot**.
 
+**increment** — A file carrying one release relative to a *base* release the receiver
+holds: the target's manifest verbatim, then a command stream (`keep`, `skip`, `store`,
+`update`) that rebuilds the target's blob stream from the base's. A transport with no
+identity of its own (spec [`increment.md`](../spec/increment.md), L151–L156).
+
 **include** — Build-file keyword for composition: a dependency on a project-local
 module or an external coordinate with a selector. Compiles to a `dependency` record.
 Its subtractive counterpart is `exclude`.
@@ -176,7 +181,13 @@ replace/add (spec §9.3). The build file's universe blocks and case refinements 
 authoring-time face.
 
 **payload** — The Brotli-compressed, content-addressed blob stream beneath a manifest;
-its hash is the release's implementation identity.
+its hash is the release's implementation identity — over the decompressed stream, so a
+release reconstructed from an increment and re-encoded locally has the same identity under a
+different envelope (tool §2.3).
+
+**priming** — The receiver's side of an increment's `update`: the encoder-free,
+RFC-7932-fixed uncompressed encoding of the base blob (parameters `window`, `block`) that
+the sent continuation is decoded after, so that it may reference the base blob's bytes.
 
 **presume / presumption** — Build-file keyword: a guarantee code assumes about its
 runtime (`envvar`, `command`, `file`, `dataset` kinds), governed by presumption

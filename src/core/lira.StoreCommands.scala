@@ -91,13 +91,9 @@ private def cache(args: List[Text])(using cli: Cli): Exit = command:
 
   args match
     case verb :: rest => verb.s match
+      // The same operation as `lira add`: a delta is reconstructed against its cached base.
       case "add" if !rest.stdlib.isEmpty =>
-        rest.each: file =>
-          val ingested = store.ingest(clientPath(file).read[Data])
-          val status = if ingested.fresh then t"added" else t"already cached"
-          val counts = t"${ingested.blobsAdded} new blobs, ${ingested.blobsShared} shared"
-          Out.println(t"${ingested.module}: $status (${ingested.manifestHex.keep(12)}, $counts)")
-
+        rest.each { file => addFile(store, clientPath(file).read[Data]) }
         Exit.Ok
 
       case "ls" if rest.stdlib.isEmpty =>

@@ -15,6 +15,9 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 - [`spec/introduction.md`](spec/introduction.md) — an informative introduction: the problems,
   the abstractions, and how they fit together; start here.
 - [`spec/lira.md`](spec/lira.md) — the format specification (working draft).
+- [`spec/increment.md`](spec/increment.md) — the increment format: transferring a release
+  relative to one the receiver already holds, changed blobs compressed against their
+  predecessors.
 - [`spec/tasty.md`](spec/tasty.md) — the normative Scala discipline.
 - [`spec/classfile.md`](spec/classfile.md) — the normative JVM bytecode discipline.
 - [`spec/dts.md`](spec/dts.md) — the normative TypeScript declaration discipline.
@@ -86,7 +89,10 @@ A release — the `lira-core` jar, then the per-platform executables built from 
 GitHub Releases by `make release VERSION=X.Y.Z`, after bumping `liraVersion` in `build.mill`,
 exactly as fume, flair, flame and tel are released.
 
-Two commands are narrower than [`design/tool.md`](design/tool.md) describes, because the
+`lira delta` writes a delta file — a release carried relative to a cached predecessor
+([`spec/increment.md`](spec/increment.md)) — and `lira add` ingests whole files and deltas
+alike, reconstructing a delta's release from its cached base. Two commands are narrower than
+[`design/tool.md`](design/tool.md) describes, because the
 disciplines they need are specified but not yet implemented in Soundness: `lira atoms` names
 `classfile/1`, `jsig/1`, `tasty/1` and `capability/1` only, and `lira harvest` takes `jdk` and
 `android` but not `dts` or `wit`. Both are marked in the source, to be restored as reliquary gains

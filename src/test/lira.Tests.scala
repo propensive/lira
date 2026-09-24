@@ -138,11 +138,12 @@ object Tests extends Suite(m"LIRA tool tests"):
     // so a subcommand declared without a group is silently absent from the usage text.
     suite(m"Command surface (design/tool.md §5)"):
       val subcommands = scala.List
-        (lira.Verify, lira.Harvest, lira.Jar, lira.Assign, lira.Delta, lira.AtomsCmd, lira.Id,
-         lira.Cache, lira.Pin, lira.Unpin, lira.Gc, lira.Fsck, lira.Install, lira.Help, lira.Quit)
+        (lira.Verify, lira.Harvest, lira.Jar, lira.Assign, lira.Diff, lira.Delta, lira.AtomsCmd,
+         lira.Id, lira.Add, lira.Cache, lira.Pin, lira.Unpin, lira.Gc, lira.Fsck, lira.Install,
+         lira.Help, lira.Quit)
 
-      val flags = scala.List[Flag](lira.Major, lira.Budget, lira.Blob, lira.Realm, lira.Classpath, lira.Only,
-        lira.Owner)
+      val flags = scala.List[Flag](lira.Major, lira.Budget, lira.Blob, lira.Output, lira.Realm,
+        lira.Classpath, lira.Only, lira.Owner)
 
       test(m"Every subcommand belongs to a command group"):
         subcommands.count(_.group.absent)
@@ -163,3 +164,138 @@ object Tests extends Suite(m"LIRA tool tests"):
       test(m"The three groups of design/tool.md §5 are all used"):
         subcommands.flatMap(_.group.option).toSet.size
       . assert(_ == 3)
+
+    // Deterministic byte patterns with enough structure to match against, and no reliance on any
+    // compressor's behaviour beyond RFC 7932 validity.
+    def list(data: Data): List[Byte] = data.to[List]
+
+    def pattern(length: Int, seed: Int): Data =
+      val bytes = Array.allocate[Byte](length)
+      var state = seed
+      var i = 0
+
+      while i < length do
+        state = state*1103515245 + 12345
+        bytes(i) = (if i % 7 == 0 then (state >>> 16) & 0xff else (i*31 + seed) & 0x7f).toByte
+        i += 1
+
+      Array.freeze(bytes)
+
+    def edit(data: Data, changes: List[(Int, Byte)]): Data =
+      val bytes = Array.allocate[Byte](data.length)
+      bytes.place(data)
+      changes.each { (index, value) => bytes(index) = value }
+      Array.freeze(bytes)
+
+    def splice(data: Data, at: Int, insert: Data): Data =
+      val bytes = Array.allocate[Byte](data.length + insert.length)
+      bytes.place(data, 0, 0, at)
+      bytes.place(insert, 0, at, insert.length)
+      bytes.place(data, at, at + insert.length, data.length - at)
+      Array.freeze(bytes)
+
+    suite(m"Priming (spec increment.md §6)"):
+      val base = pattern(4096, 7)
+      val prefix = Priming.prefix(base, Priming.Window, Priming.Block)
+
+      // Appendix A's arithmetic: three header bytes, the base, the metadata meta-block's `06`.
+      test(m"A 4,096-byte base under the recommended parameters primes in 3 + 4096 + 1 bytes"):
+        prefix.length
+      . assert(_ == 4100)
+
+      test(m"The prefix opens with WBITS 24, ISLAST 0, MNIBBLES 4 and the low bit of MLEN − 1"):
+        prefix.readable(0) & 0xff
+      . assert(_ == 0x8f)
+
+      test(m"The prefix ends with the empty metadata meta-block"):
+        prefix.readable(prefix.length - 1) & 0xff
+      . assert(_ == 0x06)
+
+      test(m"An empty base primes to two bytes"):
+        list(Priming.prefix(Data(), Priming.Window, Priming.Block)).map(_ & 0xff)
+      . assert(_ == List(0x6f, 0x00))
+
+      // The prefix is not a stream of its own — it ends with ISLAST 0, waiting for a
+      // continuation — so it is closed here with the empty last meta-block (ISLAST 1,
+      // ISLASTEMPTY 1: the byte `03`) to check what it decodes to.
+      test(m"The prefix, closed by an empty last meta-block, decodes to the base"):
+        val closed = splice(prefix, prefix.length, Array[Byte](3.toByte))
+        list(closed.decompress[Brotli]) == list(base)
+      . assert(_ == true)
+
+      // A successor differing from its predecessor by two edits and an insertion.
+      val edited = edit(base, List((100, 42.toByte), (2000, 43.toByte)))
+      val next = splice(edited, 1500, pattern(64, 99))
+      val continuation = Priming.continuation(base, next, Priming.Window)
+
+      test(m"A continuation decodes against its base to the successor"):
+        Priming.decode(base, continuation, Priming.Window, Priming.Block, next.length).let(list(_))
+      . assert(_ == list(next))
+
+      test(m"A continuation is far smaller than the successor it carries"):
+        continuation.length*8 < next.length
+      . assert(_ == true)
+
+      // RFC 7932 cannot tell a wrong base from the right one — the copies land at the same
+      // distances — which is why the result is verified by hash (increment.md §7, L155).
+      test(m"A continuation against the wrong base decodes to the wrong bytes"):
+        Priming.decode(pattern(4096, 8), continuation, Priming.Window, Priming.Block, next.length)
+          . let(list(_)) != list(next)
+      . assert(_ == true)
+
+    suite(m"Delta files (spec increment.md §3–§5, §7)"):
+      val a = pattern(300, 1)
+      val b = pattern(2048, 2)
+      val c = pattern(700, 3)
+      val d = pattern(100, 4)
+      val e = pattern(90, 5)
+      val edited = edit(b, List((500, 1.toByte), (1500, 2.toByte)))
+
+      val baseStream = BlobStream.write(List(a, b, c, d))
+      val targetStream = BlobStream.write(List(a, edited, c, e))
+      val base = BlobStream.read(baseStream)
+      val target = BlobStream.read(targetStream)
+
+      val ordinalOfB = base.blobs.where { blob => Blob.compare(blob.hash, Lira.Hash(Lira.Hash.Domain.Blob, b)) == 0 }
+        . let(_.n0).or(-1)
+
+      val pairing = Map(Lira.Hash.text(Lira.Hash(Lira.Hash.Domain.Blob, edited)) -> ordinalOfB)
+
+      val produced = DeltaFile.produce(base, target, pairing, Priming.Window)
+      val body = DeltaFile.encode(produced.commands)
+      val header =
+        DeltaFile.Header(t"base", t"brotli", Priming.Window, Priming.Block, body.length.toLong)
+
+      test(m"The walk keeps the shared records, skips the base's own, and accounts for the rest"):
+        (produced.kept, produced.skipped, produced.stored, produced.updated)
+      . assert(_ == (2, 2, 1, 1))
+
+      test(m"Applying the commands reproduces the target stream exactly"):
+        list(DeltaFile.apply(header, base, body, targetStream.length.toLong))
+      . assert(_ == list(targetStream))
+
+      test(m"A budget below the target's length rejects the reconstruction"):
+        safely(DeltaFile.apply(header, base, body, targetStream.length.toLong - 1))
+      . assert(_ == Unset)
+
+      test(m"A truncated body is rejected"):
+        val truncated = Store.slice(body, 0, body.length - 1)
+        safely(DeltaFile.apply(header, base, truncated, targetStream.length.toLong))
+      . assert(_ == Unset)
+
+      test(m"The header renders and parses back"):
+        val rendered = DeltaFile.Header(t"Ab12", t"brotli", 24, 16777216, 1234L).render
+        DeltaFile.Header.parse(rendered)
+      . assert(_ == DeltaFile.Header(t"Ab12", t"brotli", 24, 16777216, 1234L))
+
+      val head = utf8Encoder.encoded(t"#!/usr/bin/env lira\nlira 1.0\n\nname example\n##\n")
+      val delta = DeltaFile.assemble(head, header, utf8Encoder.encoded(t"body"))
+
+      test(m"A delta file is told from a whole file by its pragma line"):
+        (DeltaFile.isDelta(delta), DeltaFile.isDelta(file(manifestText, payloadText)))
+      . assert(_ == (true, false))
+
+      test(m"A delta file parses into its head, header and body"):
+        val parsed = DeltaFile.parse(delta)
+        (list(parsed.head) == list(head), parsed.header, parsed.body.utf8)
+      . assert(_ == (true, header, t"body"))

@@ -242,7 +242,7 @@ class Store(val root: Path on Linux):
       List.from:
         dir.children.stdlib.flatMap { fan => fan.children.stdlib }
 
-  private def decodeHead(head: Data): Optional[Lira.Manifest] =
+  def decodeHead(head: Data): Optional[Lira.Manifest] =
     separatorIndex(head).let: separator =>
       safely[Tel.Error | Lira.Error]:
         val document = slice(head, 0, separator + 1).utf8.load[Tel]
