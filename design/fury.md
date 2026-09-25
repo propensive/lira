@@ -522,8 +522,31 @@ a hash domain for the input identity (step 7); optionally
 nested schemas (step 1). [#2028](https://github.com/propensive/soundness/issues/2028)
 retained compiler sessions no longer gates anything, since compiles are cold.
 [#2031](https://github.com/propensive/soundness/issues/2031) ties them to the Soundness
-roadmap's tool-4. New: anthology extensions where its `Edge` and `Toolchain` types fall
-short of `tool.schema.tel` (step 5).
+roadmap's tool-4.
+
+Filed for this design (2026-09-25), by the step or track each gates:
+[#2065](https://github.com/propensive/soundness/issues/2065) anthology's edge model
+carrying `tool.schema.tel`'s information model and
+[#2066](https://github.com/propensive/soundness/issues/2066) forms as data (step 5 and
+the registry); [#2067](https://github.com/propensive/soundness/issues/2067) validator
+rejections carrying their diagnostic and focus and
+[#2068](https://github.com/propensive/soundness/issues/2068) E306 attribution (step 1's
+reports); [#2069](https://github.com/propensive/soundness/issues/2069) accrual
+accumulators without `Hazard`; [#2070](https://github.com/propensive/soundness/issues/2070)
+classloaders with a chosen parent (step 5's plugin loading) and
+[#2071](https://github.com/propensive/soundness/issues/2071) the capability leak on
+resource reads; [#2072](https://github.com/propensive/soundness/issues/2072) TLS pinned to
+a fingerprint, [#2073](https://github.com/propensive/soundness/issues/2073) certificates
+bound to an ML-DSA key and [#2074](https://github.com/propensive/soundness/issues/2074)
+BinTEL framing over `Duplex` (track B); [#2075](https://github.com/propensive/soundness/issues/2075)
+the memo tier and `lira-inputs` document (step 7);
+[#2076](https://github.com/propensive/soundness/issues/2076) debounced watch batches
+(track B and `watch`). In Pyrocosm: [#28](https://github.com/propensive/pyrocosm/issues/28)
+additional schema-validated configuration documents (step 3),
+[#29](https://github.com/propensive/pyrocosm/issues/29) schema-validated `config.tel`,
+[#30](https://github.com/propensive/pyrocosm/issues/30) daemon-owned state for `Tool.Web`,
+[#31](https://github.com/propensive/pyrocosm/issues/31) a graph block and
+[#32](https://github.com/propensive/pyrocosm/issues/32) a server-driven live list (track C).
 
 ## 17. Beyond the milestone
 
