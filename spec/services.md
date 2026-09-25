@@ -74,7 +74,10 @@ to the edge between a consumer service and the provider it calls:
    a name for that moment: the readiness check.
 
 All three point the same way. **A running service is a host to its consumers** (LIRA §4.1), and
-the edge is a `requires` record — which is why this document adds no edge type. A deployed
+the edge is a `requires` record — which is why this document adds no edge type. In the terms
+of LIRA §4.2 the three criteria are the two edge kinds' resolution rules: a dependency edge's
+provider is found by module name in a universe and materializes; a requirement edge's
+provider is found by satisfaction in an environment's addresses and does not. A deployed
 service is Janus-faced — a _module_ at distribution time, published, versioned and signed like
 any release; a _host_ at runtime, required, satisfied and probed like any environment — and
 this specification makes the two faces one object: the release's atoms are simultaneously its
@@ -235,8 +238,10 @@ operator-signed **environment release** whose manifest carries the grants, deplo
 bindings this section judges ([`environments.md`](environments.md), **L148**). A cluster's
 controller knows what is _running_; this document says what to check it against.
 
-Environment validity (**L145**) holds, for an assignment of one integration per deployed
-release (LIRA §13.3, unchanged), iff:
+Environment validity (**L145**) holds, for the integration each deploy record names (LIRA
+§13.7 — the environment's edge set is authored, not searched; a tool that asks "can this
+release deploy here?" tries the release's integrations in turn and the one that validates
+becomes the deploy record's `integration`, the search preceding the judgment), iff:
 
 1. **Closure**: every module named by any deployed release's applicable `requires` records is
    **provided** — by one of the environment's platform contracts, or by a deployed release of
@@ -248,11 +253,18 @@ release (LIRA §13.3, unchanged), iff:
    satisfaction, by every concurrently-serving release of the standing-in module. Where the
    requirement resolves to a binding, the quantifier ranges within that binding's selection
    (**L150**, LIRA §13.7): releases behind other addresses are other providers.
-3. **Aggregation**: requirements on one provider from several releases are jointly judged by
-   the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
-   lineage, jointly satisfiable iff _every_ concurrently-serving release of the provider
-   carries every required snapshot in its lineage (the diamond rule, universalized over the
-   overlap); by spanning, the union of the used-sets must be covered by each.
+3. **Aggregation, per resolved provider**: requirements from several releases that resolve
+   to the _same_ binding ([`environments.md`](environments.md) §6) are each judged, under rule
+   2's quantifier, against every release inside that binding's selection — by lineage, every
+   such release carries every required snapshot (the diamond rule, universalized over the
+   overlap); by spanning, every such release's atoms cover each used-set. Requirements on one
+   module that resolve to _different_ bindings — two majors at two addresses; a mock standing
+   in for one consumer by cross-module spanning and not for another — are judged separately,
+   each against its own binding. There is no requirement that one provider cover the union of
+   every consumer's used-set: aggregation is the conjunction of per-edge judgments grouped by
+   resolved provider (LIRA §4.2), which at build time, where resolution by name is unique,
+   is exactly the rule of hosts.md §10. The union of the resolved requirements remains the
+   environment's aggregated requirement report, consumed whole by probing (§8).
 4. **Platform coherence**: any profiles declared by deployed releases impose their predicates
    over the environment, on the terms of LIRA §13.3 rule 6 — this is where an operator's
    platform policy (every deployable pinned, every artifact signed by a release key, a
@@ -299,17 +311,20 @@ anything moves. The three transition shapes:
 **Grades schedule operations.** Consider a provider whose new release extends its surface
 lineage, and read the lineage step through §11.5's runtime transposition — linkage is wire
 compatibility for already-running consumers, recompilation is regeneration for consumers who
-rebuild. Each cell is a claim at the levels the release's disciplines and declared profiles
-actually certify (LIRA §11.5, §12.4): for an `openapi/1` surface, the wire column is the
-anticipated `http-json/1` profile's claim, not the discipline's
-([`openapi.md`](openapi.md) §2).
+rebuild. A running consumer's edge is exercised at a _linking_ juncture and requires the
+linkage level; a rebuilt consumer's at a _construction_ juncture and requires recompilation
+(LIRA §4.2, §11.5). Each cell is therefore a claim only at the levels the release's
+disciplines and declared profiles actually certify (**L151**): for an `openapi/1` surface,
+which certifies recompilation alone, the running-consumer column is the anticipated
+`http-json/1` profile's claim ([`openapi.md`](openapi.md) §2), and without that profile it
+reads _uncertified_.
 
-| Lineage step            | Rolling deploy | Running consumers                                    | Rebuilt consumers |
-| ----------------------- | -------------- | ---------------------------------------------------- | ----------------- |
-| patch                   | safe           | unaffected                                           | unaffected        |
-| minor                   | safe           | safe — wire compatibility preserved                  | safe              |
-| minor, `breaks linkage` | coordinated    | must redeploy — and _which_ is computed, not guessed | safe              |
-| major (new lineage)     | new surface    | satisfied only by spanning                           | re-audited        |
+| Lineage step            | Rolling deploy | Running consumers (linkage required)                 | Certified by      | Rebuilt consumers (recompilation) |
+| ----------------------- | -------------- | ---------------------------------------------------- | ----------------- | --------------------------------- |
+| patch                   | safe           | unaffected                                           | atoms unchanged   | unaffected                        |
+| minor                   | safe           | safe — wire compatibility preserved                  | a linkage profile; else uncertified | safe             |
+| minor, `breaks linkage` | coordinated    | must redeploy — and _which_ is computed, not guessed | the profile's `breaks` | safe                         |
+| major (new lineage)     | new surface    | satisfied only by spanning                           | as for minor      | re-audited                        |
 
 The `breaks linkage` row (LIRA §12.4) is the coordinated deploy, named in a signed manifest
 rather than in a runbook: the step is minor by the atom algebra, so regenerated clients need
@@ -317,8 +332,10 @@ nothing, but wire compatibility was not preserved, so running consumers must mov
 that must move is exactly the consumers whose used-sets intersect the step's delta (LIRA
 §13.4's staleness, transposed from "should recompile" to "must redeploy"). The row is live
 only where the provider declares a linkage-certifying profile (LIRA §12.4): for the
-`openapi/1` family, the anticipated `http-json/1`; absent one, the wire level is simply
-unclaimed, and a cautious operator treats every minor as potentially coordinated. The major row is
+`openapi/1` family, the anticipated `http-json/1`. Absent one, the wire level is
+uncertified, and a tool MUST report every running consumer's edge across a minor step as
+uncertified at the linkage level rather than as safe (**L151**) — the operator's caution
+about minors is then the tool's report, not folklore. The major row is
 where spanning earns its keep: a consumer whose used-set avoids everything the new lineage
 dropped keeps running, provably, through a break that would otherwise force a fleet migration
 on a date.
@@ -409,7 +426,11 @@ the other requires. A message topic or a shared database does not fit so cleanly
 readers _both_ evolve, against data that persists — an event written under last year's schema
 is read by next year's consumer — so compatibility there is two-sided and extended over time,
 which is the distinction schema registries encode as backward/forward/full, and which LIRA
-§10.5 identifies as the point where a single lineage stops being the right structure. A topic
+§10.5 identifies as the point where a single lineage stops being the right structure. In the
+terms of LIRA §4.2 the edge's two ends are exercised at different junctures — the writer's
+before the reader's, against data retained between them — so the reader faces every writer
+release that ever wrote, deployed or not, and no single requirer stands at one instant
+([`junctures.md`](../design/junctures.md) §10). A topic
 or a database schema is very likely a module of its own, whose migrations are lineage events
 with grades ("can I run this migration?" wants to be a containment check over deployed
 consumers' used-sets), but the two-polarity evolution relation needs design the current

@@ -152,10 +152,10 @@ materialization — not content.
 
 `capability/1` is the discipline of host contracts with no formal carrier. Its domain is the
 single realm `{host}`; its keying is by declaration; it emits only rigid atoms and no reference
-lists; it certifies **presence**, on the same terms as `resource/1` — which is the recompilation
-level for content addressed by name, and the only level that "the command exists" can mean.
-(`environment/1` certifies presence on these same terms, for environment topology —
-[`environments.md`](environments.md) §5.)
+lists; it certifies **presence** — the fourth guarantee level of LIRA §11.5, the level an
+edge constructed against nothing requires, and the only level that "the command exists" can
+mean. (`resource/1` and `environment/1` certify presence on the same terms, for declared
+content and for environment topology — LIRA §11.4, [`environments.md`](environments.md) §5.)
 
 **Claiming.** The discipline claims the single tree item at the path `capabilities`: a TEL
 document conforming to the `lira-capabilities` schema:
@@ -313,7 +313,8 @@ everything around the assertion: the contract's atoms are recomputed from its pa
 third moment:
 
 **Probing, at install or launch time.** Whether the actual host honors the contract the
-requirement was satisfied against is decidable exactly there — `command -v git` for a shell
+requirement was satisfied against — whether the provider present at the linking juncture is
+the one the judgment assumed (LIRA §4.2) — is decidable exactly there — `command -v git` for a shell
 capability, `'IntersectionObserver' in window` for a Web API (feature detection, the idiom the
 web has always used, here made machine-readable), an API-level query on Android. A capability's
 advisory `probe` field (§5) makes the check data-driven where present; probes are suggestions to
@@ -331,12 +332,17 @@ omission, never prove a declaration list complete.
 ## 10. Transitive Aggregation
 
 A buildpath's effective requirement set, for a target and assignment (LIRA §13.3), is the union
-of the `requires` records of every selected section. Tools MUST aggregate before judging:
-requirements on one contract module from several releases are jointly satisfiable iff some
-release of that contract satisfies each — by lineage membership, requirements on two snapshots
-resolve exactly as diamond dependencies do (some lineage contains both, LIRA §13.3 rule 5); by
-spanning, the union of the used-sets must be contained in one contract's atom set. The
-aggregated set — "this application, on this target, needs a host providing these capabilities" —
+of the `requires` records of every selected section. Requirements on one contract module from
+several releases are jointly satisfiable iff some release of that contract satisfies each —
+by lineage membership, requirements on two snapshots resolve exactly as diamond dependencies
+do (some lineage contains both, LIRA §13.3 rule 5); by spanning, the union of the used-sets
+must be contained in one contract's atom set. This is not a rule of its own but the
+conjunction of the per-edge judgments (LIRA §4.2): a target names at most one contract per
+module, so every requirement naming that module resolves to the same provider, and "one
+release satisfies each" is what judging each edge against that release amounts to. At run
+time resolution is per requirement and may land on different bindings, and the grouping is by
+resolved binding ([`services.md`](services.md) §6 rule 3, [`environments.md`](environments.md)
+§6). The aggregated set — "this application, on this target, needs a host providing these capabilities" —
 is the application's host contract in all but publication, and SHOULD be reported as such; a
 probing tool (§9) consumes it whole. Only the resolved member of each alternative group enters
 the aggregate, and an unprovided optional group does not at all (§6) — a preference cannot make

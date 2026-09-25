@@ -174,7 +174,7 @@ project example # a project with the id "example"
 
     # A content claim beside a presence claim (builds.md §16): presence is a
     # file/1 atom; conformance is a requires on the schema module, satisfied by
-    # lineage and graded by tels/1 — an environment providing config under a
+    # lineage and graded by tels/2 — an environment providing config under a
     # newer, extended schema still satisfies. The probe runs tel validate.
     presume file /etc/example.tel
       schema example.dev/config 1.2

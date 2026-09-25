@@ -3,7 +3,7 @@ name tool
 
 # The tool descriptor schema (builds.md §14.3): the document a tool's `descriptor`
 # extracts to at publish (`tool.tel` in a lira-tool release's tree), and equally the
-# registry entry shape for built-in tools (universes.md §6). Publishable as a tels/1
+# registry entry shape for built-in tools (universes.md §6). Publishable as a tels/2
 # module. The descriptor is the carrier-neutral information model: a WIT-hosted tool
 # and a Scala-trait tool are the same kind of thing exactly when they extract
 # identical descriptors.

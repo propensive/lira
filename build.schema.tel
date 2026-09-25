@@ -168,7 +168,7 @@ record Host
 # The predicate follows the discipline's convention: a colon-variant or a version
 # token (builds.md §12).
 # A content claim graduates to the graph (builds.md §16): the `schema` child names
-# a published tels/1 module, compiling to a requires satisfied by lineage — never an
+# a published tels/2 module, compiling to a requires satisfied by lineage — never an
 # opaque predicate. A predicate that needs an algebra is a module reference.
 record Presumption
   description  One presumption or guarantee, `presume|guarantee <kind> <name> [<predicate>]`

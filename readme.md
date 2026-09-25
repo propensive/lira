@@ -27,6 +27,8 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   validity, and deployment.
 - [`spec/environments.md`](spec/environments.md) — environment releases, the `env` realm,
   bindings and addresses, the `environment/1` discipline, and provisioning.
+- [`spec/tels.md`](spec/tels.md) — the normative TEL schema discipline `tels/2`, by which
+  LIRA's own extension layers and any TEL schema are published and versioned.
 - [`spec/webidl.md`](spec/webidl.md) — the normative Web IDL discipline, for browser host
   contracts.
 - [`spec/wit.md`](spec/wit.md) — the normative WIT discipline, for WASI worlds and, ahead, the
@@ -44,6 +46,9 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   vectors: the section matrix, the one-API rule, and buildpath resolution as a search.
 - [`design/distribution.md`](design/distribution.md) — the index service: DNS-verified
   namespaces, transparency log, single-packet UDP resolution, GitHub Releases hosting.
+- [`design/junctures.md`](design/junctures.md) — the derivation of the format's
+  primitive: one edge, exercised at a juncture, resolved in a medium; the buildpath and
+  the environment as two species of composition; TEL acceptances beside LIRA resolution.
 - [`design/execution.md`](design/execution.md) — the derivation, now adopted as
   [`spec/environments.md`](spec/environments.md): extending the algebra to long-running
   execution, with the environment manifest as desired state, bindings and addresses, drift,

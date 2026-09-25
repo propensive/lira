@@ -2,7 +2,10 @@
 
 ## Abstract
 
-The buildpath is judged and then closed; an environment is judged and then *lived in*.
+The buildpath is judged and then closed; an environment is judged and then *lived in*. The
+two are the species of one composition (LIRA §4.2), and this one is the species whose edge
+set is *authored*: every deploy record names the integration deployed, every binding the
+address a provider answers at, and the judgment reads what the operator wrote.
 Services keep calling each other, deploys keep arriving, and the compatibility question a
 buildpath answers once is asked continuously, for as long as anything runs. This document
 specifies the object that keeps the question answerable: the **environment release** — an
@@ -171,7 +174,12 @@ its selection is the gradeless transition-validity case, exactly as
 A deployed consumer's requirement on module `M` has **candidate** bindings: those whose
 provider module and selection satisfy it — by lineage membership or spanning, services.md §5
 verbatim, cross-module spanning included, so a mock's binding is a candidate for exactly the
-consumers whose used-sets it covers. Resolution is deterministic on the canonical-assignment
+consumers whose used-sets it covers. Resolution is per requirement, and so is judgment:
+requirements that resolve to one binding are each judged against every release inside its
+selection (**L150**), and requirements on one module that resolve to different bindings are
+judged separately — aggregation is this conjunction grouped by resolved binding
+([`services.md`](services.md) §6 rule 3), not a demand that one provider cover them all.
+Resolution is deterministic on the canonical-assignment
 pattern (LIRA §13.3): tools MUST resolve each alternative group (LIRA §14; an ungrouped
 requirement is a group of one) to its first satisfied member in declaration order, and that
 member to its first candidate in ascending (`rank`, `address`) order, unless a `route` pin on
@@ -200,8 +208,11 @@ tools is the build's (LIRA §13.5).
 ## 7. Transitions
 
 Every change to an environment release's records is a transition, judged by **L146**
-(services.md §7): the posterior state — and, for rolling changes, the overlap state — must
-be valid. The record-level reading of the three shapes:
+(services.md §7): every state the transition passes through must be valid — the posterior
+state and, for a rolling change, the overlap state in which predecessor and successor serve
+together; a transition replacing several releases at once passes through every intermediate
+combination its controller produces, and each is judged on the same terms (LIRA §4.2). The
+record-level reading of the three shapes:
 
 - **Deploying** adds or replaces `deploy` rows (and, mid-rollout, two releases stand
   transiently inside one binding's selection — L150's quantifier covers exactly them).
