@@ -123,6 +123,26 @@ Soundness prerequisites, beyond those fury.md §4 already files: #2027 (diagnost
 dropped by `ScalacEdges`) and #2026 (a compiler-version accessor) are needed at step 5;
 #2028 (retained compiler sessions) no longer gates anything, since compiles are cold.
 
+## 6a. Scripts
+
+Fury's single-file scripts (fury.md §12a) reach Fever through the contract's optional
+script side-trait, which Fever implements for the `scala` form and is expected to be the
+only implementation of for some time. Fever's side of the convention:
+
+- **Entry point.** The body must define `def main(using Runtime): Unit` at the top level;
+  Fever's descriptor states this convention, and a body without it is a compile error
+  naming it. `Runtime` is the capability bundle a script receives from Fury — its
+  arguments, environment, working directory and standard streams — so scripts never
+  reach for ambient state.
+- **Compilation.** The body is compiled as one module through Fever's ordinary `jvm`
+  edge, against the dependencies the header's `include`s resolve to, with the header's
+  settings and flags; Fever then produces a runnable deliverable (a `jvm-app` by default)
+  with a generated launcher that constructs the `Runtime` and calls `main`.
+- **The script is a module.** Nothing in Fever distinguishes a script's compilation from
+  a project's: the synthetic build Fury derives from the header is what Fever sees, so
+  the script path adds only the entry-point check and the launcher, and every diagnostic,
+  memo hit and identity rule applies unchanged.
+
 ## 7. Open questions
 
 1. The LSP route (§5), and with it whether Fury gains any notion of hosting a service.
@@ -134,3 +154,6 @@ dropped by `ScalacEdges`) and #2026 (a compiler-version accessor) are needed at 
 4. What Fever offers beyond compilation and the LSP — formatting, semantic rendering as
    in flame's REPL, TASTy inspection — and which of those are edges (graded, in the
    descriptor) versus daemon commands (not).
+5. The `Runtime` a script's `main` receives (§6a): which capabilities it bundles, whether
+   it is Fever's type or a small published contract module of its own so that scripts
+   compile against a lineage rather than a Fever release.
