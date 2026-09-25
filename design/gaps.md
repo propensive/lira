@@ -3,11 +3,22 @@
 The open items of the build tool design, tiered by how designed they already are. A
 living checklist: items move up as they are worked, and off as they land. Section
 references are to [`builds.md`](builds.md) unless qualified. Last revised alongside the
-Fury/Fever design round ([`fury.md`](fury.md) §13).
+junctures round ([`junctures.md`](junctures.md)), after the Fury/Fever design round
+([`fury.md`](fury.md) §13).
 
 ## 1. Designed — awaiting spec-side application
 
 Worked proposals whose target is `spec/lira.md` (or distribution):
+
+- **L151 and L152 in reliquary** — the level rule (an edge whose required level its
+  provider does not certify is reported uncertified, never satisfied) and the
+  recorded-edge rule (dependency records for every module the used-set closure reaches)
+  are normative (spec §11.5, §13.2) and unimplemented: buildpath validation needs the
+  juncture of each edge as an input, and publication needs the closure check.
+- **`tels/2` implementation** — the discipline is specified over the composed schema
+  (spec tels.md); no atomizer exists, and the root `.tel` schema files' pragma pin
+  (`specification.tel/tels:1.0.0` today) should move to `2.0.0` once the pinned `tel`
+  tool accepts it.
 
 - **Section-scoped `Tool` records**, with the `Setting` record and LIRA tool identity
   (coordinate + implementation identity; the toolchain analogue of L118). Motivated
@@ -21,7 +32,8 @@ Worked proposals whose target is `spec/lira.md` (or distribution):
 - **Stewarded namespaces** (§6 item 5): the transparent index record for unclaimed
   vendor namespaces, with DNS-proof supersession.
 - **Discipline-obligation promotions** ([`discipline-obligations.md`](discipline-obligations.md)
-  B.1, B.2): the used-set closure rule and encoding invariance into lira.md §11.2.
+  B.2): encoding invariance into lira.md §11.2. (B.1, the used-set closure rule, is
+  subsumed by **L152**, spec §13.2.)
 - **Registry entries**: `oci-image` (jvm-reachable deliverable), `lira-tool`.
 
 ## 2. Discipline specs to write
@@ -74,6 +86,11 @@ Statements exist; the `dts.md`-pattern documents do not:
   motivating case).
 
 ## 4. Genuinely untouched
+
+- **The data plane** — [`junctures.md`](junctures.md) §10 names its shape (an edge whose
+  ends are exercised at different junctures over retained data; the rolling-overlap
+  quantifier over a retention interval, with node persistence beyond deploy records) and
+  stops there. Excluded from the format as before (services.md §11).
 
 - **`build.lock`** — designed in [`fury.md`](fury.md) §12: content (dependency, tool,
   component and host resolutions with proofs and STH), the stale-lock rule, `--update`,

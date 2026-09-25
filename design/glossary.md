@@ -33,8 +33,14 @@ also the keyword introducing it. Cases group under an axis; peer axes form a pro
 
 **component** — (1) Of an edge: a separately-versioned constituent (the `scala-js`
 plugin of scalac's `sjsir` edge), recorded per cell (builds §14.2). (2) Of a TEL
-schema: one hashed element of its composed sequence (base or layer), atomized by
-`tels/1`.
+schema: one hashed element of its composed sequence (base or layer); `tels/2` atomizes
+the composed schema those components produce, not the components themselves.
+
+**composition** — The genus of the buildpath and the environment (spec §4.2): a finite
+set of nodes with their groups, judged over a **state** — the edges exercisable while it
+holds. The buildpath searches its edge set, hypothesizes its providers, materializes and
+is closed over; the environment's edge set is authored, nothing materializes or closes,
+and it is itself a release. Neither is a special case of the other.
 
 **context** — (1) Edge role: dependency cells a tool reads but does not consume
 (builds §14.2). (2) The payload the build tool passes a tool at invocation: inputs,
@@ -62,7 +68,7 @@ currency of the inner build loop. Depending on one exactly (a build pin) makes t
 dependent unpublishable until the pin lifts (L118).
 
 **discipline** — A canonicalization of one carrier into atoms, identified as
-`<name>/<version>` (`tasty/1`, `openapi/1`, `tels/1`). Any change to the
+`<name>/<version>` (`tasty/1`, `openapi/1`, `tels/2`). Any change to the
 canonicalization is a new discipline; two versions of one discipline stand in no formal
 relationship (see **dual-declaration bridge**).
 
@@ -113,8 +119,25 @@ satisfied side of deployed releases' requires.
 
 **guarantee** — (1) Build-file keyword, the dual of `presume`: a provision declared by
 a topology, a machine (`local.tel`), or a packaging module — probe-verified, never
-inferred from demand. (2) In the spec's scalar sense: the certification level of a
-discipline, `linkage` or `recompilation`.
+inferred from demand. (2) In the spec's sense: the certification level of a discipline —
+presence, linkage, recompilation, or behavior (spec §11.5) — each the level one kind of
+**juncture** requires; a judgment is a claim only at certified levels (L151).
+
+**edge** — The standing relation between a requirer and a provider (spec §4.2): a
+**group** of ordered alternatives on one side, an offer (lineage, atom set) on the other,
+compatible by snapshot ∈ lineage or used ⊆ atoms. A *dependency* edge resolves by module
+name and materializes; a *requirement* edge resolves by satisfaction and does not. Not to
+be confused with a tool edge (below), a hyperedge of the pipeline DAG.
+
+**juncture** — One exercise of an edge at an instant (spec §4.2): *construction* (the
+requirer built against the provider; the required snapshot is its memory), *linking*
+(bound together without reconstruction), *operation* (each call). The juncture fixes the
+guarantee level a judgment requires. Derived in [`junctures.md`](junctures.md).
+
+**medium** — The space in which offers are placed and an edge's provider end is resolved
+(spec §4.2): a universe, resolving by module name with disjoint linkage names (spec §13.3
+rules 1–3), or an environment's addresses, resolving to a binding (L149). Carries a
+composition's only non-edge-local rules.
 
 **host** — Anything code runs *on* that supplies capability without composing: a JDK, a
 browser, an OS+libc — and, reflexively, the build tool itself (to its tool plugins) and
@@ -279,9 +302,12 @@ directory. Its absolute location is the tool's, never the user's (builds §14.5)
 tooling (at its strongest, by the compiler itself), recorded on the requiring edge.
 The license for **spanning**.
 
-**validity** — The one algebra: closure, satisfaction, aggregation, coherence over an
-assignment of integrations. Run at three sites: the buildpath, the environment, and the
-packaging edge (an image being a frozen environment-of-one).
+**validity** — The one algebra, over a **state** of a composition (spec §4.2): every
+group resolved to a compatible member, the medium's rules, profile coherence — with
+aggregation the conjunction grouped by resolved provider. Run at three sites: the
+buildpath, the environment, and the packaging edge (an image being a frozen
+environment-of-one). A **transition** between states is valid iff every state it passes
+through is (L146).
 
 **version** — A derived, optional, strictly `x.y.z` label computed from grades; a
 human-readable hint with no authority. Consumers decide everything on hashes.

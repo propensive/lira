@@ -371,8 +371,15 @@ question between code and code — before anything is deployed to find out the h
 Now the turn that doubles the algebra's reach. LIRA observes that **a running service is a
 host to its consumers**: its versioned capability interface is its network API. Nothing of
 a provider service ever composes into a consumer's artifact — the provider is *environment*,
-exactly as a JDK is. So deployment needs no second theory; it needs the first theory,
-transposed.
+exactly as a JDK is. So deployment needs no second theory. What it needs is the theory's
+actual primitive stated once: one **edge**, a requirer against a provider, exercised at a
+**juncture** — when the requirer is built against the provider, when the two are linked, at
+every call — and judged in advance by a **composition**. The buildpath is one species of
+composition and the environment the other, and neither is the other transposed: the
+buildpath searches its edge set and hypothesizes its providers, materializes content and is
+closed over by an egress; the environment's edge set is authored, nothing materializes,
+nothing closes, and it is itself a release with a history. What they share is the edge, the
+juncture, and the judgment.
 
 A **deployable release** is a `.lira` file carrying a closed artifact — an executable jar
 stored directly, or a container image *pinned* by its registry digest — together with the
@@ -485,8 +492,9 @@ search complexity lives. **Reconciliation** — making the running world match t
 one — is the orchestrator's business; LIRA supplies the desired state and the predicate,
 and moves no process. And the specification even marks where its central structure stops:
 content whose readers and writers *both* evolve against retained data — a message topic's
-history — carries both polarities at once, and a single lineage is honestly the wrong
-shape for it.
+history — carries both polarities at once, because its two ends are exercised at different
+junctures against data kept between them, and a single lineage is honestly the wrong shape
+for it.
 
 ## 13. The Shape of the Whole
 
@@ -506,8 +514,10 @@ over manifests; **host contracts** bring the environment into the same algebra; 
 **environment** transposes all of it to run time, where a running service is a host, a
 deploy is a judged transition, an operating system is a host and an install is a deploy,
 the consumer nobody remembered is a closure failure with a name, and laptop, staging, and
-production are one architecture under different signed statements. One question, two moments, three objects — atoms, lineages, used-sets — and
-a single small algebra, carried in the artifact, checkable by anyone.
+production are one architecture under different signed statements. One question, asked of
+every edge at every juncture and decided in advance by two compositions; three objects —
+atoms, lineages, used-sets — and a single small algebra, carried in the artifact, checkable
+by anyone.
 
 ## Reading the Specification Suite
 
@@ -521,4 +531,5 @@ bindings, provisioning), and one document per discipline — [`tasty.md`](tasty.
 [`kotlin.md`](kotlin.md), [`openapi.md`](openapi.md), [`tels.md`](tels.md) — with the JVM
 ecosystem profile in [`jvm.md`](jvm.md). A reader who has followed this introduction can
 start anywhere; the specification's §4 taxonomy and §10.5 polarity note are the two
-passages that most repay early reading.
+passages that most repay early reading, and the derivation of the edge, the juncture and
+the two species of composition is [`../design/junctures.md`](../design/junctures.md).

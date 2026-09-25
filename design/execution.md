@@ -39,6 +39,13 @@ environment each provider is reachable.
 
 ## 2. The genus
 
+> **Status.** The genus is now normative in spec §4.2 and re-derived from a smaller
+> primitive — one edge, exercised at a juncture, resolved in a medium — in
+> [`junctures.md`](junctures.md), which also corrects two cells below: aggregation is not a
+> row of its own but the per-edge conjunction grouped by resolved provider, and the
+> environment's edge set is *authored* rather than searched. The table is retained for
+> history.
+
 The spec already knows that buildpath and environment are two species of one thing —
 services.md §2 is headed "the Second Composition", and §13.7 opens by transposing §13.3. The
 genus deserves a name: a **composition** is a set of releases together with granted contracts,

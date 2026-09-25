@@ -4,13 +4,16 @@
 
 LIRA (Library IR Archive) is a language-agnostic artifact format for distributing compiled
 software, and an algebra for answering — from metadata alone — the question that haunts every
-composition of independently-published parts: _will these work together?_ The question arises
-at two moments. At **build time**, libraries meet on a buildpath and must present compatible
-interfaces. At **deploy time**, running artifacts meet in an environment and must honor
-compatible contracts. LIRA gives both occasions a single answer: they are one question asked
-with two polarities: a release **provides** an interface, expressed as a set of hashed atoms,
-and **requires** capabilities of its surroundings, satisfied by the same set relations that
-grade the interface's evolution.
+composition of independently-published parts: _will these work together?_ The question is
+asked of one **edge** at a time — a requirer against a provider — at every **juncture** at which
+the edge is exercised: when the requirer is built against the provider, when the two are
+linked, at every call (§4.2). Two **compositions** decide it in advance, from manifests. At
+**build time**, libraries meet on a buildpath and must present compatible interfaces. At
+**deploy time**, running artifacts meet in an environment and must honor compatible
+contracts. LIRA gives both a single answer: they are one question asked with two polarities:
+a release **provides** an interface, expressed as a set of hashed atoms, and **requires**
+capabilities of its surroundings, satisfied by the same set relations that grade the
+interface's evolution.
 
 A single `.lira` file carries the compiled representations of one release — for a library,
 every platform's view of it (for example, JVM classfiles, TASTy, Scala.js IR and Scala Native
@@ -181,15 +184,19 @@ executing several representations) dissolve once each thing is named by its **ro
   ("the JVM platform" names both the `jvm` universe and the JVM host) and sometimes with an
   deliverable; wherever this specification's prose says "platform" informally, one of the
   precise terms above is meant and recoverable from context.
-- **Compatible**: meaningful only relative to a **guarantee level** (§11.5) — linkage,
-  recompilation, or behavior. Every compatibility claim in this specification names its level; a
-  claim without one is an equivocation, not a claim.
+- **Compatible**: meaningful only relative to a **guarantee level** (§11.5) — presence,
+  linkage, recompilation, or behavior. Every compatibility claim in this specification names
+  its level; a claim without one is an equivocation, not a claim. The level a judgment
+  _requires_ is fixed by the juncture at which the edge is exercised (§4.2, §11.5); the level
+  it _certifies_ is fixed by the provider's disciplines and profiles.
 
 The taxonomy's edges are now all in view: dependency edges compose libraries within a universe
 (§13.2), joins merge universes, an egress closes a universe into a deliverable, and requirement
 edges point from content — open or closed — to the providers it runs against (§9.4, §13.3). No
 edge leads back out of a deliverable: closure is terminal, and nothing in this specification
-turns a deliverable into composable content again.
+turns a deliverable into composable content again. Dependency and requirement edges are the
+two kinds of edge a **composition** judges (§4.2); joins and egresses are the pipeline's, and
+appear in a judgment only as the medium a dependency edge resolves in (§13.2, `serves`).
 
 ### 4.2 Terms of the Format
 
@@ -209,8 +216,9 @@ turns a deliverable into composable content again.
 - **Discipline**: a named, versioned canonicalization procedure that converts content into atoms
   (§11).
 
-- **Guarantee level**: what a compatibility claim certifies — linkage, recompilation, or
-  behavior. The three are independent, not a hierarchy (§11.5).
+- **Guarantee level**: what a compatibility claim certifies — presence, linkage,
+  recompilation, or behavior. The four are independent, not a hierarchy; each is the level
+  one kind of juncture requires (§11.5).
 - **Profile**: a named, versioned set of predicates an ecosystem imposes over releases and
   buildpaths in addition to those of this specification (§11.6).
 - **Snapshot**: the hash identifying a release's complete API — the hash of its sorted atom set
@@ -249,16 +257,48 @@ turns a deliverable into composable content again.
 - **Operator**: the party who authors and signs an environment release — the third signing
   role of the format, beside the publisher (§15) and the index
   ([`distribution.md`](../design/distribution.md)).
-- **Composition**: the genus of the buildpath and the environment: a set of releases together
-  with granted contracts, under a validity judgment decidable from manifests alone (§13.3,
-  §13.7) — the environment species being itself published, as an environment release
-  ([`environments.md`](environments.md)). The term names the shared judgment and nothing more — universes compose artifacts,
-  environments compose processes ([`services.md`](services.md) §2.1) — and the two species
-  differ in their edges and their ends: dependency edges compose content that an egress
-  **closes over**; requirement edges cohere a state that nothing ever closes over, whose
-  coherence is closure (§13.3 rule 4, §13.7) sustained. A definition language may present one
-  surface syntax for both edge kinds; the compiled records must remain distinct, since their
-  difference (hosts.md §8) is what the deployment algebra stands on.
+- **Edge**: the standing relation between a requirer and a provider: on the requirer's
+  side a **group** — the ordered alternatives of one `alternative` identifier (§14, hosts.md
+  §6), an ungrouped record being a group of one, each member naming a module, a required
+  snapshot and optionally a used-set; on the provider's side an **offer** — a release's
+  lineage and atom set. An edge is compatible iff the required snapshot appears in the lineage
+  (§13.2) or the used-set is contained in the atom set (§13.4). A **dependency** edge's
+  provider is found by module name and its content materializes into the requirer; a
+  **requirement** edge's provider is found by satisfaction — possibly a different module,
+  by spanning — and nothing materializes (hosts.md §8). Polarity is fixed per edge (§10.5).
+- **Juncture**: one exercise of an edge at an instant. Three kinds: **construction** — the
+  requirer is compiled or generated against the provider, the required snapshot being the
+  requirer's memory of it; **linking** — requirer and provider are bound into one classpath,
+  process or connection without reconstructing the requirer; **operation** — each call.
+  The juncture fixes the guarantee level a judgment requires (§11.5, **L151**); judgment
+  precedes exercise, and is made against providers either hypothesized (a target, §13.3) or
+  authored (an environment release, §13.7).
+- **Medium**: the space in which offers are placed and an edge's provider end is resolved: a
+  universe, in which a dependency edge resolves by module name (§13.3 rule 1) and linkage
+  names must be disjoint (rules 2–3); or an environment's addresses, in which a requirement
+  edge resolves to a binding (§13.7, **L149**). A node participates in a medium's rules only
+  where it places an offer in it; a join edge resolves in the served universe's medium
+  (§13.2). The medium's rules are a composition's only non-edge-local rules.
+- **Composition**: the genus of the buildpath and the environment: a finite set of nodes —
+  releases and granted contracts — with the groups they carry, judged over a **state**, the
+  set of edges that could be exercised while that state holds. A state is valid iff every
+  group resolves to a member compatible with its resolved provider, the medium's rules hold,
+  and every declared profile's predicates hold — decidable from manifests alone (§13.3,
+  §13.7). Edges resolving to one provider are each judged against every release concurrently
+  serving in it (**L150**); aggregation (hosts.md §10) is what that conjunction looks like
+  where resolution by name is unique. A **transition** replaces one state by another and is
+  valid iff every state it passes through is (**L146**). The buildpath is the species whose
+  edge set is searched (an assignment, **L132**), whose providers are hypothesized, whose
+  dependency edges materialize, and which an egress closes over into a different object;
+  the environment is the species whose edge set is authored (a deploy record names the
+  integration), whose edges are requirements only, which nothing closes over, whose states
+  succeed one another by transitions, and which is itself a release with a lineage
+  ([`environments.md`](environments.md)). Neither is a special case of the other; the term
+  names what they share — universes compose artifacts, environments compose processes
+  ([`services.md`](services.md) §2.1). A definition language may present one surface syntax
+  for both edge kinds; the compiled records must remain distinct, since their difference
+  (hosts.md §8) is what the deployment algebra stands on. The derivation is
+  [`junctures.md`](../design/junctures.md).
 
 ## 5. File Structure
 
@@ -299,7 +339,7 @@ that ends at or before the end of its manifest carries no payload and is invalid
 The manifest carries its schema **signature**, never a schema: the composed schema is not
 the file's to define. It is the published `lira` base — normative in §14 and compiled into
 every conforming implementation, exactly as the four metadata-blob schemas are (§8.3) —
-alone, or composed with **published layers**, each a signed, lineage-versioned `tels/1`
+alone, or composed with **published layers**, each a signed, lineage-versioned `tels/2`
 release (§14, [`tels.md`](tels.md)) obtained on the same terms as any release, typically
 from the registry that served the file. A reader resolves the signature against the schemas
 it holds; a signature it cannot resolve makes the file **unreadable to that reader**, who
@@ -799,6 +839,15 @@ polarities and folds differently in each: `webidl/1`'s dictionaries ([`webidl.md
 against `dts/1`'s interfaces, and `openapi/1`'s enumerations ([`openapi.md`](openapi.md)),
 which stand alone in request position and fold in response position.
 
+Polarity is a property of the **edge** (§4.2): who requires of whom is fixed, and the
+provider's offer may still carry flows in both directions — a callback or a webhook reverses
+who supplies the request — which the discipline folds flow by flow (openapi.md §5) without
+touching the edge's polarity. What the edge's two ends share is a **juncture**: both are
+exercised at the same instant, and one lineage records the provider's history between
+junctures. Content whose writer and reader are exercised at _different_ junctures, against
+data retained between them, has no single requirer — which is the precise sense in which it
+carries both polarities (below).
+
 The formal statement is deliberately modest — the subset lattice, providers ascending,
 requirements descending — and it is not load-bearing: no
 verifier computes with the duality. It is recorded because it explains why one small algebra
@@ -902,8 +951,7 @@ This specification and its companion documents register the following discipline
   below the major grade.
 - **`resource/1`** (normative; §11.4): resources declared in the manifest — presence-guaranteed
   exports, content-tracked resources, and scanned directories claimed atomless. Its domain is
-  every universe; it certifies presence, which is the recompilation level for content addressed
-  by name.
+  every universe; it certifies **presence** (§11.5): that content of the declared name exists.
 - **`tasty/1`** (informative here; normative specification in [`tasty.md`](tasty.md)): the Scala
   discipline sketched in Appendix A. Its domain is the fixed set `{jvm, sjsir, nir}` — the
   universes whose sections carry TASTy — and the cross-section invariant over that domain is what
@@ -931,8 +979,8 @@ This specification and its companion documents register the following discipline
   declaration; one rigid atom per declared capability, the value hash covering the capability's
   name and optional version predicate. It is the discipline of host contracts with no formal
   carrier — POSIX commands, tool availability; a contract with a formal grammar (Web IDL, `.d.ts`)
-  uses a discipline over that carrier instead. It certifies presence, on the same terms as
-  `resource/1`.
+  uses a discipline over that carrier instead. It certifies **presence** (§11.5), which is
+  the only level "the command exists" can mean.
 
 - **`wit/1`** (informative here; normative specification in [`wit.md`](wit.md)): the WIT
   discipline of the WebAssembly Component Model. Its domain is `{host, wasmc}` — WASI-world
@@ -982,16 +1030,20 @@ This specification and its companion documents register the following discipline
   _topology_: additions are minors, and removing an address, retargeting it to a different
   module, or withdrawing a grant is a major, behind **L110**'s explicit-major gate. Deploys,
   selections and routes enter no atom and change at patch grade.
-- **`tels/1`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
+- **`tels/2`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
   schema discipline, for releases whose content is a TEL schema document — including the
   layers of this specification's own extensibility seam (§14). Its domain is every universe
-  and `host`, on `dts/1`'s reasoning; keying by declaration; it emits only rigid atoms — one
-  per component of the schema's composed sequence, one per ordered component pair — so that
-  grade computation coincides, by construction, with TEL's signature-subsequence
-  compatibility relation, and schema versions are derived from TEL's own subtype relation.
-  It certifies **recompilation** in its schema transposition: revalidation. It also enforces
-  publish-time name binding: a schema's declared `name` binds its module name, and its layer
-  names are the names a TEL pragma's `+` selections address.
+  and `host`, on `dts/1`'s reasoning; keying by declaration; it emits only rigid atoms, over
+  the **composed schema** rather than the component sequence — members, their order within a
+  struct, their `required`/`key`/non-repeatable constraints, validators, pattern lines,
+  encodings, and folded variant sets — so that rigid growth implies TEL's subtype relation
+  between successive composed schemas (tel.md §24.3): a LIRA minor is a TEL-compatible step,
+  and schema versions are derived, conservatively, from TEL's own relation. It certifies
+  **recompilation** in its schema transposition: a reader holding an earlier release reads
+  documents written under any later one. It also enforces publish-time name binding: a
+  schema's declared `name` binds its module name, and its layer names are the names a TEL
+  pragma's `+` selections address. (`tels/1`, which encoded the signature-subsequence relation
+  TEL has since withdrawn as unsound, is a superseded draft no release ever declared.)
 
 Anticipated future disciplines include one for Java source signatures where no `.class` files
 are shipped; a klib-metadata sibling of `kmeta/1` for Kotlin multiplatform;
@@ -1053,9 +1105,15 @@ the buildpath" is checkable, and spans majors, exactly like a symbol reference (
 
 ### 11.5 Guarantee Levels
 
-A compatibility claim is worthless without saying what it certifies. Three levels are
-distinguished, and every discipline states which of them its rigid atoms carry (§11.2):
+A compatibility claim is worthless without saying what it certifies. Four levels are
+distinguished, and every discipline states which of them its rigid atoms carry (§11.2). Each
+is the level one kind of **juncture** (§4.2) requires of the edge exercised at it:
 
+- **Presence**: the named capability or content exists on the host — the level of an edge
+  that was constructed against nothing and asks only that something be there, certified by
+  disciplines over carriers with no formal interface (`capability/1`, `resource/1`,
+  `environment/1`). A presence claim over a host capability is checkable only by probing
+  (hosts.md §9); over declared content, at publish time.
 - **Linkage**: already-compiled consumers continue to resolve and load against the new release,
   with no recompilation. Meaningful where linking is late and by name — JVM classloading, native
   symbol resolution, and network calls resolved by service discovery: for a service contract,
@@ -1068,6 +1126,18 @@ distinguished, and every discipline states which of them its rigid atoms carry (
   still build.
 - **Behavior**: that unchanged interfaces compute unchanged results. No hash scheme certifies
   this and this specification does not attempt to (§18).
+
+Linkage is what a **linking** juncture requires; recompilation is what a **construction**
+juncture requires; behavior is what every **operation** juncture would require and nobody
+certifies. The juncture fixes the level a judgment _requires_; the provider's disciplines and
+declared profiles fix the levels _certified_. A validity judgment (§13.3, §13.7) is a claim
+only at the certified levels, and a tool MUST report an edge whose required level is not
+certified by its resolved provider's disciplines and profiles as **uncertified at that
+level**, never as satisfied (**L151**) — a running consumer of a service whose discipline
+certifies recompilation alone is satisfied at the regeneration level and uncertified at the
+wire level until a profile certifies it ([`services.md`](services.md) §7). A lineage step
+that satisfies the atoms while failing a certified level records the shortfall in `breaks`
+(§12.4).
 
 The levels are independent, and in both directions. A change may preserve linkage while breaking
 recompilation: tightening a type bound, changing an implicit's specificity, or altering a type
@@ -1286,6 +1356,11 @@ throughout, so what was tested is bit-for-bit what was blessed.
 
 ### 13.1 Definition
 
+The buildpath is one of the two species of **composition** (§4.2): the one whose edge set is
+searched, whose providers are hypothesized, whose dependency edges materialize, and which an
+egress closes over. The rules below are the species' own; the environment's are §13.7's; what
+both share is stated once in §4.2 and derived in [`junctures.md`](../design/junctures.md).
+
 A buildpath is a set of `.lira` files intended for joint use. It is unordered: the coherence
 rules below make ordering irrelevant, unlike traditional classpaths.
 
@@ -1321,6 +1396,14 @@ A dependency record MAY additionally carry:
 - **`build`**, a development-time pin to an exact implementation identity (§6): the candidate
   must additionally have exactly that `payload.hash`. Build pins express "this exact unpublished
   build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.5).
+
+Every construction edge is recorded. A release's `dependency` records MUST name every module
+whose atoms enter its used-set closure (§13.4) — including modules its sources never name,
+whose content reached it through the reference lists of a dependency's replaceable atoms —
+each with the required snapshot the closure was computed against and a Uses blob naming the
+atoms; a manifest omitting one is invalid at publish (**L152**). The rule is what makes rules
+4 and 5 of §13.3, staleness and spanning decidable for content copied at any depth of inline
+expansion: an edge the manifest does not carry is an edge no judgment can see.
 
 A `dependency` record naming a module whose releases are not library releases — host
 contracts, deployable releases, or environments (§9.4) — is invalid (**L147**): nothing of a
@@ -1403,6 +1486,18 @@ buildpath is **valid for a target** iff some assignment makes it so (**L132**).
    it validated in and which records remain pending: a buildpath can be coherent as a library
    composition and still unsatisfiable on the host, or in the environment, a consumer intends.
 
+The seven rules are of three kinds (§4.2). Rules 4, 5 and 7 are **edge-local**: each judges
+one group against the offer of the provider it resolves to. Rules 1–3 are the **medium's**:
+rule 1 makes resolution by module name single-valued, rules 2–3 keep the universe's linkage
+names disjoint, and a release participates in them only where it places an offer in the
+medium — a host contract on a buildpath contributes nothing to rules 2–3 (hosts.md §8). Rule
+6 is **global**. Aggregation (hosts.md §10) is not a fourth kind: it is what the edge-local
+conjunction looks like when rule 1 and the target's one-contract-per-module make every edge
+naming a module resolve to the same provider. And rule 7's _pending_ is not a second
+judgment of the same edge but the first one deferred: an edge exercised at a linking juncture
+may be judged at any earlier moment, against whatever providers are then hypothesized, and
+"pending" means that none were.
+
 Where no release declares an integration, every release has one and the assignment is unique:
 the rules read exactly as they did before this mechanism, and validity is decided by one pass.
 
@@ -1466,6 +1561,9 @@ direct references **transitively closed over the reference lists (§11.2) of its
 replaceable atoms** — capturing content copied into the module at compile time through any depth
 of inline expansion, with no compiler cooperation required beyond the archives themselves.
 
+Every module whose atoms the closure reaches is named by a `dependency` record of the module
+(**L152**, §13.2), so the closure never produces an edge the manifest does not carry.
+
 Used-sets enable two derived judgements:
 
 - **Spanning**: a module compiled against release `A` of a dependency is also valid against any
@@ -1521,8 +1619,10 @@ artifact.
 The buildpath decides, from manifests alone, whether a set of releases composes at build time.
 The same question arises again after every egress has run: whether a set of _running_ artifacts
 composes at deploy time — whether this service can be deployed into that cluster without
-breaking a consumer nobody remembered. The **environment** is the buildpath's runtime
-counterpart, and it is deliberately not a second algebra. A deployed service publishes the
+breaking a consumer nobody remembered. The **environment** is the second species of
+composition (§4.2): its edge set is authored rather than searched, its providers are stated
+rather than hypothesized, nothing materializes and nothing closes over it, and it is itself a
+release with a lineage. It is deliberately not a second algebra. A deployed service publishes the
 surface it serves as its own atoms (§9.4); the edges between services are `requires` records on
 their `app` sections — requirements rather than dependencies, because at runtime every
 other service _is_ environment: nothing of the provider composes into the consumer's artifact,
@@ -1535,7 +1635,10 @@ release of the `env` realm whose manifest carries `grant` records — the platfo
 the environment supplies — `deploy` records — the releases intended to run, each pinned by
 implementation identity and naming the `app` section deployed (its realm and integration,
 whose `requires` records are the applicable ones; the environment needs no assignment
-machinery beyond this choice) — and `binding` records, each associating an **address** with a
+machinery beyond this choice: a tool answers "can this release deploy here?" by trying each
+of the release's integrations against the environment, and that search _precedes_ the
+judgment and authors the deploy record, where the buildpath's assignment is part of the
+judgment, **L132**) — and `binding` records, each associating an **address** with a
 provider module and a release **selection**: a snapshot, satisfied through the provider's
 lineage, or an exact implementation identity. A deploy record is thus _precise_ where a
 release is _various_: the release declares every integration it offers, the deploy activates
@@ -1556,7 +1659,12 @@ hold against _every_ concurrently-serving release of a provider — refined per 
 (**L150**): where a requirement resolves to a binding, the quantifier ranges over the
 concurrently-serving releases _within that binding's selection_, releases behind other
 bindings being other providers; a provider deployed but unbound keeps the unrefined
-quantifier. Requirements aggregate across the environment by the rule of hosts.md §10.
+quantifier. Requirements aggregate **per resolved provider**: the requirements that resolve to
+one binding are each judged against every release inside its selection, and requirements on
+one module that resolve to different bindings — two majors at two addresses, a mock standing
+in for one consumer by cross-module spanning — are judged separately; the rule of hosts.md
+§10 is this conjunction where resolution by name is unique, and the aggregated requirement
+set remains the report it always was ([`services.md`](services.md) §6).
 Closure and satisfaction quantify over **groups** (§14): `requires` records sharing an
 `alternative` identifier in one section are satisfied together iff at least one member is,
 an ungrouped record being a group of one, and only the member resolution selects (below)
@@ -1614,7 +1722,9 @@ kebab-case segments joined by `/` or `.`; `namespace` is dotted package-style se
 (letters, digits, `_`; no leading digit); `semver` is exactly `major.minor.patch`, each a
 decimal natural with no superfluous leading zero; `natural` is such a natural; `discipline-id`
 and `profile-id` are `<kebab-name>/<positive integer>`; `guarantee` is `linkage` or
-`recompilation`; `address` is a DNS name optionally followed by a `/`-separated path prefix,
+`recompilation` — the two levels a step can preserve at the atoms while failing under a
+profile; presence is carried by the atoms themselves and behavior is never certified, so
+neither is breakable by record (§11.5); `address` is a DNS name optionally followed by a `/`-separated path prefix,
 compared as authored (environments.md §4); `tree-path` is a relative `/`-separated path with no
 empty, `.` or `..` segments; `atom-class` is `rigid` or `replaceable`; `tag-name` is a
 letter followed by letters, digits, `-` and `.` (`jdk-19`, `scala-3.9`).
@@ -1667,7 +1777,7 @@ scalar ProfileId
   validate     profile-id
 
 scalar Guarantee
-  description  A guarantee level (§11.5): linkage or recompilation. Behavior is never certifiable, so never breakable by record.
+  description  A breakable guarantee level (§11.5): linkage or recompilation. Presence is carried by the atoms and behavior is never certifiable, so neither is breakable by record.
   validate     guarantee
 
 scalar TreePath
@@ -1950,7 +2060,7 @@ schema layers; the manifest's schema signature — carried in its BinTEL header 
 re-emitted as a pragma line in any TEL rendering — encodes exactly which extensions a file
 uses.
 Those layers are themselves **shipped through LIRA**: an extension layer is published as a
-release of a `tels/1` module ([`tels.md`](tels.md)), referenced as
+release of a `tels/2` module ([`tels.md`](tels.md)), referenced as
 `‹domain›/‹name›:‹version›` (distribution design §2), its version derived from TEL's own
 compatibility relation — so LIRA's extensibility seam is delivered by LIRA itself, with the
 same naming, lineage, and verification as any other release. The seam is well-founded
@@ -2061,8 +2171,11 @@ contract's atoms are recomputed from its payload like any release's, and require
 _satisfaction_ is decided from manifests at resolution time — and the environment itself is
 checked at a **third verification moment**: probing at install or launch time (hosts.md §9),
 after publish-time recomputation and resolution-time manifest checking. (These three
-verification moments are orthogonal to the abstract's two _composition_ moments, build and
-deploy: each composition moment draws on all three.) A release's `source` records (§17) are
+verification moments are orthogonal to the two _compositions_ of §4.2, the buildpath and
+the environment: each draws on all three. Read against an edge's junctures, recomputation
+verifies the offer before any juncture, the manifest check judges the edge before it is
+exercised, and probing checks at the linking and operation junctures that the provider
+present is the one that was judged.) A release's `source` records (§17) are
 the second exception, authorial on the same terms — no verification over outputs can decide
 which sources produced them — with independent rebuild (§17), rather than probing, as their
 check. A deployable release's

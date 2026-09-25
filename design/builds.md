@@ -140,13 +140,22 @@ predecessor becomes entangled. The build tool SHOULD keep its module graph acycl
 format will never object. Deployments are the opposite, by design: requirement edges between
 services may form cycles, and environment validity minds not at all, being a predicate over
 a set rather than a resolution order (services.md §5). The asymmetry has a one-line cause:
-builds must *terminate* in an artifact; environments must merely *cohere*.
+builds must *terminate* in an artifact; environments must merely *cohere*. The mechanism
+behind the slogan ([`junctures.md`](junctures.md) §7): a dependency edge is constructed
+against the provider's *product* — its built interface carrier — which must therefore exist
+first, while a requirement edge is constructed against a *description*, authored
+independently of the provider's build, or against nothing. The one requirement edge that
+does order a build is the tool-provider edge of §11: a tool built in this build is a
+provider whose product the step DAG must produce before the step that requires it, which
+is why the step DAG orders by production of inputs, context *and tools*, and coincides with
+the dependency graph only on dependency edges.
 
 ## 4. The continuum to deployment
 
 The vision's second half — the build definition generalizing to a deployment definition — is
-the genus of execution.md §2 seen from the tool's side: one definition language, two species
-of composition. What the tool's language can unify, and what it must keep distinct beneath
+the genus of execution.md §2 — now spec §4.2, derived in [`junctures.md`](junctures.md) —
+seen from the tool's side: one definition language, two species of composition, neither a
+special case of the other. What the tool's language can unify, and what it must keep distinct beneath
 the surface:
 
 - **Edges compile to two kinds.** A module's "depends on" clause targeting a library becomes
@@ -465,11 +474,14 @@ CLI, never `build.tel`.
 ### 10.1 One validity algebra, two world documents
 
 Buildpath validity (§13.3) and environment validity (§13.7, L145) are the same judgment —
-closure, satisfaction, aggregation, coherence, quantified over an assignment of one
-integration per release — differing only in **which document supplies the providers**. At
-build time the providers are the target's host contracts, and requirements naming
-deployables are left explicitly pending (rule 7); at run time the providers are the
-environment's grants and bindings, and the pending judgments close. The environment
+every group resolved to a compatible member, the medium's rules, profile coherence, with
+aggregation the conjunction grouped by resolved provider (spec §4.2) — differing in
+**which document supplies the providers** and in **who fixes the edge set**. At build time
+the providers are *hypothesized* — the target's host contracts — the edge set is found by
+searching an assignment of integrations, and requirements naming deployables are left
+explicitly pending (rule 7); at run time the providers are *authored* — the environment's
+grants and bindings — the edge set is authored too, each deploy record naming its
+integration, and the pending judgments close. The environment
 release is the run's world document exactly as the lockfile is the build's (§9.2): the
 same genus of verifiable memoization, with one honest difference in polarity — the
 lockfile is *sampled* state, the environment is *desired* state, and L146's re-check at
@@ -485,16 +497,17 @@ Of §7's three axis kinds, follow each through the egress into an environment:
 - the **option** axis is consumed by the **deploy record** — a `deploy` names one
   `build`, which is precisely how patch-sibling selection was defined to work;
 - the **integration** axis **survives** — `app` sections are keyed by integration, each
-  with its own `requires`, and environment validity is *defined* as a search for an
-  assignment of one integration per deployed release.
+  with its own `requires`, and a deploy record names the one deployed (spec §13.7).
 
 The observability classification predicts this: integrations are the consumer-observable
 axis, and the environment is the final consumer. Deployability into a particular
 environment is therefore **verifiable from manifests alone**: "can this deploy into E?" =
 "does some integration's requirement set get satisfied by E's grants and bindings?" — a
-service shipped with `pg15` and `pg16` cases is deployable into either estate, the
-environment's assignment selecting exactly as the buildpath's canonical assignment
-selects a backend.
+service shipped with `pg15` and `pg16` cases is deployable into either estate. The search
+over integrations is the tool's, and it *precedes* the judgment: the integration that
+validates becomes the deploy record's `integration`, and L145 then judges the authored
+state — where the buildpath's canonical assignment is part of the judgment itself (L132),
+the environment's is its input.
 
 ### 10.3 A local run is an environment of one
 
@@ -755,7 +768,7 @@ registry entry mapping to a discipline, never a grammar change.
 How the guaranteed set reaches a compiler, concretely — for Scala first, but abstract
 over kinds by construction. The build tool serializes the compiled cell's
 configuration-class guarantees to **canonical BinTEL** under the `lira-guarantees`
-schema (`guarantees.schema.tel`, registered; publishable as a `tels/1` module). The
+schema (`guarantees.schema.tel`, registered; publishable as a `tels/2` module). The
 file is the serialized form of the `lira.tool` Invocation's presumption set: in-process
 plugins receive the value directly through the trait; external compilers receive the
 file through an output-affecting setting. Macros running in the compiler parse it and
@@ -825,7 +838,7 @@ The schema also positions `build.tel` to carry a schema signature in its header
 exactly as manifests do — at which point the build file's own grammar is versioned by
 the same mechanism as everything else in the system. With TEL's pragma now taking LIRA
 references (`‹domain›/‹name›:‹version›`, tel repository
-`design/lira-schema-references.md`) and schemas publishing as `tels/1` modules
+`design/lira-schema-references.md`) and schemas publishing as `tels/2` modules
 (spec/tels.md), that is literal: the build schema publishes like any release, its
 versions derived from TEL's own compatibility relation, and a build file references it
 by coordinate.
@@ -956,7 +969,7 @@ This **information model** is fixed and carrier-neutral. Its realization splits:
   its TASTy — edges can change with no signature change — so "edges are the tool's API"
   (§11) cannot ride on `tasty/1`. Instead, the services.md §4.3 extraction pattern: at
   publish, the build tool runs `descriptor` and writes `tool.tel` into the tree
-  (conforming to a descriptor schema published as a `tels/1` module), atomized by a
+  (conforming to a descriptor schema published as a `tels/2` module), atomized by a
   small tool discipline — one rigid atom per edge, one per classified setting — so edge
   changes are graded as promised. The schema exists: `tool.schema.tel` (registered),
   with `scalac.tool.tel` as its worked instance; it carries the §14.2 model verbatim —
@@ -1163,7 +1176,7 @@ per-platform differences in provision would be a refinement case, none yet motiv
 ## 16. How disciplines relate
 
 Two cases motivate the question. A `file/1` presumption asserts a path exists but says
-nothing of its contents — which may be a TEL document that `tels/1` could validate. And
+nothing of its contents — which may be a TEL document that `tels/2` could validate. And
 a nominal method signature's compatibility depends on the class hierarchy of the types
 it mentions, which no signature atom seems to own. Both feel like one discipline
 delegating to another. Neither is, and the refusal is principled:
@@ -1175,7 +1188,7 @@ delegating to another. Neither is, and the refusal is principled:
 > delegation would be the rule engine returning through the side door the folding
 > principle exists to keep shut.
 
-The stake is concrete: the moment `file/1` could invoke `tels/1` at satisfaction time,
+The stake is concrete: the moment `file/1` could invoke `tels/2` at satisfaction time,
 validity checking would need discipline *implementations* rather than atom sets, and
 decidability-from-manifests — which deployability, the totality loop, and every §10
 judgment rest on — would quietly die.
@@ -1203,12 +1216,12 @@ match, so an environment providing a *newer, extended* schema would wrongly fail
 > **A predicate that needs an algebra is a module reference in disguise.**
 
 Predicates remain for closed vocabularies with trivial orderings (colon-variants,
-version tokens). Structured conformance graduates: the schema is a published `tels/1`
+version tokens). Structured conformance graduates: the schema is a published `tels/2`
 module, and the presumption compiles to two records in two disciplines joined by the
 requirement graph — a `file/1` atom for presence (probed by existence plus
 `tel validate` at startup) and a `requires` on the schema module at a snapshot,
-satisfied by lineage membership and graded by `tels/1`'s own subsequence-coincident
-relation. Surface:
+satisfied by lineage membership and graded by `tels/2`, whose minors are TEL subtypes by
+construction. Surface:
 
 ```tel
 presume file /etc/example.tel

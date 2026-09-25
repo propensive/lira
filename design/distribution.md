@@ -42,7 +42,7 @@ selector   =  version | tag
 
 The two selector kinds are syntactically disjoint with no further rule: a `semver` begins
 with a digit and a `tag-name` with a letter (spec §14). A selector-form reference
-(`soundness.dev/gossamer-core:0.64.2`, `specification.tel/tels:1.0.0`,
+(`soundness.dev/gossamer-core:0.64.2`, `specification.tel/tels:2.0.0`,
 `adoptium.net/java.base:jdk-19`) names **exactly one published release**, and can only ever
 match a published one: unpublished releases are normatively versionless (spec §12.5, L117),
 and tags are signed, unique, and immutable within their module (spec §12.6, L142) — which is
@@ -150,7 +150,7 @@ Operations:
 | `RESOLVE-VERSION` | coordinate, version        | the release carrying that derived version + proof (selector form, §2) |
 | `RESOLVE-TAG`     | coordinate, tag name       | the release carrying that tag + proof — unique per L142 (selector form, §2) |
 | `RESOLVE-COMPAT`  | coordinate, snapshot hash  | latest release whose lineage contains the snapshot — the buildpath primitive (spec §13.2) |
-| `RESOLVE-EXTENDS` | coordinate, composed schema signature | latest `tels/1` release whose component sequence contains the signature's sequence as a subsequence (spec tels.md §11) |
+| `RESOLVE-EXTENDS` | coordinate, composed schema signature | latest `tels/2` release in whose lineage the signature's composition appears — else the latest whose composed schema is a subtype of it (spec tels.md §11) |
 | `LOOKUP`          | manifest hash or payload hash | `Release` record + proof                          |
 | `HEAD`            | —                          | tree size + root hash (signature via HTTPS)          |
 | `PROOF`           | leaf index, tree size      | inclusion or consistency proof                       |
@@ -159,9 +159,10 @@ Operations:
 lineages (~50 B/release) outgrow datagrams — and its honesty is auditable: the full lineage
 is reconstructible from the module's `Release` leaves in the log, so a lying answer is a
 provable inconsistency. `RESOLVE-EXTENDS` is the schema-resolution primitive on the same
-footing: it evaluates TEL's signature-subsequence relation server-side, its answer is graded
-by the `tels/1` discipline's coincidence property (spec tels.md §9) — so TEL's own subtype
-relation certifies it — and it is auditable identically, from the module's manifests.
+footing: it answers by lineage membership where the queried composition was published, and
+evaluates TEL's subtype relation on composed schemas server-side where it was not; the
+`tels/2` discipline's soundness property (spec tels.md §9) is what makes the lineage answer
+a TEL-certified one, and it is auditable identically, from the module's manifests.
 `RESOLVE-VERSION` and `RESOLVE-TAG` serve the selector-form references of §2; both can only
 match published releases, by the argument given there.
 

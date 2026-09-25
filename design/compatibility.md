@@ -33,7 +33,10 @@ It is worth naming the three guarantee levels once:
 Each discipline below states which guarantee its rigid atoms certify. The algebra is
 indifferent — but publishers and consumers must know what a "minor" promises in each universe.
 
-These three levels are now normative in the spec (§11.5), as is the mechanism for a guarantee a
+These three levels are now normative in the spec (§11.5) — joined there by a fourth,
+**presence**, for edges constructed against nothing (`capability/1`, `resource/1`), and each
+tied to the juncture that requires it (spec §4.2; **L151** makes a judgment a claim only at
+the levels certified) — as is the mechanism for a guarantee a
 discipline cannot itself certify: an **ecosystem profile** (§11.6), a versioned predicate set
 checked outside the atom algebra, whose shortfalls a release records as `breaks <level>`
 (§12.4). The rule of thumb for which mechanism to use: a claim belongs in atoms if it should

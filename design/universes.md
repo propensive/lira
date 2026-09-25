@@ -129,7 +129,7 @@ Notes:
 - `native/<triple>` is a family of universes, one per target triple, because C-ABI artifacts
   do not compose across triples. Triple-parameterized universes arrive as a schema layer —
   and schema layers now have a shipping mechanism: each is published as a release of a
-  `tels/1` module (spec/tels.md), referenced as `‹domain›/‹name›:‹version›`, so a new
+  `tels/2` module (spec/tels.md), referenced as `‹domain›/‹name›:‹version›`, so a new
   universe is delivered, versioned and verified by LIRA itself.
 - The application axis is parameterized by triple for the same reason, one step further on:
   `native-exe/<triple>` and `native-image/<triple>` are families, one member per triple, because
@@ -445,7 +445,7 @@ has something to be faithful to.
 Still proposed:
 
 1. Triple-parameterized universes (`native/<triple>`) — as a schema layer, published as a
-   `tels/1` module per spec/tels.md — and, on the
+   `tels/2` module per spec/tels.md — and, on the
    application axis, the triple-parameterized families `native-exe/<triple>` and
    `native-image/<triple>` (§1, §2). The application axis is not a schema object, so this half
    is a registry concern rather than a spec one.

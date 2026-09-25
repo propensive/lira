@@ -1,5 +1,28 @@
 # Handover: `build.tel` — a build-file format as a live test of LIRA
 
+> **Round update (2026-09-25, junctures).** Prompted by TEL's new **acceptance** (bintel.md
+> §8.4), the compatibility genus is re-derived from one primitive — an **edge** (a
+> requirer's group against a provider's offer) exercised at a **juncture** (construction,
+> linking, operation) and resolved in a **medium** (a universe by name; an environment's
+> addresses) — in [`design/junctures.md`](design/junctures.md), now normative in spec §4.2.
+> Buildpath and environment are two species of composition, *neither* a special case of the
+> other (build: searched assignment, hypothesized providers, materialization, egress closure;
+> environment: authored edge set, requirements only, its own lineage). Jon's original framing
+> ("runtime primary, build the one-instant case") was corrected on three points, recorded in
+> junctures.md §1 and §8. Four latent defects fixed: aggregation is now **per resolved
+> provider** (services.md §6 rule 3, hosts.md §10, environments.md §6, spec §13.7); the
+> environment's assignment is **authored** by the deploy record, the tool's search preceding
+> the judgment (spec §13.7, services.md §5, builds.md §10.2); **L152** requires a dependency
+> record for every module the used-set closure reaches; **L151** requires the level a
+> juncture demands to be certified by the provider's disciplines/profiles, else reported
+> uncertified — and **presence** is the fourth guarantee level (spec §11.5; services.md §7's
+> table gains a certified-level column). `tels/1` → **`tels/2`**: atoms over the *composed*
+> schema (members, in-struct order pairs, required/single/key, validators, pattern lines,
+> encodings, folded variant sets), sound toward TEL's subtype relation (tel.md §24.3) and
+> conservative; the old draft encoded TEL's withdrawn subsequence rule. Catalog gains
+> `specification.tel/tels:2.0.0` and `acceptance:1.0.0`; the root `.tel` files' pragma pin
+> is a gaps.md item. Naming was Jon's: edge / juncture / medium.
+
 > **Round update (2026-08-23b).** builds.md §3.1 gains its closing addendum: the
 > **input identity** — scheme `inputs/1` on the existing open-vocabulary source record
 > (no new record kind), digest of a canonical `lira-inputs` BinTEL doc (per-cell:

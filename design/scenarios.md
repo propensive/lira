@@ -194,9 +194,9 @@ encodings throughout, without waiting for every library to republish.*
 *A new universe (say `js`) needs to reach every consumer's tooling as more than a spec
 footnote.*
 
-- LIRA extensions are TEL schema layers, published as `tels/1` modules and referenced
+- LIRA extensions are TEL schema layers, published as `tels/2` modules and referenced
   as `‹domain›/‹name›:‹version›` — LIRA delivered by LIRA (spec tels.md; lira.md §14).
-- Schema versions are derived from TEL's own subsequence relation, so a layer append is
+- Schema versions are derived from TEL's own subtype relation, so a layer append is
   provably a minor.
 - The build schema itself (`build.schema.tel`) publishes the same way, so `build.tel`'s
   grammar is versioned by the same mechanism as everything it builds.
