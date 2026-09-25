@@ -209,7 +209,7 @@ ships, with coordinates). Edge kinds are not stored: compiler, egress, join and 
 derive from the node kinds at an edge's ends (builds.md §14.2).
 
 Fury reads it from resources and decodes its whole tool registry from it; `lira` reads the
-same file for its extension and kind tables. It is publishable as a `tels/1` module plus a
+same file for its extension and kind tables. It is publishable as a `tels/2` module plus a
 data release, the shipped copy being stage0. **Extension is by published registry layers
 only**: a build names one by coordinate (`registry acme.dev/forms 1`), it is locked like a
 dependency and merged additively, redefinition being a lint on L107's precedent. No
@@ -356,6 +356,66 @@ specimen: at the self-hosting step it moves beside the specimen `build.tel` unde
   makes them a selection with a CLI `set`'s standing.
 - **Registry layers**: `registry <coordinate> <selector>` at the document level (§7).
 
+## 12a. Scripts: single-file builds
+
+Independently of projects, Fury runs **scripts**: a single source file prefixed with a
+lightweight TEL header that describes it, executable directly through an interpreter
+directive:
+
+```text
+#!/usr/bin/env fury
+
+language scala
+  # configuration options, in Fury's own vocabulary
+
+##
+
+def main(using Runtime): Unit =
+  Out.println("Hello world")
+```
+
+The shape is the `.lira` file's own (spec §5.2): a TEL head, a line consisting of exactly
+`##`, then the body — here source text rather than a payload — so the split needs no
+parsing of either half, and the interpreter directive is tolerated as the first line.
+
+**The header** is a subset of the build file's options that still make sense for one
+source file, in the same vocabulary, under its own `script.schema.tel`: `language` names
+the source form (the only required field); beneath it the tool settings and flags a
+module could carry, `include` for dependencies by coordinate and selector, `require` for
+host contracts, and an optional `artifact` where the form has more than one runnable
+deliverable. It compiles to a **synthetic build**: one project, one module whose single
+source is the body, the default toolchain, and one `run` command — so a script is an
+ordinary DAG of one or two steps and takes every path a project takes, with nothing
+special-cased after the header is read. Anything not meaningful for one file (axes,
+universes beyond the default, topologies, extraction) is absent from the schema rather
+than ignored.
+
+**Identity and caching.** Fury hashes the whole file first: a file it has seen maps
+directly to a cached runnable in the store, and nothing is planned. A file it has not
+seen is planned and its steps memoized as usual, so a header edit that leaves the
+`inputs/1` identity unchanged is still a hit. The runnable entity — a deliverable in the
+store — is cached under both keys, then executed from a workspace with the script's
+arguments and the invoking environment. A cached runnable is never rebuilt unless the
+file or its resolved world changes; `--force` applies as to any run.
+
+**A capability of tools, not of Fury.** What a runnable entity is, and what the source
+must provide to be one, differs per language: a Scala script defines
+`def main(using Runtime): Unit`; another form may want a different signature or none.
+Fury therefore knows nothing about entry points. The `lira.tool` contract gains an
+**optional side-trait** (never an abstract member, per the contract's evolution rule)
+through which a tool declares that it can turn a single source of a given form into a
+runnable deliverable, names the convention the source must follow, and performs the
+compilation on invocation; the descriptor records the capability so `tool.tel` advertises
+it. Tools choose whether to provide it, most will not, and Fever is expected to be the
+only implementation for some time (fever.md §6a). A script whose language no applied
+tool supports as a script is an error naming the form.
+
+**Invocation.** `fury <file>` where the file's head is a script header, exactly as
+`lira <file>` presents a `.lira` file; the interpreter directive makes `./hello` do the
+same. Arguments after the file go to the run, as declared arguments do for commands.
+Scripts run through the daemon like everything else, so the second run of a script is a
+cache lookup and an exec.
+
 ## 13. Decisions recorded
 
 Kept here so they are not relitigated; the section that explains each is in brackets.
@@ -389,6 +449,10 @@ Kept here so they are not relitigated; the section that explains each is in brac
     command arguments (§12).
 17. The Fury–Fever relationship — how independently they run, over which channels — is
     kept flexible; the LSP route is undecided by choice (fever.md §4–5).
+18. Scripts: a single-file build is a TEL header, `##`, and a source body, compiled to a
+    synthetic one-module build; runnables are cached by whole-file hash and by step
+    identity; turning a source into a runnable is an optional capability a tool declares
+    through a side-trait of the contract, which Fury never special-cases (§12a).
 
 ## 14. Layout
 
@@ -507,6 +571,14 @@ updates; the swarm page.
 **Track D — Fever LSP** (after step 5, independent of A–C). `fever lsp` on Exegesis over
 `fever.compile`; the routing decision of fever.md §5; editor glue as in `tel`.
 
+**Track E — scripts** (after step 7; independent of A–D). `script.schema.tel`; the head
+and body split with the interpreter directive tolerated; the synthetic build; the
+contract's script side-trait and its descriptor field; Fever's implementation for Scala
+(fever.md §6a); the whole-file-hash fast path in the store; `fury <file>` and
+`#!/usr/bin/env fury`. Tests: a hello-world script runs, its second run compiles nothing,
+a header-only edit that changes no input is still a hit, and a script in an unsupported
+language fails naming the form.
+
 ## 16. Soundness prerequisites
 
 The changes the ladder needs in Soundness are filed as issues there, by the step that
@@ -522,14 +594,37 @@ a hash domain for the input identity (step 7); optionally
 nested schemas (step 1). [#2028](https://github.com/propensive/soundness/issues/2028)
 retained compiler sessions no longer gates anything, since compiles are cold.
 [#2031](https://github.com/propensive/soundness/issues/2031) ties them to the Soundness
-roadmap's tool-4. New: anthology extensions where its `Edge` and `Toolchain` types fall
-short of `tool.schema.tel` (step 5).
+roadmap's tool-4.
+
+Filed for this design (2026-09-25), by the step or track each gates:
+[#2065](https://github.com/propensive/soundness/issues/2065) anthology's edge model
+carrying `tool.schema.tel`'s information model and
+[#2066](https://github.com/propensive/soundness/issues/2066) forms as data (step 5 and
+the registry); [#2067](https://github.com/propensive/soundness/issues/2067) validator
+rejections carrying their diagnostic and focus and
+[#2068](https://github.com/propensive/soundness/issues/2068) E306 attribution (step 1's
+reports); [#2069](https://github.com/propensive/soundness/issues/2069) accrual
+accumulators without `Hazard`; [#2070](https://github.com/propensive/soundness/issues/2070)
+classloaders with a chosen parent (step 5's plugin loading) and
+[#2071](https://github.com/propensive/soundness/issues/2071) the capability leak on
+resource reads; [#2072](https://github.com/propensive/soundness/issues/2072) TLS pinned to
+a fingerprint, [#2073](https://github.com/propensive/soundness/issues/2073) certificates
+bound to an ML-DSA key and [#2074](https://github.com/propensive/soundness/issues/2074)
+BinTEL framing over `Duplex` (track B); [#2075](https://github.com/propensive/soundness/issues/2075)
+the memo tier and `lira-inputs` document (step 7);
+[#2076](https://github.com/propensive/soundness/issues/2076) debounced watch batches
+(track B and `watch`). In Pyrocosm: [#28](https://github.com/propensive/pyrocosm/issues/28)
+additional schema-validated configuration documents (step 3),
+[#29](https://github.com/propensive/pyrocosm/issues/29) schema-validated `config.tel`,
+[#30](https://github.com/propensive/pyrocosm/issues/30) daemon-owned state for `Tool.Web`,
+[#31](https://github.com/propensive/pyrocosm/issues/31) a graph block and
+[#32](https://github.com/propensive/pyrocosm/issues/32) a server-driven live list (track C).
 
 ## 17. Beyond the milestone
 
 Unordered; each is a design round of its own, mostly already sketched in `builds.md`:
-tool-4 on Soundness (multi-module, parity with its Mill build); the `sjsir` and `nir`
-universes; the `scala` integration axis (builds.md §7.3, needing `tasty/1` semantic
+tool-4 on Soundness (multi-module, parity with its Mill build); scripts (§12a, track E);
+the `sjsir` and `nir` universes; the `scala` integration axis (builds.md §7.3, needing `tasty/1` semantic
 atomization); `presume`/`guarantee` once `envvar/1` and `file/1` are specified (§12);
 `registry.tel` replacing the hardcoded registry (§7); the `run` settings model and the
 deployment round (builds.md §10); publishing; remote store sharing beyond the swarm; raw
