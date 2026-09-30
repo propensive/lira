@@ -63,17 +63,21 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 
 Status: specification and implementation in progress. The language-blind core — container,
 compatibility algebra, buildpath validation, signing, and canonical derivative artifacts — is
-implemented as the [`reliquary`](https://github.com/propensive/soundness) module of Soundness,
-and the Scala discipline (`tasty/1`) as its `degustation` module; the `lira`
-command-line tool (in this repository, built on Soundness) covers the artifact commands today,
-with its full design — store, cache, and node — in [`design/tool.md`](design/tool.md).
+implemented in this repository's `format` and `derive` modules, beside the disciplines: `tasty/1`,
+`classfile/1` and `jsig/1`, and the foreign surfaces `dts/1`, `webidl/1`, `wit/1`, `cheader/1`
+and `kotlin-metadata/1`. They were Soundness's `reliquary` module and its `lira` adapter
+components until they moved here. The `lira` command-line tool covers the artifact commands
+today, with its full design — store, cache, and node — in [`design/tool.md`](design/tool.md).
 
 ## Building the `lira` tool
 
-The tool is a Mill build over three modules: `core`, the command surface and the store, published
-as `dev.propensive:lira-core`; `launcher`, the one-line invocation point; and `test`. It depends on
-Soundness alone — `reliquary` for the format, `degustation` for the Scala discipline — and is not
-a Pyrocosm application. The Soundness release it builds against is pinned in
+The format is six modules, each published as `dev.propensive:lira-<module>`: `format`, the
+language-blind implementation of the specification; `derive`, derivative artifacts and release
+assembly; and the disciplines, in `tasty`, `classfile`, `foreign` and `bundle` (an anthology
+compilation as release input). The tool adds `core`, the command surface and the store, published
+as `dev.propensive:lira-core`; `launcher`, the one-line invocation point; and `test`, with
+`test-format` holding the format modules' suites. It depends on Soundness alone and is not a
+Pyrocosm application. The Soundness release it builds against is pinned in
 [`etc/refs`](etc/refs), and the tools it runs (fume, flair) in [`etc/tools`](etc/tools).
 
 ```sh
@@ -92,8 +96,7 @@ exactly as fume, flair, flame and tel are released.
 `lira delta` writes a delta file — a release carried relative to a cached predecessor
 ([`spec/increment.md`](spec/increment.md)) — and `lira add` ingests whole files and deltas
 alike, reconstructing a delta's release from its cached base. Two commands are narrower than
-[`design/tool.md`](design/tool.md) describes, because the
-disciplines they need are specified but not yet implemented in Soundness: `lira atoms` names
-`classfile/1`, `jsig/1`, `tasty/1` and `capability/1` only, and `lira harvest` takes `jdk` and
-`android` but not `dts` or `wit`. Both are marked in the source, to be restored as reliquary gains
-each discipline.
+[`design/tool.md`](design/tool.md) describes, because the tool does not yet depend on the
+`foreign` module that implements the other disciplines: `lira atoms` names `classfile/1`,
+`jsig/1`, `tasty/1` and `capability/1` only, and `lira harvest` takes `jdk` and `android` but not
+`dts` or `wit`. Both are marked in the source, to be restored once it does.

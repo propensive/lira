@@ -36,7 +36,7 @@ import java.nio.file as jnf
 
 import soundness.*
 
-import charDecoders.utf8Decoder
+import charsets.utf8Charset
 import filesystemBackends.javaBaseFilesystem
 import logging.silentLogging
 import systems.javaBaseSystem
@@ -60,9 +60,9 @@ import textSanitizers.strictSanitizer
 // other order a jar of classfiles would list nothing at all.
 //
 // The spec drafts a discipline per language — `dts/1` (spec/dts.md), `webidl/1`, `wit/1`,
-// `cheader/1` and `kotlin-metadata/1` — and this list once named all of them. None is implemented
-// in Soundness yet, so none can be named here; `lira atoms --discipline` reports what lira knows,
-// which is exactly this list. Add each back as reliquary gains it.
+// `cheader/1` and `kotlin-metadata/1` — and this list once named all of them. Their disciplines
+// now live in `src/foreign`, but this module does not depend on it yet, so none can be named here;
+// `lira atoms --discipline` reports what lira knows, which is exactly this list.
 private val knownDisciplines: proscenium.List[Discipline] =
   proscenium.List(ClassfileDiscipline, JsigDiscipline, TastyDiscipline, CapabilityDiscipline)
 

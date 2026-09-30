@@ -105,11 +105,20 @@ object settings:
     "-language:experimental.multiSpreads",
     // Capture- and separation-checked, as fume and flame are and tel is not: lira's sources were
     // written for these flags from the start (each subsumes the corresponding per-file language
-    // import), and `reliquary`'s API — which threads `Stdio` and filesystem capabilities through
-    // every command — is capture-checked on the other side of the boundary too.
+    // import). The format modules moved from Soundness are the exception, for now: see
+    // `uncheckedOptions` below.
     "-Ycc-new",
     "-language:experimental.captureChecking",
     "-language:experimental.separationChecking")
+
+  // The options of the LIRA library modules that Soundness compiled without capture checking
+  // (`reliquary`, and the TASTy and anthology adapters), carried over unchanged when they moved
+  // here from Soundness (its roadmap item dist-10). Checking them is further work, not part of the
+  // move.
+  val uncheckedOptions = scalaOptions.filterNot(Set(
+    "-Ycc-new",
+    "-language:experimental.captureChecking",
+    "-language:experimental.separationChecking"))
 
   // The tool's sources are written for the proscenium predef (the Soundness house predef), so this
   // standalone build replicates `-Yno-predef -Yimports:…`, exactly as tel, fume and flame do.
@@ -130,12 +139,15 @@ object settings:
   // This list names TOP-LEVEL components only: each jar's embedded POM names its own dependencies,
   // so the rest of the surface `import soundness.*` touches arrives transitively.
   //
+  // The LIRA format itself (`src/format` and the modules beside it) is no longer here: it moved
+  // from Soundness, where it was `reliquary` and the `lira` adapter components, into this
+  // repository's own modules.
+  //
   // Note what is absent: Pyrocosm. lira is not a Pyrocosm application — nothing here compiles
   // against pyrocosm-model or its frontends; `fury` and `fever` (below) are, and take
   // `pyrocosmDeps` in addition. See etc/refs.
   def soundnessDeps(soundness: String) = Seq(
     mvn"dev.propensive:burdock-core:$soundness",            // externalize + the repackager
-    mvn"dev.propensive:degustation-lira:$soundness",         // the Scala (TASTy) discipline
     mvn"dev.propensive:dendrology-tree:$soundness",          // the `--tree` renderings
     mvn"dev.propensive:digression-ansi:$soundness",          // stack-trace diagnostics
     mvn"dev.propensive:escapade-io:$soundness",              // Teletype <-> Stdio writables
@@ -147,13 +159,9 @@ object settings:
     mvn"dev.propensive:galilei-jvm:$soundness",              // the filesystem
     mvn"dev.propensive:hieroglyph-core:$soundness",          // charEncoders/charDecoders
     mvn"dev.propensive:iridescence-core:$soundness",         // the palette
-    mvn"dev.propensive:mandible-lira:$soundness",            // JVM artifacts as LIRA sections
     mvn"dev.propensive:monotonous-core:$soundness",          // alphabets.hexLowerCase
     mvn"dev.propensive:parasite-core:$soundness",            // threading.platformThreading
-    mvn"dev.propensive:reliquary-core:$soundness",           // the LIRA format itself
-    mvn"dev.propensive:reliquary-derive:$soundness",         // manifest derivation
-    mvn"dev.propensive:stratiform-binary:$soundness",        // BinTEL manifests
-    mvn"dev.propensive:stratiform-core:$soundness")          // the canonical TEL rendering
+    mvn"dev.propensive:stratiform-core:$soundness")          // TEL rendering and BinTEL
 
   // The `lira.tool` contract is built on anthology's types (fury.md §6), and Fever drives the
   // compiler through anthology's Scala driver (fever.md §1).
@@ -381,11 +389,63 @@ trait Publishing extends Toolchain, SonatypeCentralPublishModule:
     PathRef(jar)
 
 object lira extends Project:
+  // The LIRA format: the language-blind implementation of the specification (`spec/lira.md`) —
+  // blobs, trees, atoms, manifests, verification, buildpaths and the discipline SPI. Released as
+  // `dev.propensive:lira-format`. It and the five modules after it were Soundness's `reliquary`
+  // and its `lira` adapter components until they moved here (Soundness roadmap item dist-10).
+  object format extends Component(), Publishing:
+    override def scalacOptions = settings.uncheckedOptions ++ settings.predef
+
+    def mvnDeps = Task(Seq(
+      mvn"dev.propensive:gastronomy-core:${deps.soundness()}",
+      mvn"dev.propensive:pneumatic-brotli:${deps.soundness()}",
+      mvn"dev.propensive:pneumatic-core:${deps.soundness()}",
+      mvn"dev.propensive:revolution-semver:${deps.soundness()}",
+      mvn"dev.propensive:stratiform-base256:${deps.soundness()}",
+      mvn"dev.propensive:stratiform-core:${deps.soundness()}",
+      mvn"dev.propensive:turbulence-async:${deps.soundness()}"))
+
+  // Materialization: canonical derivative jars, the release assembler and classpaths from
+  // releases. Released as `dev.propensive:lira-derive`.
+  object derive extends Component(format), Publishing:
+    override def scalacOptions = settings.uncheckedOptions ++ settings.predef
+
+    def mvnDeps = Task(Seq(
+      mvn"dev.propensive:galilei-jvm:${deps.soundness()}",
+      mvn"dev.propensive:hellenism-jvm:${deps.soundness()}",
+      mvn"dev.propensive:zeppelin-core:${deps.soundness()}"))
+
+  // The `tasty/1` discipline over degustation's TASTy reader. Released as
+  // `dev.propensive:lira-tasty`.
+  object tasty extends Component(format), Publishing:
+    override def scalacOptions = settings.uncheckedOptions ++ settings.predef
+    def mvnDeps = Task(Seq(mvn"dev.propensive:degustation-core:${deps.soundness()}"))
+
+  // The `classfile/1` and `jsig/1` disciplines, JVM profiles and host contracts over mandible.
+  // Released as `dev.propensive:lira-classfile`.
+  object classfile extends Component(format, derive), Publishing:
+    def mvnDeps = Task(Seq(mvn"dev.propensive:mandible-core:${deps.soundness()}"))
+
+  // The foreign-surface disciplines over xenophile's front ends: `dts/1`, `webidl/1`, `wit/1`,
+  // `cheader/1` and `kotlin-metadata/1`. Released as `dev.propensive:lira-foreign`.
+  object foreign extends Component(format), Publishing:
+    def mvnDeps = Task(Seq(
+      mvn"dev.propensive:xenophile-cffi:${deps.soundness()}",
+      mvn"dev.propensive:xenophile-kotlin:${deps.soundness()}",
+      mvn"dev.propensive:xenophile-typescript:${deps.soundness()}",
+      mvn"dev.propensive:xenophile-webidl:${deps.soundness()}",
+      mvn"dev.propensive:xenophile-wit:${deps.soundness()}"))
+
+  // `LiraBundle`: an anthology compilation's output as the input to a release. Released as
+  // `dev.propensive:lira-bundle`.
+  object bundle extends Component(format, derive), Publishing:
+    override def scalacOptions = settings.uncheckedOptions ++ settings.predef
+    def mvnDeps = Task(Seq(mvn"dev.propensive:anthology-core:${deps.soundness()}"))
+
   // The `lira` command-line tool (LIRA specification §5.1): the subcommands, the content-addressed
-  // store and the renderings. The format itself lives in Soundness — `reliquary` is the
-  // language-blind implementation and `degustation` the Scala discipline — so this module is the
-  // front end alone. Released as `dev.propensive:lira-core`.
-  object core extends Component(), Publishing:
+  // store and the renderings, over the format modules above. Released as
+  // `dev.propensive:lira-core`.
+  object core extends Component(format, derive, tasty, classfile), Publishing:
     def mvnDeps = Task(settings.soundnessDeps(deps.soundness()))
 
   // The invocation point, ALONE in its own module (`src/launcher/lira_launcher.scala` — just the
@@ -415,10 +475,43 @@ object lira extends Project:
   // that drives `Tests.invoke` in-process, for `make test-plain` and for CI's `test_main`.
   // One test module for the repository: lira's suite and fury's (src/test/fury.Tests.scala) run
   // together, since the shared CI workflow drives a single test assembly.
+  // The format modules' suites, moved from Soundness with them: `FormatTests` (formerly
+  // reliquary's own) and the three adapter suites. Compiled, like the test suites in Soundness, without capture
+  // checking; `test` below aggregates them into the repository's single test assembly.
+  object `test-format` extends Component(format, derive, tasty, classfile, foreign, bundle):
+    override def scalacOptions = settings.uncheckedOptions ++ settings.predef
+    def scalacPluginMvnDeps = Task(Seq(mvn"dev.propensive:beneficence-plugin:${deps.soundness()}"))
+
+    def mvnDeps = Task(settings.testDeps(deps.soundness()) ++ Seq(
+      mvn"dev.propensive:anthology-java:${deps.soundness()}",
+      mvn"dev.propensive:anthology-scala:${deps.soundness()}",
+      mvn"dev.propensive:enigmatic-core:${deps.soundness()}",
+      mvn"dev.propensive:imperial-core:${deps.soundness()}",
+      mvn"org.scala-lang:scala3-compiler_3:${settings.scalaVersion}",
+      mvn"org.scala-lang:scala3-tasty-inspector_3:${settings.scalaVersion}"))
+
   object test extends Component(core, fury.core):
+    // `test-format` is not a `PublishModule`, so it cannot be a `Component` dependency; it joins
+    // the assembly (and `runTests`'s classpath) through these instead.
+    override def compileModuleDeps = Seq(`test-format`)
+    override def runModuleDeps = Seq(`test-format`)
+
     def mvnDeps = Task(settings.testDeps(deps.soundness()) ++ settings.pyrocosmDeps(deps.pyrocosm()))
     def scalacPluginMvnDeps = Task(Seq(mvn"dev.propensive:beneficence-plugin:${deps.soundness()}"))
     def finalMainClass = "lira.runTests"
+
+    // The repository's specimen files fury's suite validates and decodes, copied into a
+    // `specimens/` resource directory: a suite run in-process by fume's daemon cannot read them
+    // relative to the working directory, which is the daemon's, not the repository's.
+    def specimenFiles = Task.Sources(
+      Seq("build.tel", "local.tel", "scalac.tool.tel").map(mill.api.BuildCtx.workspaceRoot / _)*)
+
+    override def resources = Task:
+      val directory = Task.dest / "specimens"
+
+      specimenFiles().foreach: ref =>
+        os.copy.over(ref.path, directory / ref.path.last, createFolders = true)
+      super.resources() ++ Seq(PathRef(Task.dest))
 
   // The plugin contract (`src/tool`, package `lira.tool`; builds.md §14.3, fury.md §6): the
   // descriptor, invocation and outcome types a tool implements, built on anthology's forms.
@@ -502,7 +595,9 @@ object fever extends Project:
 // (propensive/.github) reconstructs the ivy2 layout coursier resolves from, which is how `make
 // snapshot` publishes an unreleased build for a dependent repository to pin.
 object release extends Module:
-  def modules: Seq[PublishModule] = Seq(lira.core, lira.tool, fury.core, fever.core)
+  def modules: Seq[PublishModule] =
+    Seq(lira.format, lira.derive, lira.tasty, lira.classfile, lira.foreign, lira.bundle, lira.core,
+        lira.tool, fury.core, fever.core)
 
   private def withDescriptors(source: os.Path, target: os.Path, entries: Seq[(String, os.Path)])
   :   Unit =

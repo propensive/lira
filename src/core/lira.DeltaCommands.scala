@@ -152,7 +152,7 @@ private def addFile(store: Store, data: Data)(using Stdio)
     val stream = DeltaFile.apply(header, baseStore, body, manifest.payload.length)
 
     if stream.length.toLong != manifest.payload.length
-        || Blob.compare(Lira.Payload.hash(stream), manifest.payload.hash) != 0
+        || Lira.Payload.hash(stream) != manifest.payload.hash
     then abort(DeltaError(t"the reconstruction does not match the manifest's payload"))
 
     val full = DeltaFile.join(List(parsed.head, Lira.Payload.compress(stream)))

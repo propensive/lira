@@ -31,7 +31,7 @@ The two look similar and behave differently, and the difference matters for §4:
 
 Spec §9.5 defines `against` on a section: "the API snapshot hashes of dependency releases it was
 compiled against, when these differ from the release's declared dependency list." The intent is
-right and the mechanism is a stub. It has no behaviour anywhere in `reliquary` — `Section`
+right and the mechanism is a stub. It has no behaviour anywhere in the format implementation — `Section`
 decodes and renders it, `LiraAssembler` never sets it, and nothing reads it — and it is too weak
 to build on: a bare list of snapshot hashes carries no module names, so a consumer would have to
 reverse-look-up each hash through every candidate's lineage to learn what it constrains.

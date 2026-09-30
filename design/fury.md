@@ -514,7 +514,7 @@ supertypes across bundles.
 
 **3. `fury resolve` (~350).** Resolve every `include` through pins, directory sources and
 the store to a set of cells; run the buildpath validity rules (spec §13.3); print the
-judgment and advisories. Reuses reliquary's `Buildpath`. Needs: the precedence order and
+judgment and advisories. Reuses the format module's `Buildpath`. Needs: the precedence order and
 `local.tel` schema of §11. Tests `Buildpath` on real releases and the four-homes model
 against a user-global file.
 
@@ -538,7 +538,7 @@ surfaces anthology gaps: no compiler-version accessor.
 dependency records (L118 build pins for development-release dependencies), ingest it, print
 its identities; `lira verify` passes. Needs: **section-scoped `Tool` records, the `Setting`
 record and LIRA tool identity** applied to the spec (builds.md §6 item 3; `gaps.md` §1) and
-to reliquary's manifest type, which today also lacks the spec's `source` record. This is
+to the format module's manifest type, which today also lacks the spec's `source` record. This is
 where `gaps.md` §5's hand-derivation happens against real output. Tests L108, L127 and
 L141 on a real module, and the Tool-record design itself.
 
@@ -595,6 +595,11 @@ nested schemas (step 1). [#2028](https://github.com/propensive/soundness/issues/
 retained compiler sessions no longer gates anything, since compiles are cold.
 [#2031](https://github.com/propensive/soundness/issues/2031) ties them to the Soundness
 roadmap's tool-4.
+
+Since the LIRA format moved into this repository (Soundness roadmap item dist-10: `reliquary`
+became the `format` and `derive` modules, and the `lira` adapter components the discipline
+modules), the reliquary issues — #2022, #2023, #2024, #2025 and #2075 below — are changes to
+this repository rather than to Soundness.
 
 Filed for this design (2026-09-25), by the step or track each gates:
 [#2065](https://github.com/propensive/soundness/issues/2065) anthology's edge model

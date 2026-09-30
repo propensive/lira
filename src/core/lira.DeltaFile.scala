@@ -34,8 +34,8 @@ package lira
 
 import soundness.*
 
-import charDecoders.utf8Decoder
-import charEncoders.utf8Encoder
+import charsets.utf8Charset
+import codepages.utf8Codepage
 
 // A delta file did not parse, named a base the store does not hold, or did not reconstruct the
 // release its manifest describes. Nothing a delta yields is the release until the whole stream
@@ -44,7 +44,7 @@ case class DeltaError(detail: Text)(using Diagnostics)
 extends Error(m"delta: $detail")
 
 // The delta file (spec/increment.md, which calls it an increment): a release carried relative to
-// a base the receiver holds. In the byte layout reliquary implements today — directive, TEL
+// a base the receiver holds. In the byte layout `src/format` implements today — directive, TEL
 // manifest, `##` separator, payload — a delta is the target's manifest head verbatim, then a
 // second document, the delta header, then a second separator, then the Brotli-compressed command
 // stream. A file whose first payload byte would begin a Brotli stream instead begins the header's
@@ -52,8 +52,8 @@ extends Error(m"delta: $detail")
 // its own.
 object DeltaFile:
   val pragma: Text = t"delta 1.0"
-  private val pragmaBytes: Data = utf8Encoder.encoded(t"$pragma\n")
-  private val separatorBytes: Data = utf8Encoder.encoded(t"##\n")
+  private val pragmaBytes: Data = utf8Codepage.encoded(t"$pragma\n")
+  private val separatorBytes: Data = utf8Codepage.encoded(t"##\n")
 
   // The one byte-assembly primitive of this file: chunks are collected as an immutable list
   // and laid into a single fresh buffer once their total is known.
@@ -156,7 +156,7 @@ object DeltaFile:
     Parsed(head, header, Store.slice(data, second + 4, data.length))
 
   def assemble(head: Data, header: Header, body: Data): Data =
-    join(List(head, utf8Encoder.encoded(header.render), separatorBytes, body))
+    join(List(head, utf8Codepage.encoded(header.render), separatorBytes, body))
 
   // The command stream (increment.md §5), in target order: a merge walk of two hash-sorted record
   // lists, with `keep` and `skip` run-length coded over the base and `store`/`update` carrying
@@ -208,11 +208,11 @@ object DeltaFile:
         case (_, root: Section) => List(root)
         case _                  => List()
 
-      candidates.prim.let { counterpart => pair(section.tree, counterpart.tree) }
-      val tree = Lira.Tree.decode(target.resolve(section.tree))
+      candidates.prim.let { counterpart => pair(section.tree.bytes, counterpart.tree.bytes) }
+      val tree = Lira.Tree.decode(target.resolve(section.tree.bytes))
 
       val baseTrees = candidates.map: counterpart =>
-        Lira.Tree.decode(base.resolve(counterpart.tree))
+        Lira.Tree.decode(base.resolve(counterpart.tree.bytes))
 
       tree.entries.each: entry =>
         val found = baseTrees.fold[Optional[TreeEntry]](Unset): (found, tree) =>
@@ -222,7 +222,7 @@ object DeltaFile:
 
     targetManifest.api.each: api =>
       baseManifest.api.seek(_.discipline == api.discipline).let: counterpart =>
-        pair(api.atoms, counterpart.atoms)
+        pair(api.atoms.bytes, counterpart.atoms.bytes)
 
     paired
 

@@ -37,14 +37,14 @@ import soundness.*
 // See the note in `lira.LiraTool.scala`: the collection types come straight from Proscenium.
 import proscenium.{List, Nil}
 
-import charEncoders.utf8Encoder
+import codepages.utf8Codepage
 import strategies.throwUnsafely
 
 // Tests for the parts of the tool that are decidable from their arguments alone: the §5.2 byte
 // layout every `.lira` file has, the content-addressed store's naming (design/tool.md §2), and
 // the command surface the usage text is derived from. Nothing here touches a store on disk or
-// reads a real release — those need fixtures the format's own implementation in Soundness
-// (`reliquary`) tests for itself. Run with `make test` (fume) or `make test-plain`.
+// reads a real release — those need fixtures the format's own implementation (`src/format`, with
+// its suite in `lira.FormatTests`) tests for itself. Run with `make test` (fume) or `make test-plain`.
 object Tests extends Suite(m"LIRA tool tests"):
 
   // A minimal file in the §5.2 shape: a TEL manifest, the `##` separator line alone, then the
@@ -54,7 +54,7 @@ object Tests extends Suite(m"LIRA tool tests"):
   val payloadText: Text = t"payload bytes\n"
 
   def file(manifest: Text, payload: Text): Data =
-    utf8Encoder.encoded(t"$manifest##\n$payload")
+    utf8Codepage.encoded(t"$manifest##\n$payload")
 
   def run(): Unit =
     suite(m"File layout (spec §5.2)"):
@@ -69,46 +69,46 @@ object Tests extends Suite(m"LIRA tool tests"):
       test(m"The separator index is the newline that opens the `##` line"):
         val data = file(manifestText, payloadText)
         bytes(Store.separatorIndex(data).let { index => Store.slice(data, 0, index + 1) })
-      . assert(_ == bytes(utf8Encoder.encoded(manifestText)))
+      . assert(_ == bytes(utf8Codepage.encoded(manifestText)))
 
       test(m"The payload is what follows the separator line"):
         val data = file(manifestText, payloadText)
         bytes(Store.separatorIndex(data).let { index => Store.slice(data, index + 4, data.length) })
-      . assert(_ == bytes(utf8Encoder.encoded(payloadText)))
+      . assert(_ == bytes(utf8Codepage.encoded(payloadText)))
 
       test(m"A file with no separator line has no separator index"):
-        Store.separatorIndex(utf8Encoder.encoded(manifestText))
+        Store.separatorIndex(utf8Codepage.encoded(manifestText))
       . assert(_ == Unset)
 
       test(m"A `##` that is not alone on its line is not the separator"):
-        Store.separatorIndex(utf8Encoder.encoded(t"lira 1.0\n## not a separator\n"))
+        Store.separatorIndex(utf8Codepage.encoded(t"lira 1.0\n## not a separator\n"))
       . assert(_ == Unset)
 
       test(m"The first of two separator lines is the one found"):
-        Store.separatorIndex(utf8Encoder.encoded(t"a\n##\nb\n##\nc\n"))
+        Store.separatorIndex(utf8Codepage.encoded(t"a\n##\nb\n##\nc\n"))
       . assert(_ == 1)
 
     suite(m"Manifest-bytes hashing (spec §7.1)"):
       test(m"Equal bytes hash equally"):
-        val once = Store.manifestBytesHash(utf8Encoder.encoded(manifestText))
-        val again = Store.manifestBytesHash(utf8Encoder.encoded(manifestText))
+        val once = Store.manifestBytesHash(utf8Codepage.encoded(manifestText))
+        val again = Store.manifestBytesHash(utf8Codepage.encoded(manifestText))
         once.readable.toList == again.readable.toList
       . assert(_ == true)
 
       test(m"Different bytes hash differently"):
-        val one = Store.manifestBytesHash(utf8Encoder.encoded(manifestText))
-        val other = Store.manifestBytesHash(utf8Encoder.encoded(t"lira 1.0\n\nname other\n"))
+        val one = Store.manifestBytesHash(utf8Codepage.encoded(manifestText))
+        val other = Store.manifestBytesHash(utf8Codepage.encoded(t"lira 1.0\n\nname other\n"))
         one.readable.toList == other.readable.toList
       . assert(_ == false)
 
       test(m"The hash is a Blake3 digest, so 32 bytes wide"):
-        Store.manifestBytesHash(utf8Encoder.encoded(manifestText)).length
+        Store.manifestBytesHash(utf8Codepage.encoded(manifestText)).length
       . assert(_ == 32)
 
       // The domain prefix is what keeps raw manifest bytes from colliding with the spec's own
       // `lira/1:manifest` domain, which hashes the canonical signing encoding instead.
       test(m"The domain prefix is applied, so this is not a bare Blake3 of the content"):
-        val content = utf8Encoder.encoded(manifestText)
+        val content = utf8Codepage.encoded(manifestText)
         Store.manifestBytesHash(content).readable.toList == Blake3.hashOf(content).readable.toList
       . assert(_ == false)
 
@@ -142,7 +142,7 @@ object Tests extends Suite(m"LIRA tool tests"):
          lira.Id, lira.Add, lira.Cache, lira.Pin, lira.Unpin, lira.Gc, lira.Fsck, lira.Install,
          lira.Help, lira.Quit)
 
-      val flags = scala.List[Flag](lira.Major, lira.Budget, lira.Blob, lira.Output, lira.Realm,
+      val flags = scala.List[Flag](lira.Major, lira.Budget, lira.DeltaBlob, lira.Output, lira.Realm,
         lira.Classpath, lira.Only, lira.Owner)
 
       test(m"Every subcommand belongs to a command group"):
@@ -256,7 +256,8 @@ object Tests extends Suite(m"LIRA tool tests"):
       val base = BlobStream.read(baseStream)
       val target = BlobStream.read(targetStream)
 
-      val ordinalOfB = base.blobs.where { blob => Blob.compare(blob.hash, Lira.Hash(Lira.Hash.Domain.Blob, b)) == 0 }
+      val hashOfB = Lira.Hash(Lira.Hash.Domain.Blob, b).bytes
+      val ordinalOfB = base.blobs.where { blob => Blob.compare(blob.hash, hashOfB) == 0 }
         . let(_.n0).or(-1)
 
       val pairing = Map(Lira.Hash.text(Lira.Hash(Lira.Hash.Domain.Blob, edited)) -> ordinalOfB)
@@ -288,8 +289,8 @@ object Tests extends Suite(m"LIRA tool tests"):
         DeltaFile.Header.parse(rendered)
       . assert(_ == DeltaFile.Header(t"Ab12", t"brotli", 24, 16777216, 1234L))
 
-      val head = utf8Encoder.encoded(t"#!/usr/bin/env lira\nlira 1.0\n\nname example\n##\n")
-      val delta = DeltaFile.assemble(head, header, utf8Encoder.encoded(t"body"))
+      val head = utf8Codepage.encoded(t"#!/usr/bin/env lira\nlira 1.0\n\nname example\n##\n")
+      val delta = DeltaFile.assemble(head, header, utf8Codepage.encoded(t"body"))
 
       test(m"A delta file is told from a whole file by its pragma line"):
         (DeltaFile.isDelta(delta), DeltaFile.isDelta(file(manifestText, payloadText)))

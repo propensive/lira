@@ -39,8 +39,8 @@ import soundness.*
 case class BuildError(detail: Text)(using Diagnostics) extends Error(m"build file: $detail")
 
 // The typed model of a build.tel (build.schema.tel), hand-decoded from the validated document in
-// the style of reliquary's `Manifest.decode` — ladder step 1 tests whether that is tolerable at
-// this schema's size (fury.md §15). Positional atoms are read in the schema's field order and
+// the style `Lira.Manifest.decode` was written in before its derivation — ladder step 1 tests
+// whether that is tolerable at this schema's size (fury.md §15). Positional atoms are read in the schema's field order and
 // child fields by keyword. Nothing here resolves anything: forms, tools and coordinates stay
 // texts until `fury resolve`.
 object Model:

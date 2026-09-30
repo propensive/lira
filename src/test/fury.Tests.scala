@@ -32,11 +32,9 @@
                                                                                                   */
 package fury
 
-import java.nio.file as jnf
-
 import soundness.*
 
-import charEncoders.utf8Encoder
+import codepages.utf8Codepage
 import parsing.trackPositions
 import proscenium.List
 import strategies.throwUnsafely
@@ -45,15 +43,18 @@ import strategies.throwUnsafely
 // the tool ships reconstructs and passes stratiform's validity battery, that the repository's
 // specimens validate against them, that the specimen build file decodes to the model, and that
 // the milestone lint accepts a build in scope and refuses the specimen, which deliberately
-// exercises what the milestone leaves out. The repository's `.tel` files are read relative to
-// the working directory, which `make test` and CI make the repository root — stratiform is the
-// validator here because the `tel` command's own `validate` predates the schema headers these
+// exercises what the milestone leaves out. The repository's `.tel` files are read from the
+// `specimens/` resources the build copies them into, through the thread-context classloader as
+// `Schemas` reads its own, so the suite does not depend on its working directory — stratiform is
+// the validator here because the `tel` command's own `validate` predates the schema headers these
 // files carry.
 object Tests extends Suite(m"Fury tests"):
   private def declared(arg: Model.Argument): (Text, Optional[Text]) = (arg.name, arg.default)
 
-  private def document(path: Text): Tel =
-    String(jnf.Files.readAllBytes(jnf.Path.of(path.s)), "UTF-8").tt.read[Tel]
+  private def document(name: Text): Tel =
+    val loader = Thread.currentThread.nn.getContextClassLoader.nn
+    val stream = loader.getResourceAsStream(t"specimens/$name".s).nn
+    String(stream.readAllBytes(), "UTF-8").tt.read[Tel]
 
   private val milestone: Text = List(
     t"tel 1.0",

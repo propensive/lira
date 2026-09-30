@@ -34,7 +34,7 @@ package fury
 
 import soundness.*
 
-import charEncoders.utf8Encoder
+import codepages.utf8Codepage
 import errorDiagnostics.emptyDiagnostics
 
 // A schema Fury ships could not be read: a defect of the build, never of a user's file.
