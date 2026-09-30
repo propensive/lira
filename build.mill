@@ -500,6 +500,19 @@ object lira extends Project:
     def scalacPluginMvnDeps = Task(Seq(mvn"dev.propensive:beneficence-plugin:${deps.soundness()}"))
     def finalMainClass = "lira.runTests"
 
+    // The repository's specimen files fury's suite validates and decodes, copied into a
+    // `specimens/` resource directory: a suite run in-process by fume's daemon cannot read them
+    // relative to the working directory, which is the daemon's, not the repository's.
+    def specimenFiles = Task.Sources(
+      Seq("build.tel", "local.tel", "scalac.tool.tel").map(mill.api.BuildCtx.workspaceRoot / _)*)
+
+    override def resources = Task:
+      val directory = Task.dest / "specimens"
+
+      specimenFiles().foreach: ref =>
+        os.copy.over(ref.path, directory / ref.path.last, createFolders = true)
+      super.resources() ++ Seq(PathRef(Task.dest))
+
   // The plugin contract (`src/tool`, package `lira.tool`; builds.md §14.3, fury.md §6): the
   // descriptor, invocation and outcome types a tool implements, built on anthology's forms.
   // Published as `dev.propensive:lira-tool`, the host contract both `fury` (which loads tools

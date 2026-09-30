@@ -39,7 +39,6 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 import soundness.*
 import galilei.Linux.pathOnLinux
 
-import alphabets.hexLowerCase
 import logging.silentLogging
 import probates.cancelProbate
 import strategies.throwUnsafely
