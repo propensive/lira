@@ -35,7 +35,7 @@ package lira
 import soundness.*
 
 import alphabets.hexLowerCase
-import charEncoders.utf8Encoder
+import codepages.utf8Codepage
 import filesystemBackends.javaBaseFilesystem
 import filesystemOptions.createNonexistentParents
 import filesystemOptions.deleteRecursively
@@ -62,7 +62,7 @@ object Store:
   private val manifestBytesDomain: Text = t"lira/1:manifest-bytes"
 
   def manifestBytesHash(content: Data): Data =
-    val prefix: Data = charEncoders.utf8Encoder.encoded(manifestBytesDomain)
+    val prefix: Data = codepages.utf8Codepage.encoded(manifestBytesDomain)
     val buffer = Array.allocate[Byte](prefix.length + 1 + content.length)
     buffer.place(prefix, 0, 0, prefix.length)
     buffer.place(content, 0, prefix.length + 1, content.length)
@@ -164,8 +164,8 @@ class Store(val root: Path on Linux):
     val actual = tier match
       case Tier.Manifest   => manifestBytesHash(data)
       case Tier.Payload    => abort(StoreError(t"payloads verify via their manifest"))
-      case Tier.Blob       => Lira.Hash(Lira.Hash.Domain.Blob, data)
-      case Tier.Derivative => Lira.Hash(Lira.Hash.Domain.Derivative, data)
+      case Tier.Blob       => Lira.Hash(Lira.Hash.Domain.Blob, data).bytes
+      case Tier.Derivative => Lira.Hash(Lira.Hash.Domain.Derivative, data).bytes
 
     if actual.serialize[Hex] != hex
     then abort(StoreError(t"object $hex in ${tier.dirName} fails verification"))
@@ -175,7 +175,7 @@ class Store(val root: Path on Linux):
   // The decompressed blob stream of a release, verified against the manifest's declared
   // length and hash on every read.
   def blobStream(manifest: Lira.Manifest): Data raises Io.Error raises Lira.Error raises StoreError =
-    val hex = manifest.payload.hash.serialize[Hex]
+    val hex = manifest.payload.hash.bytes.serialize[Hex]
     val target = objectPath(Tier.Payload, hex)
     if !target.existent() then abort(StoreError(t"no $hex in payload"))
     Lira.Payload.decompress(target.read[Data], manifest.payload.length, manifest.payload.hash)
@@ -190,7 +190,7 @@ class Store(val root: Path on Linux):
     val separator = separatorIndex(data).lest(StoreError(t"the separator vanished"))
     val head = slice(data, 0, separator + 4)
     val manifestHex = manifestBytesHash(head).serialize[Hex]
-    val payloadHex = lira.manifest.payload.hash.serialize[Hex]
+    val payloadHex = lira.manifest.payload.hash.bytes.serialize[Hex]
 
     val fresh = put(Tier.Manifest, manifestHex, head)
     put(Tier.Payload, payloadHex, lira.compressed)
@@ -259,7 +259,7 @@ class Store(val root: Path on Linux):
       val hex = path.name
 
       decodeHead(safely(path.read[Data]).or(Data())).option.toList.map: manifest =>
-        val payloadPath = objectPath(Tier.Payload, manifest.payload.hash.serialize[Hex])
+        val payloadPath = objectPath(Tier.Payload, manifest.payload.hash.bytes.serialize[Hex])
 
         val size = safely(backend.stat(path, false).size).or(0L)
           + safely(backend.stat(payloadPath, false).size).or(0L)
@@ -287,7 +287,7 @@ class Store(val root: Path on Linux):
     val evictedSet = evicted.map(_.hex).to(scala.collection.immutable.Set)
     val retained = all.filter { release => !evictedSet.contains(release.hex) }
 
-    val retainedPayloads = retained.map(_.manifest.payload.hash.serialize[Hex]).to:
+    val retainedPayloads = retained.map(_.manifest.payload.hash.bytes.serialize[Hex]).to:
       scala.collection.immutable.Set
 
     evicted.each: release =>
@@ -311,7 +311,7 @@ class Store(val root: Path on Linux):
 
     val referencedDerivatives = retained.flatMap: release =>
       release.manifest.section.stdlib.flatMap { section => section.derivative.option.toList }
-        . map(_.serialize[Hex])
+        . map(_.bytes.serialize[Hex])
     . to(scala.collection.immutable.Set)
 
     var blobsRemoved = 0
@@ -370,7 +370,7 @@ class Store(val root: Path on Linux):
 
     val owned = releases().stdlib.map { release => release.manifest }
 
-    val lengths = owned.map { manifest => (manifest.payload.hash.serialize[Hex], manifest) }.toMap
+    val lengths = owned.map { manifest => (manifest.payload.hash.bytes.serialize[Hex], manifest) }.toMap
 
     objects(Tier.Payload).each: path =>
       count += 1
@@ -388,11 +388,11 @@ class Store(val root: Path on Linux):
   // The bare-artifact lookup behind `lira id` (spec §13.6): hash the candidate under the
   // derivative domain and search stored manifests for a section that declares it.
   def identify(data: Data): Optional[(Release, Section)] raises Io.Error =
-    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, data).serialize[Hex]
+    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, data).bytes.serialize[Hex]
 
     val matches = releases().flatMap: release =>
       release.manifest.section.stdlib.flatMap: section =>
-        section.derivative.option.toList.filter(_.serialize[Hex] == hex)
+        section.derivative.option.toList.filter(_.bytes.serialize[Hex] == hex)
           . map { _ => (release, section) }
 
     matches match

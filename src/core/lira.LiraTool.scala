@@ -37,7 +37,7 @@ import java.nio.file as jnf
 import soundness.*
 
 import backstops.silentBackstop
-import charDecoders.utf8Decoder
+import charsets.utf8Charset
 import classloaders.threadContextClassloader
 import environments.daemonClientEnvironment
 import executives.completionsExecutive
@@ -118,7 +118,7 @@ val Help = Subcommand("help", "show usage information", group = Housekeeping)
 val Quit = Subcommand("quit", "shut down the background daemon", group = Housekeeping)
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
-val Blob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
+val DeltaBlob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
 val Output = Flag[Text]("out", false, Nil, "write the delta file to this path")
 val Realm = Flag[Text]("realm", false, Nil, "the realm to atomize a bare artifact in")
 val Classpath = Flag[Text]("classpath", false, Nil, "dependency classpath for membership keying")
@@ -127,7 +127,7 @@ val Owner = Flag[Text]("owner", false, Nil, "restrict the listing to keys with t
 
 // Every flag lira declares that takes a value, and takes exactly one.
 private val valueFlags: scala.List[Flag] =
-  scala.List(Budget, Blob, Output, Realm, Classpath, Only, Owner)
+  scala.List(Budget, DeltaBlob, Output, Realm, Classpath, Only, Owner)
 
 // The POSIX interpreter's own reading of the commandline. `arguments` is the raw list, flags and
 // all, so a command matching an exact arity would fail the moment a flag appeared among them;
@@ -234,7 +234,7 @@ object LiraTool:
           case _ => execute(usage(help, Exit.Fail(1)))
 
       case Diff() :: rest =>
-        val blob = flagText(Blob, t"file")
+        val blob = flagText(DeltaBlob, t"file")
 
         rest match
           case Pathname(previous) :: Pathname(next) :: Nil =>
@@ -612,10 +612,10 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
 
       // `harvest dts` and `harvest wit` belong here — declaration carriers, one contract
       // module: `.d.ts` under `dts/1` (a Node-builtins contract), `.wit` under `wit/1` (a WASI
-      // world). Both are specified (spec/dts.md, spec/wit.md) but neither discipline exists in
-      // Soundness yet, and a harvested contract's atoms must be exactly what a verifier
-      // recomputes — which only the real atomizer can produce. Restore the branch, and `dts`
-      // and `wit` below, once reliquary gains them.
+      // world). Both are specified (spec/dts.md, spec/wit.md) and their disciplines live in
+      // `src/foreign`, which this module does not yet depend on, and a harvested contract's atoms
+      // must be exactly what a verifier recomputes — which only the real atomizer can produce.
+      // Restore the branch, and `dts` and `wit` below, once it does.
 
       case other =>
         Out.println(t"lira: unknown host kind '$other' (expected jdk or android)")

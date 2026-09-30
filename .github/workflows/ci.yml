@@ -22,7 +22,10 @@ jobs:
   scala:
     uses: propensive/.github/.github/workflows/scala-ci.yml@main
     with:
-      compile:       lira.core.compile lira.tool.compile fury.core.compile fever.core.compile
+      compile: >-
+        lira.format.compile lira.derive.compile lira.tasty.compile lira.classfile.compile
+        lira.foreign.compile lira.bundle.compile lira.core.compile lira.tool.compile
+        fury.core.compile fever.core.compile
       publish_local: __
       assembly:      lira.launcher.assembly fury.launcher.assembly fever.launcher.assembly
       test_assembly: lira.test.assembly

@@ -35,8 +35,8 @@ package lira
 import soundness.*
 
 import alphabets.hexLowerCase
-import charDecoders.utf8Decoder
-import charEncoders.utf8Encoder
+import charsets.utf8Charset
+import codepages.utf8Codepage
 import columnAttenuation.ignoreAttenuation
 import environments.daemonClientEnvironment
 import filesystemBackends.javaBaseFilesystem
@@ -229,13 +229,13 @@ private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit 
   val lira = Lira.read(data)
   store.ingest(data)
 
-  val declared: Optional[Data] = lira.manifest.section.stdlib
+  val declared: Optional[Lira.Hash] = lira.manifest.section.stdlib
     . find { section => section.realm == universe }
     . map(_.derivative)
     . getOrElse(Unset)
 
   val cached: Optional[Data] =
-    declared.let { hash => safely(store.fetch(Store.Tier.Derivative, hash.serialize[Hex])) }
+    declared.let { hash => safely(store.fetch(Store.Tier.Derivative, hash.bytes.serialize[Hex])) }
 
   val jarData: Optional[Data] = cached.or:
     val report = Verification.install(lira)
@@ -243,14 +243,14 @@ private def storeJar(universe: Text, file: Path on Local)(using cli: Cli): Exit 
     report.materialized.stdlib.find { pair => pair(0).realm == universe } match
       case scala.Some(pair) =>
         val built = Derivative.jar(pair(1), report.blobstore)
-        val hex = Lira.Hash(Lira.Hash.Domain.Derivative, built).serialize[Hex]
+        val hex = Lira.Hash(Lira.Hash.Domain.Derivative, built).bytes.serialize[Hex]
         store.put(Store.Tier.Derivative, hex, built)
         built
 
       case _ => Unset
 
   jarData.let: bytes =>
-    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, bytes).serialize[Hex]
+    val hex = Lira.Hash(Lira.Hash.Domain.Derivative, bytes).bytes.serialize[Hex]
     store.journal(t"use", hex)
     val source = store.objectPath(Store.Tier.Derivative, hex)
     val target = clientPath(t"${stemOf(file)}-$universe.jar")
