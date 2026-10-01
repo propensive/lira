@@ -72,6 +72,18 @@ Statements exist; the `dts.md`-pattern documents do not:
 - **Parameterized edges in practice** — the descriptor supports the parameter; no
   worked instance exercises binding beyond the oci-index sketch (`clang` is the
   motivating case).
+- **A BinTEL service discipline** — a request/response surface carried as TEL schemas
+  has two polarities, and `tels/2` (schema payloads only) covers neither as a *served*
+  surface: response schemas stand alone (covariant — a producer may always degrade,
+  tel.md §24.6), while a server's request-side acceptance must fold as `openapi/1`
+  folds request positions (contravariant — its evolution is safe when it *generalizes*,
+  the reverse of atom growth). Until it exists, a BinTEL-speaking service self-describes
+  through whatever carrier describes its transport, like any other; the negotiated-group
+  correspondence (services.md §5.1) needs nothing from it.
+- **`tels/2` follow-ups on the TEL side** — tel's `design/lira-schema-references.md`
+  §4/§6 to cite the positional construction in place of the superseded subsequence
+  mapping; and whether an overlay `field`'s `description` child should be its own schema
+  atom, so that a documentation edit grades patch in an overlay as it does in a record.
 
 ## 4. Genuinely untouched
 

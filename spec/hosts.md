@@ -220,7 +220,12 @@ the **alternative group**: `requires` records sharing an `alternative` identifie
 section (LIRA §14) are satisfied together iff at least one of them is, resolution taking the
 first satisfied member in declaration order — so an artifact that genuinely carries several
 branches, a POSIX signal handler and a Windows console handler in one binary, declares the
-branches it carries and is judged on the one the host can satisfy. Where the branches differ
+branches it carries and is judged on the one the host can satisfy. A group is **static** by
+default — chosen once, as that binary chooses at start-up; a member marked `negotiated` (LIRA
+§14) declares instead that the section chooses per use, in declaration order, tolerating any
+member on any use — a claim about behaviour (§9), signed rather than inferred, which changes
+nothing against a single host release and everything against a provider that is several
+releases at once (LIRA §13.7, services.md §5). Where the branches differ
 in **content**, not merely in what they require, the disjunction is the section matrix
 instead: two integrations (LIRA §9.5), discharged by a choice with a name — the assignment of
 LIRA §13.3 rule 7 at build time, the deploy record at deploy time. And **portability is
@@ -230,7 +235,8 @@ nothing host-specific, and needs no group.
 
 Those are the three moments at which a platform decision can be made — build, deploy, use —
 and each has its declaration: a use-time decision needs a portable envelope or a declared
-alternative group; a deploy-time decision is a section choice; a build-time decision is an
+alternative group — static where the choice is made once, negotiated where it is made per
+use; a deploy-time decision is a section choice; a build-time decision is an
 egress over an assignment. The invariant across all three is the honest one: **every branch
 an artifact might take is declared, either as portable or as an alternative** — an undeclared
 branch is exactly the under-declaration that used-set tooling exists to catch. Deciding
@@ -339,7 +345,9 @@ spanning, the union of the used-sets must be contained in one contract's atom se
 aggregated set — "this application, on this target, needs a host providing these capabilities" —
 is the application's host contract in all but publication, and SHOULD be reported as such; a
 probing tool (§9) consumes it whole. Only the resolved member of each alternative group enters
-the aggregate, and an unprovided optional group does not at all (§6) — a preference cannot make
+the aggregate — per release where the group is negotiated and the provider is several
+releases (LIRA §13.7), the aggregate being then a report indexed by release — and an
+unprovided optional group does not at all (§6) — a preference cannot make
 a host unsatisfying — though a probing tool SHOULD probe and report such groups beside it. Where the application is then published as a deployable
 release ([`services.md`](services.md)), tooling SHOULD record this aggregated set as the
 `requires` of its `app` section — the point at which the phrase "in all but publication" stops

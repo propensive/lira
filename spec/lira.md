@@ -299,7 +299,7 @@ that ends at or before the end of its manifest carries no payload and is invalid
 The manifest carries its schema **signature**, never a schema: the composed schema is not
 the file's to define. It is the published `lira` base — normative in §14 and compiled into
 every conforming implementation, exactly as the four metadata-blob schemas are (§8.3) —
-alone, or composed with **published layers**, each a signed, lineage-versioned `tels/1`
+alone, or composed with **published layers**, each a signed, lineage-versioned `tels/2`
 release (§14, [`tels.md`](tels.md)) obtained on the same terms as any release, typically
 from the registry that served the file. A reader resolves the signature against the schemas
 it holds; a signature it cannot resolve makes the file **unreadable to that reader**, who
@@ -992,16 +992,19 @@ This specification and its companion documents register the following discipline
   _topology_: additions are minors, and removing an address, retargeting it to a different
   module, or withdrawing a grant is a major, behind **L110**'s explicit-major gate. Deploys,
   selections and routes enter no atom and change at patch grade.
-- **`tels/1`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
+- **`tels/2`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
   schema discipline, for releases whose content is a TEL schema document — including the
   layers of this specification's own extensibility seam (§14). Its domain is every universe
   and `host`, on `dts/1`'s reasoning; keying by declaration; it emits only rigid atoms — one
-  per component of the schema's composed sequence, one per ordered component pair — so that
-  grade computation coincides, by construction, with TEL's signature-subsequence
-  compatibility relation, and schema versions are derived from TEL's own subtype relation.
-  It certifies **recompilation** in its schema transposition: revalidation. It also enforces
-  publish-time name binding: a schema's declared `name` binds its module name, and its layer
-  names are the names a TEL pragma's `+` selections address.
+  per schema atom of the schema's atomic expansion (TEL §20.3), its position in the
+  expansion folded into the value — so that set inclusion is exactly the prefix relation on
+  expansions, the relation TEL proves subtype-producing (TEL §24.4): every minor step is a
+  TEL subtype step, and schema versions are derived from a relation TEL's own theorem
+  certifies. It certifies **recompilation** in its schema transposition: every document
+  produced under a later release reads under any earlier one. It also enforces publish-time
+  name binding: a schema's declared `name` binds its module name, and its layer names are
+  the names a TEL pragma's `+` selections address. `tels/1`, which encoded the
+  signature-subsequence relation TEL has since withdrawn as unsound, is retired.
 
 Anticipated future disciplines include one for Java source signatures where no `.class` files
 are shipped; a klib-metadata sibling of `kmeta/1` for Kotlin multiplatform;
@@ -1399,7 +1402,11 @@ buildpath is **valid for a target** iff some assignment makes it so (**L132**).
    `requires` records sharing an `alternative` identifier within one section form a
    **group**, an ungrouped record being a group of one (§14): a group is satisfied iff at
    least one member is, resolution taking the first satisfied member in declaration order,
-   and only that member enters the aggregate. A group none of whose members is satisfied
+   and only that member enters the aggregate. A group a member marks `negotiated` (§14) is
+   judged no differently here: the target holds one release of each contract, against which
+   "some member satisfied" and "one member satisfied by every release" coincide, and the flag
+   earns its keep at environment validity (§13.7), where a provider is several releases at
+   once. A group none of whose members is satisfied
    fails this rule — unless a member is marked `optional`, in which case the group states a
    preference, not a need: it is excluded from this rule and from aggregation, and resolves
    to nothing, which provisioning and probing report rather than fail. A
@@ -1569,20 +1576,54 @@ bindings being other providers; a provider deployed but unbound keeps the unrefi
 quantifier. Requirements aggregate across the environment by the rule of hosts.md §10.
 Closure and satisfaction quantify over **groups** (§14): `requires` records sharing an
 `alternative` identifier in one section are satisfied together iff at least one member is,
-an ungrouped record being a group of one, and only the member resolution selects (below)
-enters the quantifier and the aggregate. A group none of whose members is satisfied fails —
-unless a member is marked `optional`, in which case the group is a preference: it neither
-fails closure nor joins the quantifier or the aggregate, and resolves to nothing.
+an ungrouped record being a group of one. A group is **static** unless a member marks it
+`negotiated`, and the two readings part company exactly where the quantifier ranges over
+several releases. A static group resolves once: it is satisfied iff some member — the first
+in declaration order — is satisfied by _every_ release in the quantifier's range, and only
+that member enters the quantifier and the aggregate; the section commits to it for the
+binding, as a process that chooses its protocol at start-up does. A **negotiated** group
+resolves per release: it is satisfied iff _every_ release in the range satisfies _some_
+member, each release resolving to its first satisfied member in declaration order, and the
+member that enters the aggregate against a release is the member resolved at that release.
+The flag is the section's signed claim that it chooses among the members per use, trying
+them in declaration order and tolerating any member on any use — a claim about behaviour
+that no verifier can check against code (hosts.md §9), which is why it is declared and never
+inferred; on a group of one it is a no-op, and a tool MAY lint a flag on a member other than
+the first. Aggregation follows the quantifier: for each release in range, the members the
+static groups resolved to and the members the negotiated groups resolved to _at that
+release_ are jointly judged against it by the rule of hosts.md §10 — which, every group
+being satisfied, holds by construction, so an environment's aggregate is a report indexed
+by release rather than a further judgement — and groups never couple across consumers: a
+negotiated group neither rescues nor fails a static one on the same provider, and a failing
+overlap names the consumer, the group and the release. A group none of whose members is
+satisfied fails — unless a member is marked `optional`, in which case the group is a
+preference: it neither fails closure nor joins the quantifier or the aggregate, and resolves
+to nothing. `optional` and `negotiated` compose by substitution, the one saying what an
+unsatisfied group means and the other what satisfied means: a negotiated optional group with
+a release in range that satisfies no member is unprovided, never partly provided.
 
-Resolution is deterministic on the canonical-assignment pattern. A requirement's **candidate**
-bindings are those whose provider module and selection satisfy it ([`services.md`](services.md)
-§5, cross-module spanning included); tools MUST resolve each group to its first member, in
-declaration order, that is satisfied, and that member to its first candidate in ascending
-(`rank`, `address`) order, unless a `route` pin on the consumer's deploy record names a
-candidate of some member, which member and candidate are then chosen — a `route` naming an
-address that is not a candidate for any member of its group is invalid (also **L148**), else
-a pin could silently defeat satisfaction. **Provisioning** — the §13.5 analog — evaluates a valid environment into
-a table from each requirement to its resolved binding's address; a requirement whose provider
+Resolution is deterministic on the canonical-assignment pattern. A binding is a
+**candidate** of a static group iff its provider module and selection satisfy some member
+([`services.md`](services.md) §5, cross-module spanning included), and of a negotiated group
+iff every release its selection admits satisfies some member. Tools MUST resolve a static
+group to its first member, in declaration order, that has a candidate, and that member to
+its first candidate in ascending (`rank`, `address`) order; and a negotiated group to its
+first candidate in ascending (_worst member_, `rank`, `address`) order, a binding's worst
+member being the greatest declaration index among the members its releases resolve to —
+the static rule again when every release resolves alike, so member preference steers the
+choice of binding under both readings. A `route` pin on the consumer's deploy record names a
+candidate binding of a group, which binding is then chosen — a negotiated group's members
+still resolve per release; a route never pins a member, since the manifest cannot assert a
+choice the code does not make — and a `route` naming an address that is not a candidate of
+its group is invalid (also **L148**), else a pin could silently defeat satisfaction. The
+route's group is the one group of the section with a member naming the route's `module`; a
+section with two such groups leaves the route ambiguous, and it is invalid on the same
+terms, while its `address` may name a binding of another module, a candidate by spanning
+being a candidate. **Provisioning** — the §13.5 analog — evaluates a valid environment into
+a table from each requirement to its resolved binding's address — for a negotiated group,
+the address and, per release the selection admits, the member that release resolves to, so
+a runtime MAY take its use-time preference list from the row and read from it what each
+release will answer; a requirement whose provider
 carries no binding is _unaddressed_, an advisory fact rather than a failure, since not every
 provider answers at an address. A group none of whose members is satisfied — valid only
 where a member is `optional` — is likewise **unprovided**: recorded in the table as absent,
@@ -1737,7 +1778,7 @@ record Integration
   field label String optional  # human-readable note; no authority
 
 record Requires
-  description  One requirement of this section, on either kind of provider (hosts.md, services.md); grouped by alternative, a preference where a member is marked optional (§13.7).
+  description  One requirement of this section, on either kind of provider (hosts.md, services.md); grouped by alternative, a preference where a member is marked optional, chosen per use where a member is marked negotiated (§13.7).
 
   field module ModuleName               # the provider's module name (host contract or deployable, L137)
   field api Hash                        # required contract snapshot (satisfied by lineage membership)
@@ -1745,6 +1786,7 @@ record Requires
   field uses Hash optional              # Uses metadata blob against the contract (hosts.md §7)
   field alternative Identifier optional # group: records sharing an id need one member satisfied (§13.7)
   field optional Flag optional          # the group is a preference: it may resolve to nothing (§13.7)
+  field negotiated Flag optional        # the group is chosen per use, in declaration order (§13.7)
 
 scalar Address
   description  An environment address (§4.1): a DNS name or URL prefix, compared as authored — the owns precedent, no canonicalization (environments.md §4).
@@ -1760,8 +1802,8 @@ record Grant
 record Route
   description  A per-requirement routing pin on one deploy (§13.7, environments.md §6).
 
-  field module ModuleName               # the required provider module
-  field address Address                 # the candidate binding this requirement resolves to
+  field module ModuleName               # names the group: the section's one group with a member on this module
+  field address Address                 # the candidate binding the group resolves to; may be another module's, by spanning
 
 record Deploy
   description  One release this environment intends to run (L148, environments.md §4).
@@ -1777,7 +1819,7 @@ record Binding
 
   field address Address
   field module ModuleName               # provider module: either L137 kind
-  field api Hash optional               # selection by lineage constraint (the default form)
+  field api Hash optional repeatable    # selection by lineage constraint, any listed snapshot admitting (the default form)
   field build Hash optional             # selection by exact implementation identity
   field rank Natural optional           # canonical-resolution preference, lower first (§13.7)
 
@@ -1962,7 +2004,7 @@ schema layers; the manifest's schema signature — carried in its BinTEL header 
 re-emitted as a pragma line in any TEL rendering — encodes exactly which extensions a file
 uses.
 Those layers are themselves **shipped through LIRA**: an extension layer is published as a
-release of a `tels/1` module ([`tels.md`](tels.md)), referenced as
+release of a `tels/2` module ([`tels.md`](tels.md)), referenced as
 `‹domain›/‹name›:‹version›` (distribution design §2), its version derived from TEL's own
 compatibility relation — so LIRA's extensibility seam is delivered by LIRA itself, with the
 same naming, lineage, and verification as any other release. The seam is well-founded

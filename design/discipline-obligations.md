@@ -71,10 +71,14 @@ change is a new discipline; migration between versions is the dual-declaration b
    grade probe wording changes as API changes.
 
 7. **Native-relation coincidence** (spec tels.md §9, the precedent). Where a carrier
-   has its own compatibility relation (TEL's signature subsequence), the discipline
-   SHOULD construct atomization so LIRA's grade computation *coincides* with it, and
-   prove the coincidence — rather than approximating it and living with divergence.
-   `tels/1`'s component-plus-ordered-pair encoding is the worked example.
+   has its own compatibility relation (TEL's subtyping of composed schemas), the
+   discipline SHOULD construct atomization so LIRA's grade computation *coincides* with
+   the largest part of it that set inclusion can express, prove the coincidence, and
+   state the remainder — rather than approximating silently and living with divergence.
+   `tels/2`'s positional encoding of the atomic expansion is the worked example: exact
+   for TEL's prefix theorem, conservative beyond it, and says so. (`tels/1`'s
+   component-plus-ordered-pair encoding coincided with a relation TEL later withdrew as
+   unsound — the cautionary half of the same precedent.)
 
 8. **No inter-discipline delegation** (builds.md §16). A discipline never consults
    another discipline: atomization and satisfaction reference only its own carrier and

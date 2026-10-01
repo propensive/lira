@@ -150,7 +150,7 @@ Operations:
 | `RESOLVE-VERSION` | coordinate, version        | the release carrying that derived version + proof (selector form, §2) |
 | `RESOLVE-TAG`     | coordinate, tag name       | the release carrying that tag + proof — unique per L142 (selector form, §2) |
 | `RESOLVE-COMPAT`  | coordinate, snapshot hash  | latest release whose lineage contains the snapshot — the buildpath primitive (spec §13.2) |
-| `RESOLVE-EXTENDS` | coordinate, composed schema signature | latest `tels/1` release whose component sequence contains the signature's sequence as a subsequence (spec tels.md §11) |
+| `RESOLVE-EXTENDS` | coordinate, composed schema signature | latest `tels/2` release whose retained expansion has the signature's as a prefix (spec tels.md §11) |
 | `LOOKUP`          | manifest hash or payload hash | `Release` record + proof                          |
 | `HEAD`            | —                          | tree size + root hash (signature via HTTPS)          |
 | `PROOF`           | leaf index, tree size      | inclusion or consistency proof                       |
@@ -159,9 +159,10 @@ Operations:
 lineages (~50 B/release) outgrow datagrams — and its honesty is auditable: the full lineage
 is reconstructible from the module's `Release` leaves in the log, so a lying answer is a
 provable inconsistency. `RESOLVE-EXTENDS` is the schema-resolution primitive on the same
-footing: it evaluates TEL's signature-subsequence relation server-side, its answer is graded
-by the `tels/1` discipline's coincidence property (spec tels.md §9) — so TEL's own subtype
-relation certifies it — and it is auditable identically, from the module's manifests.
+footing: it evaluates the prefix relation on atomic expansions server-side, its answer is
+graded by the `tels/2` discipline's coincidence property (spec tels.md §9) — so TEL's own
+prefix theorem certifies it as a subtype — and it is auditable identically, from the
+module's manifests.
 `RESOLVE-VERSION` and `RESOLVE-TAG` serve the selector-form references of §2; both can only
 match published releases, by the argument given there.
 

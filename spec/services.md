@@ -224,6 +224,36 @@ where hosts.md §9 must caveat that no verifier can check code against its _requ
 service's _provision_ is recomputed from its shipped description — the strongest verification
 position in the specification, bounded only by the behavior gap (§8).
 
+### 5.1 Negotiated Requirements
+
+A consumer that can speak to a provider in more than one way has two honest things it might
+say about itself, and LIRA §14 gives each its declaration. If it chooses once — at start-up,
+from configuration, from the provisioning table — it declares an alternative group and is
+judged **statically**: one member, the first in declaration order, must be satisfied by every
+release behind the binding it resolves to (LIRA §13.7). If it chooses **per use** — offering
+its alternatives, in order, on every exchange and taking whichever the other side can serve —
+a member marks the group `negotiated`, and it is judged per release: every release behind
+the binding must satisfy _some_ member, each resolving to the first it satisfies.
+
+The reading to hold onto is that a negotiated group is the deploy-time image of whatever
+preference list the consumer presents at use time: the members are its alternatives, in its
+order; per-release first-match is the provider's choice; and L145, judged from manifests
+before anything moves, is the guarantee that the use-time negotiation can never fail against
+the published desired state — no release the selection admits is one the consumer cannot
+talk to. The flag is a claim about the consumer's behavior, on hosts.md §9's terms: signed,
+never inferred. The one thing this specification asks of a negotiating consumer is that its
+use-time list and its declared group agree, member for member and in order, so that what the
+algebra predicts a release will answer is what the release answers.
+
+The shape is not LIRA's, and belongs to no one protocol. A BinTEL reader's acceptance
+(BinTEL §8.4) is exactly such a list — compositions in decreasing order of preference, the
+writer serving the first it can, the reader recognizing which from the document itself — and
+so is an HTTP `Accept` header, or a feature probe before a Protobuf exchange. LIRA takes no
+position on how the exchange is carried; it records the list's image and judges it. Where a
+protocol's own compatibility relation and LIRA's coincide — as they do for TEL schema
+payloads, by the construction of [`tels.md`](tels.md) §9 — the coincidence is a fact about
+two designs that agree, not a privilege either extends to the other.
+
 ## 6. The Environment
 
 An **environment** is a set of deployable releases — the deployed set — together with a set of
@@ -245,14 +275,18 @@ release (LIRA §13.3, unchanged), iff:
    (rule 2), which is how a mock or a standard's implementation stands in for a named module.
 2. **Satisfaction, against every concurrent release**: each requirement is satisfied, per §5,
    by _every_ concurrently-serving release of its provider — and, for cross-module
-   satisfaction, by every concurrently-serving release of the standing-in module. Where the
+   satisfaction, by every concurrently-serving release of the standing-in module — a static
+   group through its one resolved member, a negotiated group through the member each release
+   resolves to (§5.1, LIRA §13.7). Where the
    requirement resolves to a binding, the quantifier ranges within that binding's selection
    (**L150**, LIRA §13.7): releases behind other addresses are other providers.
 3. **Aggregation**: requirements on one provider from several releases are jointly judged by
    the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
    lineage, jointly satisfiable iff _every_ concurrently-serving release of the provider
-   carries every required snapshot in its lineage (the diamond rule, universalized over the
-   overlap); by spanning, the union of the used-sets must be covered by each.
+   carries every snapshot resolved at it in its lineage (the diamond rule, universalized over
+   the overlap); by spanning, the union of the used-sets resolved at it must be covered by
+   each. Where every group is satisfied this holds by construction, and the aggregate is a
+   report indexed by release (LIRA §13.7).
 4. **Platform coherence**: any profiles declared by deployed releases impose their predicates
    over the environment, on the terms of LIRA §13.3 rule 6 — this is where an operator's
    platform policy (every deployable pinned, every artifact signed by a release key, a
@@ -260,15 +294,17 @@ release (LIRA §13.3, unchanged), iff:
    than an admission-controller configuration.
 
 Rules 1–3 quantify over alternative groups (LIRA §14, hosts.md §6): a group is satisfied iff
-one member is, only the resolved member enters the quantifier and the aggregate, and a group
-with no satisfied member fails — unless a member is `optional`, in which case the group is a
-preference, excluded from rules 1–3 and recorded as unprovided at provisioning
-([`environments.md`](environments.md) §6).
+one member is — a static group's one member against every release, a negotiated group's
+first satisfied member at each release (§5.1) — only the resolved member enters the
+quantifier and the aggregate, and a group with no satisfied member fails — unless a member
+is `optional`, in which case the group is a preference, excluded from rules 1–3 and recorded
+as unprovided at provisioning ([`environments.md`](environments.md) §6).
 
 There is deliberately **no uniqueness rule**: two releases of one module serving concurrently
 is the normal state of a rolling deployment. What replaces it is the binding (LIRA §13.7,
 L149): the address disambiguates at run time what uniqueness disambiguated at build time,
-and rule 2's quantifier — during the overlap, every consumer must be satisfied by _both_ —
+and rule 2's quantifier — during the overlap, every consumer must be satisfied by _both_,
+through one member or, negotiating, through a member each —
 ranges per binding (L150). A consumer is pinned to one candidate binding by a `route` row on
 its deploy record ([`environments.md`](environments.md) §6): the routing pin is to
 environments what the integration pin is to buildpaths — a consumer preference which the
@@ -309,7 +345,7 @@ anticipated `http-json/1` profile's claim, not the discipline's
 | patch                   | safe           | unaffected                                           | unaffected        |
 | minor                   | safe           | safe — wire compatibility preserved                  | safe              |
 | minor, `breaks linkage` | coordinated    | must redeploy — and _which_ is computed, not guessed | safe              |
-| major (new lineage)     | new surface    | satisfied only by spanning                           | re-audited        |
+| major (new lineage)     | new surface: at a new address, or in-address for consumers that span or negotiate | satisfied by spanning, or by a negotiated group naming both surfaces | re-audited        |
 
 The `breaks linkage` row (LIRA §12.4) is the coordinated deploy, named in a signed manifest
 rather than in a runbook: the step is minor by the atom algebra, so regenerated clients need
@@ -321,7 +357,31 @@ only where the provider declares a linkage-certifying profile (LIRA §12.4): for
 unclaimed, and a cautious operator treats every minor as potentially coordinated. The major row is
 where spanning earns its keep: a consumer whose used-set avoids everything the new lineage
 dropped keeps running, provably, through a break that would otherwise force a fleet migration
-on a date.
+on a date. Negotiation (§5.1) is the row's second escape, for the consumer the break _does_
+touch: it keeps running by declaring both sides and choosing per use, and the algebra admits
+it to the overlap because it said so.
+
+**A protocol migration, step by step.** Provider `payments` serves surface `A`; consumer
+`orders` requires `A`, statically. The operator wants `payments` serving `B` — a new lineage
+that drops `A` — behind the address `orders` already dials. Every state is judged by L145,
+every overlap by L146, from manifests:
+
+| Step | Transition                                                                    | Judgement                                                                                                                                                       |
+| ---- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | replace `orders` with a release whose `requires` is the negotiated group `{B, A}` | overlap of old and new `orders` against `A`-serving `payments`: the new one resolves to `A`; valid                                                          |
+| 2    | widen the binding's selection to `{A, B}`                                     | posterior only; valid, and patch-grade (environments.md §5)                                                                                                     |
+| 3    | roll `payments` from `A` to `B` inside the selection                          | overlap: `orders` resolves the `A` release to `A` and the `B` release to `B`; valid — and had the old `orders` survived step 1, invalid at the `B` release, named |
+| 4    | retire the `A` release; narrow the selection to `{B}`                         | valid                                                                                                                                                           |
+| 5    | replace `orders` with a release requiring `B`, statically                     | overlap against `B`-serving `payments`; valid                                                                                                                   |
+
+Steps 1 and 5 are the consumer's two deploys, and between them it speaks both; step 3 is the
+only moment two surfaces serve, and the only consumer the algebra admits to it is one that
+declared it could. Without `negotiated` the same migration takes the two-address shape
+(environments.md §1): `B` at a second address, `orders`'s static group flipping to it at
+provisioning, never a mixed moment — the right shape for a consumer that chooses once, and
+an unnecessary one for a consumer that need not. The provider side needs no mechanism at
+either shape: a release serving two surfaces at once is the union of their atoms, and
+dropping one is the rigid removal that began the new lineage.
 
 ## 8. The Third Moment, at Runtime
 
