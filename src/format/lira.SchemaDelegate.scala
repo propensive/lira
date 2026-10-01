@@ -51,7 +51,7 @@ import vacuous.*
 // `Tels.Resolution.Delegate` implementation serving `:version`/`:tag`
 // references and signature-form lookups from LIRA releases.
 //
-// A TEL schema module follows the `tels/1` discipline: its payload is
+// A TEL schema module follows the `tels/2` discipline: its payload is
 // the single tree item at the fixed path `schema.tel`, conforming to
 // the `tels` meta-schema, published under the module name the schema
 // declares. Every answer is grounded in a verified release: the
@@ -60,7 +60,7 @@ import vacuous.*
 // release that no selector can match — and the payload is materialized
 // through `Verification.install` before the schema body is extracted.
 object SchemaDelegate:
-  // The tels/1 fixed payload path.
+  // The tels/2 fixed payload path.
   val schemaPath: Text = t"schema.tel"
 
   // The release-store seam: this library keeps releases as in-memory

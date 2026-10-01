@@ -48,6 +48,9 @@ record Requires
   field api Hash
   field version Semver optional
   field uses Hash optional
+  field alternative Identifier optional
+  field optional Flag optional
+  field negotiated Flag optional
 
 record Section
   select Realm

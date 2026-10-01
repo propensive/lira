@@ -2327,6 +2327,31 @@ object FormatTests extends Suite(m"LIRA format tests"):
           (t"posix", Lira.Hash.text(blob(encode(t"snap"))),
            Optional(Lira.Hash.text(blob(encode(t"uses")))))))
 
+      // §14's `alternative` groups: the identifier round-trips, and the two flags travel as bare
+      // keywords — never as `true`/`false` atoms, which a TEL `Flag` field does not admit.
+      test(m"grouped requirements round-trip, their flags as bare keywords"):
+        val members = List(
+          Lira.Manifest.Requires(t"payments", blob(encode(t"b")), alternative = t"wire",
+            negotiated = Lira.Flag.on),
+          Lira.Manifest.Requires(t"payments", blob(encode(t"a")), alternative = t"wire"))
+
+        val bytes = LiraAssembler.assemble(t"consumer",
+          List(LiraAssembler.SectionInput(t"jvm",
+            List((TreePath(t"a/A.class"), classA)), requires = members)),
+          Discipline.Registry(List()),
+          toolchain = List(Lira.Manifest.Tool(t"scala", t"3.9.0")))
+
+        val manifest = Lira.read(bytes).manifest
+        val back = manifest.section.stdlib.head.requires.stdlib
+        val text = manifest.render.s
+
+        ( back.map(entry => (entry.alternative, entry.optional.set, entry.negotiated.set)),
+          text.contains("    negotiated\n"),
+          text.contains("    optional"),
+          text.contains("true") )
+      . assert(_ == (scala.List((Optional(t"wire"), false, true), (Optional(t"wire"), false, false)),
+                     true, false, false))
+
       // Rule 7 (§13.3, hosts.md §7), over stub manifests: satisfaction is manifest-decidable,
       // spanning arrives through the caller-supplied lookups.
       val snapA = Lira.Hash(Lira.Hash.Domain.Snapshot, encode(t"contract-a"))
