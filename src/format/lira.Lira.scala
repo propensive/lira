@@ -425,6 +425,23 @@ object Lira:
       else parse(tel.primaryAtom).or:
         abort(Tel.Error(Tel.Error.Reason.NotScalar(tel.primaryAtom, expected)))
 
+  // A TEL flag (the `Flag` fields of §14): keyword presence alone, which a Scala `Boolean` is not —
+  // stratiform reads and writes one as a `true`/`false` atom. A set flag encodes as the bare keyword
+  // and a clear one as nothing, through the flag-natured codecs the derived manifest coder
+  // consults; an absent keyword decodes as clear.
+  case class Flag(set: Boolean)
+
+  object Flag:
+    val on: Flag = Flag(true)
+    val off: Flag = Flag(false)
+
+    given decodable: Flag is Tel.Decodable =
+      Tel.Decodable(() => Morphology.Bool, Tel.Nature.Flag): tel => Flag(!tel.keyword.s.isEmpty)
+
+    given encodable: Flag is Tel.Encodable =
+      Tel.Encodable(() => Morphology.Bool, Tel.Nature.Flag): flag =>
+        Tel.scalar(Text(flag.set.toString))
+
   // Domain-separated hashing per §7.1 of the LIRA specification: every hash the format defines is
   // `BLAKE3-256(utf8(domain) ++ 0x00 ++ content)`, with the domain string carrying the `lira/1`
   // format epoch. Atom domains additionally carry the full discipline identifier, so atoms from
@@ -550,12 +567,18 @@ object Lira:
     // One host requirement of a section (hosts.md §6): the host contract's module name and the
     // required contract snapshot, satisfied by lineage membership or by spanning where a Uses
     // blob is attached (hosts.md §7). Authorial: no verifier can decide that code needs what it
-    // declares (§16), which is why the environment itself is probed at a third moment.
+    // declares (§16), which is why the environment itself is probed at a third moment. Records
+    // sharing an `alternative` identifier form a group (§13.7): a preference where a member is
+    // `optional`, chosen per use rather than once where a member is `negotiated` — both flags
+    // being claims about the section's behavior that no verifier checks either.
     case class Requires
-      ( module:  Text,
-        api:     Lira.Hash,
-        version: Optional[Semver]    = Unset,
-        uses:    Optional[Lira.Hash] = Unset )
+      ( module:      Text,
+        api:         Lira.Hash,
+        version:     Optional[Semver]    = Unset,
+        uses:        Optional[Lira.Hash] = Unset,
+        alternative: Optional[Text]      = Unset,
+        optional:    Lira.Flag           = Lira.Flag.off,
+        negotiated:  Lira.Flag           = Lira.Flag.off )
 
     // How a declared resource participates in the algebra (§11.4). `Export` guarantees the name is
     // present; `Track` additionally tracks the bytes as replaceable churn; `Scan` claims a whole
@@ -715,6 +738,7 @@ object Lira:
         section.requires.each: requirement =>
           val version: Optional[Semver] = requirement.version
           val uses: Optional[Lira.Hash] = requirement.uses
+          val alternative: Optional[Text] = requirement.alternative
 
           lines += "  requires"
           lines += s"    module ${requirement.module}"
@@ -724,6 +748,9 @@ object Lira:
             lines += s"    version ${version.major}.${version.minor}.${version.patch}"
 
           uses.let: uses => lines += s"    uses ${Lira.Hash.text(uses)}"
+          alternative.let: id => lines += s"    alternative $id"
+          if requirement.optional.set then lines += "    optional"
+          if requirement.negotiated.set then lines += "    negotiated"
 
       lines += "payload"
       lines += s"  compression ${payload.compression}"
@@ -919,7 +946,10 @@ object Lira:
           field("module", moduleName),
           field("api", hash),
           field("version", semver, required = Loose),
-          field("uses", hash, required = Loose)),
+          field("uses", hash, required = Loose),
+          field("alternative", identifier, required = Loose),
+          field("optional", Tels.Flag, required = Loose),
+          field("negotiated", Tels.Flag, required = Loose)),
 
         record("Section",
           selectRef("Realm"),
@@ -1049,7 +1079,7 @@ object Lira:
     // test suite recomputes each from its `src/test-format/resources/lira/*.tel` mirror and checks
     // agreement).
     // A conforming document of each schema carries its signature on the pragma line.
-    val liraSignature:  Text = t"ῘΔìẅḍβlίZOǒžAζȉḠẌLŠῺẃȕЊTȧGƜ2ДNΫΫA"
+    val liraSignature:  Text = t"ẅḢÃЂ9pǓľşҢxῚÞӝҢκuΫЃñìΊẉuƕ1KӯgnỌΎЂ"
     val treeSignature:  Text = t"ǨẙơẗỵclϋẁЫĥᾸMôĮẍOώżӯάǢЗĆӸkҚțȐωǢέӫ"
     val atomsSignature: Text = t"2ӪççÃ5AḟǑXϋƤzᾱĺHϕЂẌǒEẂẁĮί9ḀẘΊÐιЪp"
     val usesSignature:  Text = t"şşCȧOӖGҐΪḍḋjΊӁῚƟȐЌĥέȦЬƜδĻĘ1Ȑḟ6ӟÔḍ"

@@ -24,7 +24,7 @@ Named for their languages; extensions map to them via the tool registry.
 ## Universes
 
 Forms whose content composes. `jvm`, `sjsir` and `nir` are in the base schema; the rest
-are reserved for schema layers (now shipped as `tels/1` modules).
+are reserved for schema layers (now shipped as `tels/2` modules).
 
 | Name | Content and interface convention |
 | --- | --- |
@@ -82,7 +82,7 @@ OpenAPI documents · TEL capability listings · TEL schemas.
 | `resource/1` | Resource path claims | spec |
 | `opaque/1` | Whole-file rigidity for undisciplined content | spec |
 | `environment/1` | Environment topology: bindings + grants, nothing else | spec |
-| `tels/1` | TEL schema payloads; grades coincide with TEL's subsequence relation | spec (new) |
+| `tels/2` | TEL schema payloads; grades coincide with TEL's prefix theorem | spec |
 | `envvar/1` | Environment-variable presumptions | proposed (builds.md §12) |
 | `file/1` | Filesystem-presence presumptions | proposed (builds.md §12) |
 | `proto/1` | Protobuf descriptors | anticipated |
@@ -156,7 +156,7 @@ tables, CA trust roots, the MIME database.
 | `name lira` (spec §14) | The manifest schema |
 | `lira-tree`, `lira-atoms`, `lira-uses`, `lira-delta` | Metadata-blob schemas |
 | `lira-capabilities` | Capability listing schema (hosts.md §5) |
-| `build` (`build.schema.tel`) | The build-file schema, registered locally; publishable as a `tels/1` module |
+| `build` (`build.schema.tel`) | The build-file schema, registered locally; publishable as a `tels/2` module |
 | `lira-inputs` | Planned: the input-closure document whose digest is the `inputs/1` source scheme (builds.md §3.1 addendum) |
 | `tool` (`tool.schema.tel`) | Tool descriptors, extracted at publish (builds.md §14.3); registered; worked instance `scalac.tool.tel` |
 | `local` (`local.schema.tel`) | The per-checkout and user-global local file (fury.md §11); draft |

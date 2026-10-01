@@ -755,7 +755,7 @@ registry entry mapping to a discipline, never a grammar change.
 How the guaranteed set reaches a compiler, concretely — for Scala first, but abstract
 over kinds by construction. The build tool serializes the compiled cell's
 configuration-class guarantees to **canonical BinTEL** under the `lira-guarantees`
-schema (`guarantees.schema.tel`, registered; publishable as a `tels/1` module). The
+schema (`guarantees.schema.tel`, registered; publishable as a `tels/2` module). The
 file is the serialized form of the `lira.tool` Invocation's presumption set: in-process
 plugins receive the value directly through the trait; external compilers receive the
 file through an output-affecting setting. Macros running in the compiler parse it and
@@ -825,7 +825,7 @@ The schema also positions `build.tel` to carry a schema signature in its header
 exactly as manifests do — at which point the build file's own grammar is versioned by
 the same mechanism as everything else in the system. With TEL's pragma now taking LIRA
 references (`‹domain›/‹name›:‹version›`, tel repository
-`design/lira-schema-references.md`) and schemas publishing as `tels/1` modules
+`design/lira-schema-references.md`) and schemas publishing as `tels/2` modules
 (spec/tels.md), that is literal: the build schema publishes like any release, its
 versions derived from TEL's own compatibility relation, and a build file references it
 by coordinate.
@@ -956,7 +956,7 @@ This **information model** is fixed and carrier-neutral. Its realization splits:
   its TASTy — edges can change with no signature change — so "edges are the tool's API"
   (§11) cannot ride on `tasty/1`. Instead, the services.md §4.3 extraction pattern: at
   publish, the build tool runs `descriptor` and writes `tool.tel` into the tree
-  (conforming to a descriptor schema published as a `tels/1` module), atomized by a
+  (conforming to a descriptor schema published as a `tels/2` module), atomized by a
   small tool discipline — one rigid atom per edge, one per classified setting — so edge
   changes are graded as promised. The schema exists: `tool.schema.tel` (registered),
   with `scalac.tool.tel` as its worked instance; it carries the §14.2 model verbatim —
@@ -1163,7 +1163,7 @@ per-platform differences in provision would be a refinement case, none yet motiv
 ## 16. How disciplines relate
 
 Two cases motivate the question. A `file/1` presumption asserts a path exists but says
-nothing of its contents — which may be a TEL document that `tels/1` could validate. And
+nothing of its contents — which may be a TEL document that `tels/2` could validate. And
 a nominal method signature's compatibility depends on the class hierarchy of the types
 it mentions, which no signature atom seems to own. Both feel like one discipline
 delegating to another. Neither is, and the refusal is principled:
@@ -1175,7 +1175,7 @@ delegating to another. Neither is, and the refusal is principled:
 > delegation would be the rule engine returning through the side door the folding
 > principle exists to keep shut.
 
-The stake is concrete: the moment `file/1` could invoke `tels/1` at satisfaction time,
+The stake is concrete: the moment `file/1` could invoke `tels/2` at satisfaction time,
 validity checking would need discipline *implementations* rather than atom sets, and
 decidability-from-manifests — which deployability, the totality loop, and every §10
 judgment rest on — would quietly die.
@@ -1203,11 +1203,11 @@ match, so an environment providing a *newer, extended* schema would wrongly fail
 > **A predicate that needs an algebra is a module reference in disguise.**
 
 Predicates remain for closed vocabularies with trivial orderings (colon-variants,
-version tokens). Structured conformance graduates: the schema is a published `tels/1`
+version tokens). Structured conformance graduates: the schema is a published `tels/2`
 module, and the presumption compiles to two records in two disciplines joined by the
 requirement graph — a `file/1` atom for presence (probed by existence plus
 `tel validate` at startup) and a `requires` on the schema module at a snapshot,
-satisfied by lineage membership and graded by `tels/1`'s own subsequence-coincident
+satisfied by lineage membership and graded by `tels/2`'s own prefix-coincident
 relation. Surface:
 
 ```tel

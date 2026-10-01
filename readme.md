@@ -30,6 +30,8 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
   validity, and deployment.
 - [`spec/environments.md`](spec/environments.md) — environment releases, the `env` realm,
   bindings and addresses, the `environment/1` discipline, and provisioning.
+- [`spec/tels.md`](spec/tels.md) — the normative TEL schema discipline, `tels/2`: schema
+  releases graded by TEL's own prefix theorem, so schema versions are computed, never chosen.
 - [`spec/webidl.md`](spec/webidl.md) — the normative Web IDL discipline, for browser host
   contracts.
 - [`spec/wit.md`](spec/wit.md) — the normative WIT discipline, for WASI worlds and, ahead, the

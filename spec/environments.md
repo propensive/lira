@@ -42,8 +42,9 @@ that arrangement, each derived at length in [`execution.md`](../design/execution
 2. **The dropped uniqueness rule left a question unanswered.** A buildpath answers "which
    release provides module M?" by rule 1 (L111); the environment deliberately dropped
    uniqueness for rolling deploys, and with it the answer. The **binding** answers it by
-   address: two majors of one service coexist at two addresses, and "which provider does
-   this consumer get?" is decided per address (L149, L150) instead of per path.
+   address: two majors of one service coexist at two addresses — or, for consumers that
+   negotiate per use, inside one selection (§4, §7) — and "which provider does this consumer
+   get?" is decided per address (L149, L150) instead of per path.
 3. **Concurrent majors were inexpressible.** Under L145 rule 2's unrefined quantifier, two
    concurrently-serving releases with disjoint lineages fail every lineage-only consumer;
    the routing pin that fixes this was tool lore "the manifests cannot imply." The binding's
@@ -116,10 +117,12 @@ development release — which, in continuous deployment, it usually does.
 - The **provider module** is either L137 kind: a deployable service, or a host contract — the
   latter being how a third-party endpoint (a vendor API nobody here deploys) enters an
   environment: as a grant, bound to the address it answers at.
-- The **selection** admits releases to the binding: `api`, a snapshot satisfied through the
-  provider's lineage (the default form — a rolling deploy is two releases transiently inside
-  one selection), or `build`, an exact implementation identity (the L118 boundary above
-  applies verbatim). A binding selects; it never satisfies — satisfaction remains the
+- The **selection** admits releases to the binding: `api`, one or more snapshots, a release
+  admitted iff it satisfies any of them through the provider's lineage (the default form — a
+  rolling deploy is two releases transiently inside one selection, and a selection naming
+  snapshots of two lineages is how a cross-major roll happens behind one address, for the
+  consumers that negotiate: LIRA §13.7, services.md §7), or `build`, an exact implementation
+  identity (the L118 boundary above applies verbatim). A binding selects; it never satisfies — satisfaction remains the
   consumer's requirement against the selected releases, per services.md §5.
 
 One address, one provider, at a time: rebinding an address is a **transition** (§7), never a
@@ -168,17 +171,22 @@ its selection is the gradeless transition-validity case, exactly as
 
 ## 6. Resolution and Provisioning
 
-A deployed consumer's requirement on module `M` has **candidate** bindings: those whose
-provider module and selection satisfy it — by lineage membership or spanning, services.md §5
+A deployed consumer's requirement group on module `M` (LIRA §14; an ungrouped requirement
+is a group of one) has **candidate** bindings: for a static group, those whose provider
+module and selection satisfy some member — by lineage membership or spanning, services.md §5
 verbatim, cross-module spanning included, so a mock's binding is a candidate for exactly the
-consumers whose used-sets it covers. Resolution is deterministic on the canonical-assignment
-pattern (LIRA §13.3): tools MUST resolve each alternative group (LIRA §14; an ungrouped
-requirement is a group of one) to its first satisfied member in declaration order, and that
-member to its first candidate in ascending (`rank`, `address`) order, unless a `route` pin on
-the consumer's deploy record names a candidate binding of some member, which member and
-binding are then chosen. A `route` naming an address that is not a candidate for any member
-of its group is invalid (**L148**): a pin states a preference among satisfying options, never
-an escape from satisfaction. Routes live on deploy records — in
+consumers whose used-sets it covers; for a negotiated group, those every release of whose
+selection satisfies some member. Resolution is deterministic on the canonical-assignment
+pattern (LIRA §13.3): tools MUST resolve a static group to its first member in declaration
+order that has a candidate, and that member to its first candidate in ascending (`rank`,
+`address`) order; and a negotiated group to its first candidate in ascending (worst member,
+`rank`, `address`) order, each release of the chosen binding resolving to its own first
+satisfied member (LIRA §13.7). A `route` pin on the consumer's deploy record names a
+candidate binding of a group — its group being the section's one group with a member on the
+route's `module`, two such groups making the pin ambiguous — and that binding is then
+chosen; a route pins a binding, never a member. A `route` naming an address that is not a
+candidate of its group, or whose group is ambiguous, is invalid (**L148**): a pin states a
+preference among satisfying options, never an escape from satisfaction. Routes live on deploy records — in
 the environment release, authored by the operator — and never in any release manifest, which
 would weld the release to one environment (execution.md §4); the route is the buildpath's
 integration pin made a signed fact, per deployment.
@@ -186,13 +194,17 @@ integration pin made a signed fact, per deployment.
 **Provisioning** is the §13.5 analog: from a valid environment, a tool derives the table
 from each deployed release's requirements to the addresses of their resolved bindings — the
 consumer-facing answer to "where is my provider?", computed from manifests, handed to the
-runtime. A requirement whose provider carries no binding is **unaddressed**: an advisory
+runtime. A negotiated group's row carries, beside the address, the member each release the
+selection admits resolves to: the runtime MAY take its use-time preference list from the
+group's members in their order, and the row says what each release will answer. A requirement whose provider carries no binding is **unaddressed**: an advisory
 fact, not a validity failure, since not every provider answers at an address (`kubernetes`
 is a grant nobody dials). A group none of whose members is satisfied — valid only where a
 member is `optional` (LIRA §14) — is **unprovided**: recorded in the table as absent, never a
 failure, since the group was a preference, so that the deployed release's own fallback
 governs; a present provider that would satisfy no member is not a candidate and counts as
-absent, because an environment offers an optional capability only in a form that satisfies. What happens next divides on the sentence that has divided every
+absent, because an environment offers an optional capability only in a form that satisfies —
+so a negotiated optional group flips to unprovided for as long as a release satisfying no
+member stands in the selection, a valid state the table shows. What happens next divides on the sentence that has divided every
 such question in this specification: provisioning produces the table, and *reconciling the
 running world to the judged one is the orchestrator's business*, exactly as invoking egress
 tools is the build's (LIRA §13.5).
@@ -204,7 +216,10 @@ Every change to an environment release's records is a transition, judged by **L1
 be valid. The record-level reading of the three shapes:
 
 - **Deploying** adds or replaces `deploy` rows (and, mid-rollout, two releases stand
-  transiently inside one binding's selection — L150's quantifier covers exactly them).
+  transiently inside one binding's selection — L150's quantifier covers exactly them — a
+  successor of another lineage included where the selection admits it, which is the state a
+  negotiated group exists to be judged in; a static consumer of the same binding objects,
+  by name, and rightly).
 - **Rebinding** retargets a `binding` row. Its validity condition falls out of L145 with no
   new rule: every consumer whose requirement resolves to that address must be satisfied by
   the new occupant's selected releases. Same-module retargeting is patch-grade; retargeting
@@ -222,8 +237,9 @@ and report **drift** — divergence of the actual environment from the desired s
 probing's usual advisory terms. What this document adds is the report's vocabulary: a drift
 report SHOULD name the module, the snapshot, the address, and the cause, all of which the
 environment release supplies — so "something is wrong in prod" becomes "the release serving
-`orders.internal/v2` does not satisfy the binding's selection," a sentence a tool can both
-generate and act on. Probe cadence, escalation, and reconciliation strategy are tooling and
+`orders.internal/v2` does not satisfy the binding's selection," or "the release serving
+`payments.internal` resolves to no member of `orders`'s negotiated group," a sentence a tool
+can both generate and act on. Probe cadence, escalation, and reconciliation strategy are tooling and
 orchestration concerns, outside the format.
 
 ## 9. Variants: One Artifact, Many Environments (Informative)

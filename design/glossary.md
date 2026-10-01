@@ -14,7 +14,7 @@ bodies, macros) may be replaced. Compatibility is set arithmetic over atoms — 
 algebra rests on this.
 
 **binding** — An environment record tying an address to a provider module, with a
-selection by `api` (lineage constraint) or `build` (exact). One of the two record kinds
+selection by `api` (one or more lineage constraints) or `build` (exact). One of the two record kinds
 that enter an environment's atoms.
 
 **buildpath** — The set of releases a module is built against, validated by seven rules
@@ -33,8 +33,8 @@ also the keyword introducing it. Cases group under an axis; peer axes form a pro
 
 **component** — (1) Of an edge: a separately-versioned constituent (the `scala-js`
 plugin of scalac's `sjsir` edge), recorded per cell (builds §14.2). (2) Of a TEL
-schema: one hashed element of its composed sequence (base or layer), atomized by
-`tels/1`.
+schema: one hashed element of its composed sequence (base or layer); `tels/2` atomizes
+the sequence's schema atoms, positionally, rather than the components themselves.
 
 **context** — (1) Edge role: dependency cells a tool reads but does not consume
 (builds §14.2). (2) The payload the build tool passes a tool at invocation: inputs,
@@ -62,7 +62,7 @@ currency of the inner build loop. Depending on one exactly (a build pin) makes t
 dependent unpublishable until the pin lifts (L118).
 
 **discipline** — A canonicalization of one carrier into atoms, identified as
-`<name>/<version>` (`tasty/1`, `openapi/1`, `tels/1`). Any change to the
+`<name>/<version>` (`tasty/1`, `openapi/1`, `tels/2`). Any change to the
 canonicalization is a new discipline; two versions of one discipline stand in no formal
 relationship (see **dual-declaration bridge**).
 
@@ -171,6 +171,12 @@ identity, signatures. Every buildpath and environment judgment is decidable from
 **module** — (1) LIRA: a named library, host contract, deployable, or environment — one
 API lineage, many releases. (2) Build file: a buildable unit within a project,
 compiling to releases of a LIRA module.
+
+**negotiated group** — An alternative group of `requires` records a member marks
+`negotiated`: the section chooses among the members per use, in declaration order, so in an
+environment every concurrently-serving release behind the binding must satisfy *some*
+member, rather than one member satisfying all (the static reading). The deploy-time image
+of a use-time preference list such as a BinTEL acceptance (spec §13.7, services.md §5.1).
 
 **option** — A build-file axis of implementation-only variation (debug/release,
 instrumentation): each combination is a separate release in patch relation, selected by
