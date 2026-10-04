@@ -466,7 +466,7 @@ object lira extends Project:
 
     // A clean zip (no executable shell preamble) so the Burdock repackager can read and rewrite the
     // assembled JAR. This is also what the `.lira` interpreter directive needs: the executable is
-    // built from this jar by xeq, not by prepending a launcher script.
+    // built from this jar by xek, not by prepending a launcher script.
     def prependShellScript = ""
 
   // A `Suite` is not a main class (Soundness #1963): the beneficence plugin writes the
