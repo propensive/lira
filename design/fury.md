@@ -11,8 +11,9 @@ Fury is deliberately **language-agnostic**. Everything that knows what a `.scala
 lives in [Fever](fever.md), the Scala compiler service, which Fury reaches only through the
 tool contract of builds.md §14.3. Both are Pyrocosm-family tools — `pyrocosm.Tool.standard`
 for the command line, an Ethereal daemon, the Configurator cascade for configuration, the
-`Tool.Web` hook for a browser front-end — developed in this repository beside the `lira`
-tool and separated into their own repositories when their interfaces have grown apart.
+`Tool.Web` hook for a browser front-end — each in its own repository (`propensive/fury`,
+`propensive/fever`), laid out and released as fume, flair and flame are, and building against
+the libraries this repository publishes.
 The three are **separate binaries sharing library code**: `lira` reads, verifies and serves
 LIRA files ([`tool.md`](tool.md)); `fury` builds them; `fever` compiles Scala for `fury` and
 for editors. This settles the relationship [`gaps.md`](gaps.md) §4 left open.
@@ -420,7 +421,8 @@ cache lookup and an exec.
 
 Kept here so they are not relitigated; the section that explains each is in brackets.
 
-1. Fury and Fever are two tools, two daemons, two packages, developed here (intro; fever.md).
+1. Fury and Fever are two tools, two daemons, two packages, each in its own repository
+   (intro; fever.md).
 2. Fury is language-agnostic; Scala lives in Fever (intro).
 3. The DAG is static; edges, not the DAG, are dispatched; placement is a policy behind a
    stable interface, judged by finish time (§1, §3).
@@ -481,9 +483,14 @@ classes on its classpath.
 Fury) join `etc/refs`, which pins Soundness at the version Pyrocosm was built against;
 `lira` stays as it is, not a Pyrocosm tool. Every publishing module is published locally
 before the launchers assemble (`__.publishLocal`), the Makefile gains `fury` and `fever`
-targets on the same repackage-then-`xeq` path as `lira`, and CI compiles every module. The
-later move is `src/fury/` and `src/fever/` to their own repositories, leaving `lira-core` and
-`lira-tool` as published dependencies.
+targets on the same repackage-then-`xek` path as `lira`, and CI compiles every module.
+
+This is the layout while the two tools are still built here. `src/fury/` and `src/fever/`
+move to `propensive/fury` and `propensive/fever`, each with the layout and tag-driven release
+of fume, flair and flame, and each pinning this repository in its `etc/refs`: Fury for
+`lira-core` and `lira-tool`, Fever for `lira-tool` alone. A change Fury needs in the format
+or the store is therefore made and published here first, as a release or a snapshot, and
+then pinned there.
 
 ## 15. The ladder
 

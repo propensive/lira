@@ -1,0 +1,15 @@
+# What this repository's release needs that another's does not. See propensive/.github, which
+# holds the workflow and the script; a release is cut by `git tag -s X.Y.Z && git push --tags`.
+# One `key value` line each; the library list and the version pin are not declared, because
+# release.sh derives them from `release.stage` and from `val liraVersion` in build.mill.
+
+name       lira
+title      lira
+
+build      lira.core.compile
+launcher   lira.launcher
+
+# The publication homes Burdock matches the classpath against by SHA-256, so that a library on
+# it becomes an on-demand `Burdock-Require` URL rather than being inlined into the executable.
+# Pyrocosm is not among them: lira does not depend on it.
+hints      propensive/lira,propensive/soundness,propensive/proscala

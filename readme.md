@@ -91,9 +91,13 @@ make install     # copy it to ~/.local/bin, which is what a `.lira` file's `#!` 
 make check       # check the sources with flair
 ```
 
-A release — the `lira-core` jar, then the per-platform executables built from it — is published to
-GitHub Releases by `make release VERSION=X.Y.Z`, after bumping `liraVersion` in `build.mill`,
-exactly as fume, flair, flame and tel are released.
+A release — the `lira-*` library jars, then the per-platform executables built from them — is
+published to GitHub Releases by a signed tag, after bumping `liraVersion` in `build.mill` and
+merging it, exactly as fume, flair and flame are released:
+
+```sh
+git tag -s X.Y.Z && git push --tags
+```
 
 `lira delta` writes a delta file — a release carried relative to a cached predecessor
 ([`spec/increment.md`](spec/increment.md)) — and `lira add` ingests whole files and deltas
