@@ -1,10 +1,10 @@
-# Publish the library to the local ~/.ivy2 (the launcher resolves `lira-core` from there; burdock
+# Publish the library to the local ~/.ivy2 (the launcher resolves `lira` from there; burdock
 # will NOT externalize a locally-published copy unless its bytes match a release asset).
 publishLocal:
 	./mill __.publishLocal
 
 # Build the invocation-point `launcher` module as a plain (clean, no shell-preamble) assembly JAR.
-# `launcher` depends on lira-core as a PUBLISHED coordinate resolved from ~/.ivy2/local, so the
+# `launcher` depends on the lira jar as a PUBLISHED coordinate resolved from ~/.ivy2/local, so the
 # library is published there FIRST — otherwise the launcher silently builds against whatever was
 # last published (a release's jar, say, whose bytes then externalize to that release's download,
 # and local changes never reach the executable). `clean lira.launcher` for the same reason: the
@@ -40,7 +40,7 @@ release:
 # Soundness and proscala repositories, whose per-jar SHA-256 digests the repackager matches against
 # the classpath. The Soundness jars synced into ~/.ivy2/local are the release assets byte-for-byte,
 # and the proscala release publishes the same jars its tarball carries, so both the components and
-# the fork toolchain externalize; lira-core externalizes only once released (by a tag), and
+# the fork toolchain externalize; the lira jar externalizes only once released (by a tag), and
 # is inlined otherwise. Pyrocosm is deliberately NOT among the hints: lira does not depend on it.
 # Set GITHUB_TOKEN to lift the API rate limit.
 lira.jar: assembly

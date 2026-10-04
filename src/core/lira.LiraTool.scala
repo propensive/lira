@@ -181,7 +181,7 @@ private def flagText(flag: Flag of Text, label: Text)
 // The tool's entry point, as an object rather than a bare `@main`: the `@main` itself lives in
 // the `launcher` module (src/launcher/lira_launcher.scala), which wraps this call in burdock's
 // `externalize` so the released executable downloads its dependencies on demand rather than
-// carrying them. Keeping the dispatch here — in the published `lira-core` — is what lets the
+// carrying them. Keeping the dispatch here — in the published `lira` jar — is what lets the
 // launcher be the four lines it is.
 object LiraTool:
   def run(): Unit = cli:
