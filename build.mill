@@ -390,8 +390,8 @@ trait Publishing extends Toolchain, SonatypeCentralPublishModule:
 
 object lira extends Project:
   // The LIRA format: the language-blind implementation of the specification (`spec/lira.md`) —
-  // blobs, trees, atoms, manifests, verification, buildpaths and the discipline SPI. Released as
-  // `dev.propensive:lira-format`. It and the five modules after it were Soundness's `reliquary`
+  // blobs, trees, atoms, manifests, verification, buildpaths and the discipline SPI. Released, as
+  // every module down to `core` is, in the one `dev.propensive:lira` jar (`library`, below). It and the five modules after it were Soundness's `reliquary`
   // and its `lira` adapter components until they moved here (Soundness roadmap item dist-10).
   object format extends Component(), Publishing:
     override def scalacOptions = settings.uncheckedOptions ++ settings.predef
@@ -406,7 +406,7 @@ object lira extends Project:
       mvn"dev.propensive:turbulence-async:${deps.soundness()}"))
 
   // Materialization: canonical derivative jars, the release assembler and classpaths from
-  // releases. Released as `dev.propensive:lira-derive`.
+  // releases.
   object derive extends Component(format), Publishing:
     override def scalacOptions = settings.uncheckedOptions ++ settings.predef
 
@@ -415,19 +415,17 @@ object lira extends Project:
       mvn"dev.propensive:hellenism-jvm:${deps.soundness()}",
       mvn"dev.propensive:zeppelin-core:${deps.soundness()}"))
 
-  // The `tasty/1` discipline over degustation's TASTy reader. Released as
-  // `dev.propensive:lira-tasty`.
+  // The `tasty/1` discipline over degustation's TASTy reader.
   object tasty extends Component(format), Publishing:
     override def scalacOptions = settings.uncheckedOptions ++ settings.predef
     def mvnDeps = Task(Seq(mvn"dev.propensive:degustation-core:${deps.soundness()}"))
 
   // The `classfile/1` and `jsig/1` disciplines, JVM profiles and host contracts over mandible.
-  // Released as `dev.propensive:lira-classfile`.
   object classfile extends Component(format, derive), Publishing:
     def mvnDeps = Task(Seq(mvn"dev.propensive:mandible-core:${deps.soundness()}"))
 
   // The foreign-surface disciplines over xenophile's front ends: `dts/1`, `webidl/1`, `wit/1`,
-  // `cheader/1` and `kotlin-metadata/1`. Released as `dev.propensive:lira-foreign`.
+  // `cheader/1` and `kotlin-metadata/1`.
   object foreign extends Component(format), Publishing:
     def mvnDeps = Task(Seq(
       mvn"dev.propensive:xenophile-cffi:${deps.soundness()}",
@@ -436,31 +434,64 @@ object lira extends Project:
       mvn"dev.propensive:xenophile-webidl:${deps.soundness()}",
       mvn"dev.propensive:xenophile-wit:${deps.soundness()}"))
 
-  // `LiraBundle`: an anthology compilation's output as the input to a release. Released as
-  // `dev.propensive:lira-bundle`.
+  // `LiraBundle`: an anthology compilation's output as the input to a release.
   object bundle extends Component(format, derive), Publishing:
     override def scalacOptions = settings.uncheckedOptions ++ settings.predef
     def mvnDeps = Task(Seq(mvn"dev.propensive:anthology-core:${deps.soundness()}"))
 
   // The `lira` command-line tool (LIRA specification §5.1): the subcommands, the content-addressed
-  // store and the renderings, over the format modules above. Released as
-  // `dev.propensive:lira-core`.
+  // store and the renderings, over the format modules above.
   object core extends Component(format, derive, tasty, classfile), Publishing:
     def mvnDeps = Task(settings.soundnessDeps(deps.soundness()))
 
+  // What is released: ONE jar, `dev.propensive:lira`, holding the classes of the seven modules
+  // above. They stay separate modules because they compile under different options (`format`,
+  // `derive`, `tasty` and `bundle` without capture checking), and each is still published locally,
+  // as `lira-<module>`, only because Mill requires a publishing module's `moduleDeps` to publish;
+  // none of those coordinates is released, and nothing should depend on one. This module has no
+  // sources and no `moduleDeps`: its `compile` gathers the parts' classes, so its jar is their
+  // union and a module depending on it compiles against them, and its POM names only the external
+  // dependencies, which are the union of theirs.
+  object library extends Component(), Publishing:
+    override def artifactName = "lira"
+    def parts: Seq[Component] = Seq(format, derive, tasty, classfile, foreign, bundle, core)
+    override def sources = Task.Sources()
+
+    def mvnDeps = Task:
+      Task.traverse(parts)(_.mvnDeps)().flatten.distinct
+
+    override def compile = Task:
+      val classes = Task.dest / "classes"
+      os.makeDir.all(classes)
+
+      Task.traverse(parts)(_.localClasspath)().flatten.map(_.path).filter(os.isDir).foreach: root =>
+        os.walk(root).filter(os.isFile).foreach: file =>
+          val target = classes / file.relativeTo(root)
+          if os.exists(target) then
+            Task.fail(s"${file.relativeTo(root)} is in more than one part of the lira jar")
+          os.copy(file, target, createFolders = true)
+
+      mill.javalib.api.CompilationResult(Task.dest / "zinc", PathRef(classes))
+
   // The invocation point, ALONE in its own module (`src/launcher/lira_launcher.scala` — just the
-  // `@main def lira = externalize(LiraTool.run())`). It depends on `core` NOT as a Mill `moduleDep`
+  // `@main def lira = externalize(LiraTool.run())`). It depends on the library NOT as a Mill `moduleDep`
   // but as a PUBLISHED coordinate, so coursier puts the byte-identical released jar on the compile
   // classpath that `externalize` hashes; the repackager then externalizes it into an on-demand
   // download instead of inlining. Burdock is also named explicitly because the `externalize` macro
   // and the `soundness.repackage` main are compiled and run against it.
   //
-  // NOTE: `lira-core` resolves from `~/.ivy2/local`, so a `publishLocal` must precede this module's
-  // assembly (`make run` and `make assembly` do so). Externalization happens only in `make
-  // release`, once the same bytes are a GitHub release asset (a local copy alone would be inlined).
+  // NOTE: `lira` resolves from `~/.ivy2/local`, so a `publishLocal` must precede this module's
+  // assembly (`make run` and `make assembly` do so). Externalization happens only in a release,
+  // once the same bytes are a GitHub release asset (a local copy alone would be inlined).
+  //
+  // `lira-tool` is here although the tool never calls it: release.sh refuses to publish an
+  // executable unless every jar of the release externalizes from it, and it costs the executable
+  // one more on-demand download.
   object launcher extends Component():
     def mvnDeps = Task:
-      mvn"dev.propensive:lira-core:${settings.liraVersion}" +: settings.soundnessDeps(deps.soundness())
+      Seq(mvn"dev.propensive:lira:${settings.liraVersion}",
+          mvn"dev.propensive:lira-tool:${settings.liraVersion}")
+        ++ settings.soundnessDeps(deps.soundness())
 
     def finalMainClass = "lira.lira"
 
@@ -478,7 +509,7 @@ object lira extends Project:
   // The format modules' suites, moved from Soundness with them: `FormatTests` (formerly
   // reliquary's own) and the three adapter suites. Compiled, like the test suites in Soundness, without capture
   // checking; `test` below aggregates them into the repository's single test assembly.
-  object `test-format` extends Component(format, derive, tasty, classfile, foreign, bundle):
+  object `test-format` extends Component(library):
     override def scalacOptions = settings.uncheckedOptions ++ settings.predef
     def scalacPluginMvnDeps = Task(Seq(mvn"dev.propensive:beneficence-plugin:${deps.soundness()}"))
 
@@ -490,7 +521,7 @@ object lira extends Project:
       mvn"org.scala-lang:scala3-compiler_3:${settings.scalaVersion}",
       mvn"org.scala-lang:scala3-tasty-inspector_3:${settings.scalaVersion}"))
 
-  object test extends Component(core, fury.core):
+  object test extends Component(library, fury.core):
     // `test-format` is not a `PublishModule`, so it cannot be a `Component` dependency; it joins
     // the assembly (and `runTests`'s classpath) through these instead.
     override def compileModuleDeps = Seq(`test-format`)
@@ -517,7 +548,7 @@ object lira extends Project:
   // descriptor, invocation and outcome types a tool implements, built on anthology's forms.
   // Published as `dev.propensive:lira-tool`, the host contract both `fury` (which loads tools
   // against it) and every tool, `fever` first, compile against.
-  object tool extends Component(core), Publishing:
+  object tool extends Component(library), Publishing:
     def mvnDeps = Task(settings.soundnessDeps(deps.soundness()) ++ settings.anthologyDeps(deps.soundness()))
 
 // A Pyrocosm tool's published module: its sources, plus the version resource `pyrocosm.Tool`
@@ -538,7 +569,7 @@ object fury extends Project:
   override def moduleDir = super.moduleDir / "fury"
 
   // Released as `dev.propensive:fury-core`: the engine, the model, the daemon's commands.
-  object core extends Component(lira.core, lira.tool), Pyrocosmic("fury"), Publishing:
+  object core extends Component(lira.library, lira.tool), Pyrocosmic("fury"), Publishing:
     def mvnDeps = Task:
       settings.soundnessDeps(deps.soundness()) ++ settings.pyrocosmDeps(deps.pyrocosm())
 
@@ -596,8 +627,7 @@ object fever extends Project:
 // snapshot` publishes an unreleased build for a dependent repository to pin.
 object release extends Module:
   def modules: Seq[PublishModule] =
-    Seq(lira.format, lira.derive, lira.tasty, lira.classfile, lira.foreign, lira.bundle, lira.core,
-        lira.tool)
+    Seq(lira.library, lira.tool)
 
   private def withDescriptors(source: os.Path, target: os.Path, entries: Seq[(String, os.Path)])
   :   Unit =

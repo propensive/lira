@@ -4,7 +4,7 @@ name: CI
 # workflow — see propensive/.github for what it does and what it expects of this repository (the
 # ./mill wrapper, etc/shared, and the pins in etc/refs).
 #
-# Each launcher resolves its library (lira-core, fury-core, fever-core) as a published coordinate,
+# Each launcher resolves its library (lira, fury-core, fever-core) as a published coordinate,
 # so every publishing module is published locally first (`__.publishLocal`).
 
 on:

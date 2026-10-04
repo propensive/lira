@@ -73,12 +73,12 @@ today, with its full design — store, cache, and node — in [`design/tool.md`]
 
 ## Building the `lira` tool
 
-The format is six modules, each published as `dev.propensive:lira-<module>`: `format`, the
-language-blind implementation of the specification; `derive`, derivative artifacts and release
-assembly; and the disciplines, in `tasty`, `classfile`, `foreign` and `bundle` (an anthology
-compilation as release input). The tool adds `core`, the command surface and the store, published
-as `dev.propensive:lira-core`; `launcher`, the one-line invocation point; and `test`, with
-`test-format` holding the format modules' suites. It depends on Soundness alone and is not a
+The format is six modules: `format`, the language-blind implementation of the specification;
+`derive`, derivative artifacts and release assembly; and the disciplines, in `tasty`, `classfile`,
+`foreign` and `bundle` (an anthology compilation as release input). The tool adds `core`, the
+command surface and the store. All seven are published together as one jar, `dev.propensive:lira`,
+with the plugin contract beside it as `dev.propensive:lira-tool`. `launcher` is the one-line
+invocation point, and `test`, with `test-format`, holds the suites. It depends on Soundness alone and is not a
 Pyrocosm application. The Soundness release it builds against is pinned in
 [`etc/refs`](etc/refs), and the tools it runs (fume, flair) in [`etc/tools`](etc/tools).
 
@@ -91,7 +91,7 @@ make install     # copy it to ~/.local/bin, which is what a `.lira` file's `#!` 
 make check       # check the sources with flair
 ```
 
-A release — the `lira-*` library jars, then the per-platform executables built from them — is
+A release — the `lira` and `lira-tool` jars, then the per-platform executables built from them — is
 published to GitHub Releases by a signed tag, after bumping `liraVersion` in `build.mill` and
 merging it, exactly as fume, flair and flame are released:
 

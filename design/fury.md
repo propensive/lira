@@ -74,7 +74,7 @@ knows a language belongs in a tool.
 | `launcher` | the `@main`, wrapped by burdock's `externalize`; Fury's own Ethereal daemon |
 
 Shared with `lira`: the store, the derivative and memo tiers, hashing domains and manifest
-types, as the published `lira-core` library; and the `lira.tool` contract as the published
+types, as the published `lira` library; and the `lira.tool` contract as the published
 `lira-tool` module (§6).
 
 Reused from Soundness and Pyrocosm rather than written: `acyclicity` for the DAG,
@@ -461,7 +461,7 @@ Kept here so they are not relitigated; the section that explains each is in brac
 ```
 build.mill           shared settings; modules lira.core, lira.tool, lira.launcher, lira.test,
                      fury.core, fury.launcher, fever.core, fever.launcher
-src/core/            package lira — the lira tool and the store it shares (lira-core)
+src/core/            package lira — the lira tool and the store it shares (the lira jar)
 src/tool/            package lira.tool — the plugin contract (lira-tool)
 src/launcher/        lira's @main
 src/fury/core/       package fury — everything Fury (fury-core)
@@ -475,9 +475,10 @@ schemas at the root: build, tool, guarantees, local, lock, registry; scalac.tool
 
 Fury's and Fever's modules are rooted at `src/fury/` and `src/fever/` because Mill derives a
 module's directory from its name, and a second `core` at `src/core` would collide with
-lira's. Splitting `lira-core` into a store library and a separate `lira` CLI module is
-deferred: `fury-core` depends on `lira-core` as it stands, which costs nothing but the CLI
-classes on its classpath.
+lira's. The format, the disciplines, the store and the `lira` CLI are published as one jar,
+`dev.propensive:lira`, with the contract beside it as `lira-tool`, which depends on it; a
+store library separate from the CLI is deferred, which costs `fury-core` and every tool
+nothing but the CLI classes on its classpath.
 
 `fury` and `fever` use `pyrocosm.Tool.standard`, so `pyrocosm-cli` (and `pyrocosm-web` for
 Fury) join `etc/refs`, which pins Soundness at the version Pyrocosm was built against;
@@ -488,7 +489,7 @@ targets on the same repackage-then-`xek` path as `lira`, and CI compiles every m
 This is the layout while the two tools are still built here. `src/fury/` and `src/fever/`
 move to `propensive/fury` and `propensive/fever`, each with the layout and tag-driven release
 of fume, flair and flame, and each pinning this repository in its `etc/refs`: Fury for
-`lira-core` and `lira-tool`, Fever for `lira-tool` alone. A change Fury needs in the format
+`lira` and `lira-tool`, Fever for `lira-tool`, which brings `lira` with it. A change Fury needs in the format
 or the store is therefore made and published here first, as a release or a snapshot, and
 then pinned there.
 
