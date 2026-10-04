@@ -107,7 +107,7 @@ Statements exist; the `dts.md`-pattern documents do not:
   beyond a swarm remain undesigned; input-hash lookup (§3.1 addendum) joins the online
   service's query list beside the commit reverse-lookup.
 - ~~**The build tool ↔ `lira` CLI relationship**~~ — decided: three binaries (`lira`,
-  `fury`, `fever`) sharing library code, developed together in this repository
+  `fury`, `fever`) sharing library code, each in its own repository
   ([`fury.md`](fury.md), [`fever.md`](fever.md)).
 - **The `lira.tool` trait in earnest** — its home (the `lira-tool` module), base
   (anthology's types) and carrier (BinTEL) are decided ([`fury.md`](fury.md) §6,

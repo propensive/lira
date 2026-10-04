@@ -44,8 +44,8 @@ object settings:
   // resolves it at. Kept as a single value so the released coordinate and the launcher's dependency
   // coordinate cannot drift apart: burdock externalizes a module only when the exact released jar
   // bytes are on the launcher's classpath, so a mismatch would silently fall back to inlining.
-  // Bump (and commit) per release; release-launcher.sh (in propensive/.github) refuses to release
-  // when this pin disagrees with its VERSION argument. Snapshots override it through
+  // Bump (and commit) per release; release.sh (in propensive/.github) refuses to release
+  // when this pin disagrees with the tag being released. Snapshots override it through
   // `publishVersion` (below), never here.
   val liraVersion = "0.1.0"
 
@@ -358,7 +358,7 @@ trait Component(dependencies: PublishModule*) extends Toolchain:
     mill.javalib.Assembly.Rule.AppendPattern("META-INF/services/.*"))
 
 // Mixed into the library module that is released (`core`) — the module the `launcher` then pulls
-// back in as a published coordinate. Releases go to GitHub Releases (see release-launcher.sh in
+// back in as a published coordinate. Releases go to GitHub Releases (see release.sh in
 // propensive/.github), with `publishLocal` producing the jar and its POM; the Sonatype module is
 // retained only for its POM machinery. Every setting mirrors the Soundness build: the same
 // `dev.propensive` organization, Apache-2.0 licence, GitHub SCM and developer, plus the empty
@@ -597,7 +597,7 @@ object fever extends Project:
 object release extends Module:
   def modules: Seq[PublishModule] =
     Seq(lira.format, lira.derive, lira.tasty, lira.classfile, lira.foreign, lira.bundle, lira.core,
-        lira.tool, fury.core, fever.core)
+        lira.tool)
 
   private def withDescriptors(source: os.Path, target: os.Path, entries: Seq[(String, os.Path)])
   :   Unit =

@@ -3,8 +3,8 @@
 Fever is the Scala half of the build tool: the compiler wrapper that Fury delegates Scala
 edges to, and the long-running service that performs one-off compilations and other
 source-code operations — `scalac`, but resident and faster — including, in time, most of
-the work an LSP server does. It is a Pyrocosm-family tool like [Fury](fury.md), developed
-beside it in this repository and separated when their interfaces have grown apart.
+the work an LSP server does. It is a Pyrocosm-family tool like [Fury](fury.md), in its
+own repository, `propensive/fever`.
 
 The reason it is a separate tool is stated once and governs every placement decision
 below: **Fury is language-agnostic; anything that knows what a `.scala` file is belongs

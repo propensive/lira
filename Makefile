@@ -18,11 +18,16 @@ assembly: publishLocal
 	./mill fury.launcher.assembly
 	./mill fever.launcher.assembly
 
-# Publish lira to GitHub Releases: the lira-core jar first, then — once its digest is indexed — the
-# repackaged `lira` executables, added to the same release. See release-launcher.sh in
-# propensive/.github (run through etc/shared) for the two-step ordering and its verification.
+# A release — the lira library jars, then the repackaged `lira` executables, added to the same
+# release — is cut by a signed tag, which fires .github/workflows/release.yml; what it needs is
+# declared in etc/release. See release.sh in propensive/.github.
 release:
-	./etc/shared release-launcher.sh lira "lira-core" $(VERSION)
+	@echo "Releases are triggered by tags, not by make. Bump liraVersion, merge it, then:" >&2
+	@echo "" >&2
+	@echo "    git tag -s X.Y.Z && git push --tags" >&2
+	@echo "" >&2
+	@echo "See propensive/.github." >&2
+	@exit 1
 
 # Repackage the launcher assembly into a self-fetching launcher with Burdock. The
 # `burdock.externalize` macro wrapping `LiraTool.run()` (in src/launcher/lira_launcher.scala) has
@@ -35,7 +40,7 @@ release:
 # Soundness and proscala repositories, whose per-jar SHA-256 digests the repackager matches against
 # the classpath. The Soundness jars synced into ~/.ivy2/local are the release assets byte-for-byte,
 # and the proscala release publishes the same jars its tarball carries, so both the components and
-# the fork toolchain externalize; lira-core externalizes only once released (`make release`), and
+# the fork toolchain externalize; lira-core externalizes only once released (by a tag), and
 # is inlined otherwise. Pyrocosm is deliberately NOT among the hints: lira does not depend on it.
 # Set GITHUB_TOKEN to lift the API rate limit.
 lira.jar: assembly
