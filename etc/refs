@@ -11,5 +11,5 @@
 # service developed beside it (design/fury.md, design/fever.md), ARE Pyrocosm tools, hence the
 # second pin; Pyrocosm's own pin of Soundness is what fixes the first. The flair plugin and fume,
 # which this repository merely runs, are tools rather than dependencies: see etc/tools.
-propensive/soundness	0.69.0
-propensive/pyrocosm	0.4.0
+propensive/soundness	0.70.0
+propensive/pyrocosm	0.5.0

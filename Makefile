@@ -11,7 +11,7 @@ publishLocal:
 # coordinate is fixed, so Mill's cached resolution would not notice the fresh publish.
 # One `./mill` invocation per launcher, deliberately: asked for two launcher assemblies at once,
 # Mill 1.1.5 produces only the first jar (observed with `fury.launcher.assembly
-# fever.launcher.assembly`), and xeq will happily wrap a jar that does not exist.
+# fever.launcher.assembly`), and xek will happily wrap a jar that does not exist.
 assembly: publishLocal
 	./mill clean lira.launcher fury.launcher fever.launcher
 	./mill lira.launcher.assembly
@@ -42,12 +42,12 @@ lira.jar: assembly
 	cp out/lira/launcher/assembly.dest/out.jar lira.jar
 	java -cp lira.jar soundness.repackage --github propensive/lira,propensive/soundness,propensive/proscala
 
-# Package the repackaged JAR as a native executable for this machine with the pinned `xeq` builder
-# script (fetched into dist/xeq and verified against etc/xeq.tsv). This replaces the older
+# Package the repackaged JAR as a native executable for this machine with the pinned `xek` builder
+# (fetched into dist/xek and verified against etc/xek.tsv). This replaces the older
 # `java -Dbuild.executable=lira -jar lira.jar` step, which produced an Ethereal-wrapped executable
 # without burdock externalization; the released executables are built exactly this way.
-lira: lira.jar xeq-fetch
-	dist/xeq build --jar lira.jar --out lira
+lira: lira.jar xek-fetch
+	dist/xek lira.jar lira
 
 # The same path for fury and fever (design/fury.md §14): repackage each launcher's assembly, then
 # build a native executable from it. Pyrocosm IS among the hints here, since both depend on it.
@@ -59,11 +59,11 @@ fever.jar: assembly
 	cp out/fever/launcher/assembly.dest/out.jar fever.jar
 	java -cp fever.jar soundness.repackage --github propensive/lira,propensive/soundness,propensive/proscala,propensive/pyrocosm
 
-fury: fury.jar xeq-fetch
-	dist/xeq build --jar fury.jar --out fury
+fury: fury.jar xek-fetch
+	dist/xek fury.jar fury
 
-fever: fever.jar xeq-fetch
-	dist/xeq build --jar fever.jar --out fever
+fever: fever.jar xek-fetch
+	dist/xek fever.jar fever
 
 install-fury: fury
 	-./fury quit 2>/dev/null || true
@@ -75,9 +75,9 @@ install-fever: fever
 	rm -f ${HOME}/.local/bin/fever
 	cp fever ${HOME}/.local/bin/
 
-# Fetch the pinned `xeq` builder script into dist/xeq.
-xeq-fetch:
-	./etc/shared xeq-fetch.sh
+# Fetch the pinned `xek` builder into dist/xek.
+xek-fetch:
+	./etc/shared xek-fetch.sh
 
 # Install the tool onto the PATH, which is what the `#!/usr/bin/env lira` interpreter directive of
 # a `.lira` file resolves. Remove-then-copy, NOT a bare `cp`: overwriting the existing file reuses
@@ -137,4 +137,4 @@ snapshot-prune:
 dev:
 	./mill -w __.compile
 
-.PHONY: publishLocal assembly release xeq-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev fury fever install-fury install-fever
+.PHONY: publishLocal assembly release xek-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev fury fever install-fury install-fever
