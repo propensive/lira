@@ -9,14 +9,9 @@ publishLocal:
 # last published (a release's jar, say, whose bytes then externalize to that release's download,
 # and local changes never reach the executable). `clean lira.launcher` for the same reason: the
 # coordinate is fixed, so Mill's cached resolution would not notice the fresh publish.
-# One `./mill` invocation per launcher, deliberately: asked for two launcher assemblies at once,
-# Mill 1.1.5 produces only the first jar (observed with `fury.launcher.assembly
-# fever.launcher.assembly`), and xek will happily wrap a jar that does not exist.
 assembly: publishLocal
-	./mill clean lira.launcher fury.launcher fever.launcher
+	./mill clean lira.launcher
 	./mill lira.launcher.assembly
-	./mill fury.launcher.assembly
-	./mill fever.launcher.assembly
 
 # A release — the lira library jars, then the repackaged `lira` executables, added to the same
 # release — is cut by a signed tag, which fires .github/workflows/release.yml; what it needs is
@@ -53,32 +48,6 @@ lira.jar: assembly
 # without burdock externalization; the released executables are built exactly this way.
 lira: lira.jar xek-fetch
 	dist/xek lira.jar lira
-
-# The same path for fury and fever (design/fury.md §14): repackage each launcher's assembly, then
-# build a native executable from it. Pyrocosm IS among the hints here, since both depend on it.
-fury.jar: assembly
-	cp out/fury/launcher/assembly.dest/out.jar fury.jar
-	java -cp fury.jar soundness.repackage --github propensive/lira,propensive/soundness,propensive/proscala,propensive/pyrocosm
-
-fever.jar: assembly
-	cp out/fever/launcher/assembly.dest/out.jar fever.jar
-	java -cp fever.jar soundness.repackage --github propensive/lira,propensive/soundness,propensive/proscala,propensive/pyrocosm
-
-fury: fury.jar xek-fetch
-	dist/xek fury.jar fury
-
-fever: fever.jar xek-fetch
-	dist/xek fever.jar fever
-
-install-fury: fury
-	-./fury quit 2>/dev/null || true
-	rm -f ${HOME}/.local/bin/fury
-	cp fury ${HOME}/.local/bin/
-
-install-fever: fever
-	-./fever quit 2>/dev/null || true
-	rm -f ${HOME}/.local/bin/fever
-	cp fever ${HOME}/.local/bin/
 
 # Fetch the pinned `xek` builder into dist/xek.
 xek-fetch:
@@ -142,4 +111,4 @@ snapshot-prune:
 dev:
 	./mill -w __.compile
 
-.PHONY: publishLocal assembly release xek-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev fury fever install-fury install-fever
+.PHONY: publishLocal assembly release xek-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev

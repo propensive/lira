@@ -7,9 +7,6 @@
 #
 # The `lira` tool and the LIRA format modules beneath it (`src/format` and its siblings, which were
 # Soundness's `reliquary` until they moved here) depend on Soundness alone; the tool is NOT a
-# Pyrocosm application. `fury` and `fever`, the build tool and the Scala compiler
-# service developed beside it (design/fury.md, design/fever.md), ARE Pyrocosm tools, hence the
-# second pin; Pyrocosm's own pin of Soundness is what fixes the first. The flair plugin and fume,
-# which this repository merely runs, are tools rather than dependencies: see etc/tools.
+# Pyrocosm application, so Soundness is the only pin. The flair plugin and fume, which this
+# repository merely runs, are tools rather than dependencies: see etc/tools.
 propensive/soundness	0.70.0
-propensive/pyrocosm	0.5.0

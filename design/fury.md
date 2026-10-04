@@ -458,40 +458,27 @@ Kept here so they are not relitigated; the section that explains each is in brac
 
 ## 14. Layout
 
+Three repositories, each with the layout and the tag-driven release of fume, flair and flame:
+
 ```
-build.mill           shared settings; modules lira.core, lira.tool, lira.launcher, lira.test,
-                     fury.core, fury.launcher, fever.core, fever.launcher
-src/core/            package lira — the lira tool and the store it shares (the lira jar)
-src/tool/            package lira.tool — the plugin contract (lira-tool)
-src/launcher/        lira's @main
-src/fury/core/       package fury — everything Fury (fury-core)
-src/fury/launcher/   fury's @main
-src/fever/core/      package fever — everything Fever (fever-core); one module until a
-                     second Scala version is needed
-src/fever/launcher/  fever's @main
-src/test/
-schemas at the root: build, tool, guarantees, local, lock, registry; scalac.tool.tel
+propensive/lira      the format, the disciplines, the store and the lira CLI, published as the
+                     one jar dev.propensive:lira; the plugin contract (package lira.tool) beside
+                     it as lira-tool, which depends on it; these design documents
+propensive/fury      package fury: src/core (fury-core), src/launcher (fury's @main), src/test;
+                     the schemas at its root (build, tool, guarantees, local, lock, registry),
+                     scalac.tool.tel and the specimen build.tel and local.tel
+propensive/fever     package fever: src/core (fever-core; one module until a second Scala
+                     version is needed), src/launcher (fever's @main)
 ```
 
-Fury's and Fever's modules are rooted at `src/fury/` and `src/fever/` because Mill derives a
-module's directory from its name, and a second `core` at `src/core` would collide with
-lira's. The format, the disciplines, the store and the `lira` CLI are published as one jar,
-`dev.propensive:lira`, with the contract beside it as `lira-tool`, which depends on it; a
-store library separate from the CLI is deferred, which costs `fury-core` and every tool
-nothing but the CLI classes on its classpath.
+Fury and Fever pin a release of this repository in their `etc/refs`: Fury for `lira` and
+`lira-tool`, Fever for `lira-tool`, which brings `lira` with it. A change Fury needs in the
+format or the store is therefore made and published here first, as a release or a snapshot,
+and then pinned there. A store library separate from the CLI is deferred, which costs
+`fury-core` and every tool nothing but the CLI classes on its classpath.
 
-`fury` and `fever` use `pyrocosm.Tool.standard`, so `pyrocosm-cli` (and `pyrocosm-web` for
-Fury) join `etc/refs`, which pins Soundness at the version Pyrocosm was built against;
-`lira` stays as it is, not a Pyrocosm tool. Every publishing module is published locally
-before the launchers assemble (`__.publishLocal`), the Makefile gains `fury` and `fever`
-targets on the same repackage-then-`xek` path as `lira`, and CI compiles every module.
-
-This is the layout while the two tools are still built here. `src/fury/` and `src/fever/`
-move to `propensive/fury` and `propensive/fever`, each with the layout and tag-driven release
-of fume, flair and flame, and each pinning this repository in its `etc/refs`: Fury for
-`lira` and `lira-tool`, Fever for `lira-tool`, which brings `lira` with it. A change Fury needs in the format
-or the store is therefore made and published here first, as a release or a snapshot, and
-then pinned there.
+`fury` and `fever` use `pyrocosm.Tool.standard`, so each pins Pyrocosm, and Soundness at the
+version Pyrocosm was built against; `lira` stays as it is, not a Pyrocosm tool.
 
 ## 15. The ladder
 

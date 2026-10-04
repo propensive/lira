@@ -50,7 +50,7 @@ def runTests(): Unit =
   val failures = juca.AtomicInteger(0)
   val out = jl.System.out.nn
 
-  // Every suite runs — lira's, the format modules' four, then fury's — and the worst status is the
+  // Every suite runs — lira's, then the format modules' four — and the worst status is the
   // exit status.
   def handle(event: TestEvent): Unit = event match
     case TestEvent.TestCompleted(test, _, _, outcome, _, _) =>
@@ -71,7 +71,7 @@ def runTests(): Unit =
     case _ => ()
 
   val suites = scala.List(Tests, FormatTests, TastyDisciplineTests, ClassfileDisciplineTests,
-      ForeignDisciplineTests, fury.Tests)
+      ForeignDisciplineTests)
 
   val status = suites.map(_.invoke(t"", handle)).max
 
