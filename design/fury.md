@@ -143,7 +143,13 @@ for a project that wants its outputs beside its sources. That setting is a machi
    diagnostic, done, failed, cancelled — is appended to the run's log; completion events
    carry the step's resource statistics (wall and CPU time, peak memory, load and
    concurrency at start, worker, bytes transferred). The CLI renderer, the web interface
-   and the swarm status all read this log.
+   and the swarm status all read this log. A run's events are also the daemon's: `fury log`
+   shows **the instance's event log**, every notable action the daemon takes — a listener
+   opening, a peer connecting, each message sent and received, and, once there are builds,
+   their events — and a run's own log is the part of it that belongs to that run. The
+   instance's log is the daemon's newest thousand events, held in memory, each logged at a
+   level, of which `fury log` shows `info` and above unless asked for more; a run's is kept
+   in the store (§10).
 6. **Failure**: a failed step skips its dependants; independent steps continue, so one
    build reports every failure it can. Fail-fast is an occasion-class flag. There are **no
    step timeouts** — a run is cancelled explicitly or not at all, and the interface shows
@@ -257,6 +263,34 @@ replaces that as a later step.
   serve at least one of the project's steps. Sync is a prefetch, never a correctness
   requirement: a step whose tree is missing on a worker still fetches on demand.
 
+**The interim transport.** The first rung of this section was built ahead of the ladder, so
+that the link between machines could be seen working before there was anything to dispatch
+over it, and it stands on what Pyrocosm already had (`pyrocosm-remote`, which fume's `--on`
+uses) rather than on the identity above. As built:
+
+- A machine has one self-signed EC certificate, shared by every Pyrocosm tool on it. The
+  caller pins it by the SHA-256 fingerprint its `machine` block declares, and proves itself
+  with a shared token. It is not mutual TLS, there is no ML-DSA key, and `invite` and
+  `accept` do not exist: `fury identity` prints what the other machine must be told.
+- Machines are declared in `config.tel` (§11) or the shared
+  `~/.config/pyrocosm/machines.tel`; a machine listens when its configuration says `listen`,
+  on port 8092 unless `listen-port` says otherwise.
+- A connection is kept only where it is asked for — `fury connect <machine>`, or a `connect`
+  line of the configuration — and otherwise an exchange is one short connection. A kept
+  connection carries a `beat` from each end every second; an end which hears nothing for
+  three seconds takes it for lost, and the end which made it makes it again, after a pause
+  which doubles with each failure in a row, to half a minute at most. This is the heartbeat
+  of the capacity paragraph above, without what it is to carry: there is no advertisement,
+  no membership and no hub.
+- The framing is Pyrocosm's `Channel` — a four-byte length, a tag byte, a BinTEL body — and
+  the handshake names the protocol by a fingerprint of the message schema, which must match
+  exactly.
+- The messages are `ping`, carrying a note, the `pong` that answers it (`fury ping`), and
+  `beat`.
+
+The identity model above remains the target, for Fury and for fume together; the messages
+and the journal carry over to it unchanged.
+
 ## 9. What the first milestone assumes
 
 The scope that reaches the milestone without design work beyond what the steps below
@@ -298,7 +332,8 @@ state, in the manner of CI per commit — and grouping is configurable, disambig
 project name or root path where needed; no fixed project identity is baked into the key.
 `--force` starts an ordinary run that bypasses memo hits for the selected modules. Runs
 are BinTEL event logs stored as objects in a `build/` tier of the store, LRU-evictable
-under the store budget and never pinned; `fury log` reads the same objects. Pages: the run
+under the store budget and never pinned; `fury log <run>` reads the same objects, where a
+bare `fury log` shows the instance's own (§5). Pages: the run
 list, a run's DAG with step states, diagnostics and retained workspace paths, and the
 swarm's members, budgets, loads and in-flight steps, live over WebSocket.
 
@@ -443,7 +478,8 @@ Kept here so they are not relitigated; the section that explains each is in brac
 13. Swarm: dedicated ML-DSA keypair with explicit accept; TLS bound to it; star around the
     initiator (clique later, messages hub-agnostic); hub is a worker; advertised budgets;
     one Fury protocol; sync to capable members only; explicit host, mDNS later;
-    membership per user; orphaned steps finish and keep outputs (§8).
+    membership per user; orphaned steps finish and keep outputs (§8). Until that keypair
+    exists, the transport and identity are Pyrocosm's, as fume's are (§8).
 14. Runs by start time, grouped by tree hash, in a `build/` store tier (§10).
 15. Configuration files have one role each, with the allocation of §11; the six-layer
     precedence order (§11); `local.tel` gitignored at self-hosting (§11).
@@ -455,6 +491,8 @@ Kept here so they are not relitigated; the section that explains each is in brac
     synthetic one-module build; runnables are cached by whole-file hash and by step
     identity; turning a source into a runnable is an optional capability a tool declares
     through a side-trait of the contract, which Fury never special-cases (§12a).
+19. `fury log` shows the instance's event log; a run's log is the part of it kept in the
+    store (§5, §10).
 
 ## 14. Layout
 
@@ -558,7 +596,9 @@ workspace`; `fury watch` with cancellation; `--force`.
 **Track B — swarm** (after A's scheduler). Keys, invite and accept; capability
 advertisement and heartbeat; the Fury protocol over TLS with BinTEL framing; the remote
 worker with blob fetch; then watcher-driven sync to capable members; placement policies
-beyond greedy.
+beyond greedy. Its first rungs were taken early, before step 2: a listener, `fury ping`,
+kept connections with a heartbeat, and `fury log`, on the interim transport of §8. The rest
+still waits for the scheduler.
 
 **Track C — web** (after A's run log). The run list, the run page with its DAG, live
 updates; the swarm page.
@@ -610,10 +650,10 @@ classloaders with a chosen parent (step 5's plugin loading) and
 resource reads; [#2072](https://github.com/propensive/soundness/issues/2072) TLS pinned to
 a fingerprint, [#2073](https://github.com/propensive/soundness/issues/2073) certificates
 bound to an ML-DSA key and [#2074](https://github.com/propensive/soundness/issues/2074)
-BinTEL framing over `Duplex` (track B); [#2075](https://github.com/propensive/soundness/issues/2075)
+BinTEL framing over `Duplex` (track B; all three now closed); [#2075](https://github.com/propensive/soundness/issues/2075)
 the memo tier and `lira-inputs` document (step 7);
 [#2076](https://github.com/propensive/soundness/issues/2076) debounced watch batches
-(track B and `watch`). In Pyrocosm: [#28](https://github.com/propensive/pyrocosm/issues/28)
+(track B and `watch`; closed). In Pyrocosm: [#28](https://github.com/propensive/pyrocosm/issues/28)
 additional schema-validated configuration documents (step 3),
 [#29](https://github.com/propensive/pyrocosm/issues/29) schema-validated `config.tel`,
 [#30](https://github.com/propensive/pyrocosm/issues/30) daemon-owned state for `Tool.Web`,
