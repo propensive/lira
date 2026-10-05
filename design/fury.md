@@ -280,8 +280,7 @@ uses) rather than on the identity above. As built:
   connection carries a `beat` from each end every second; an end which hears nothing for
   three seconds takes it for lost, and the end which made it makes it again, after a pause
   which doubles with each failure in a row, to half a minute at most. This is the heartbeat
-  of the capacity paragraph above, without what it is to carry: there is no advertisement,
-  no membership and no hub.
+  of the capacity paragraph above. There is no membership and no hub.
 - The framing is Pyrocosm's `Channel`: a four-byte length, a tag byte, and a payload, which
   is Fury's own.
 - The protocol has one schema, `wire.schema.tel` in the Fury repository, in which the
@@ -297,8 +296,11 @@ uses) rather than on the identity above. As built:
   one — changes the base, so a build which changes them must go on accepting the earlier
   form as a further alternative to talk to builds which have not. Retracting cases by layer
   (soundness#2164) narrows what an end accepts; it does not let a base be widened.
-- The messages are `ping`, carrying a note, the `pong` that answers it (`fury ping`), and
-  `beat`.
+- The messages are `ping`, carrying a note, the `pong` that answers it (`fury ping`),
+  `beat`, and `advert`. An `advert` is the first of the capacity paragraph's advertisement:
+  each end of a kept connection says once what it is — hostname, operating system,
+  architecture and cores — and every `beat` carries its load. Universes, tool releases, store
+  space and a concurrency budget are not advertised yet.
 
 The identity model above remains the target, for Fury and for fume together; the messages
 and the journal carry over to it unchanged.
