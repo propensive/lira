@@ -147,7 +147,8 @@ for a project that wants its outputs beside its sources. That setting is a machi
    shows **the instance's event log**, every notable action the daemon takes — a listener
    opening, a peer connecting, each message sent and received, and, once there are builds,
    their events — and a run's own log is the part of it that belongs to that run. The
-   instance's log is the daemon's newest thousand events, held in memory; a run's is kept
+   instance's log is the daemon's newest thousand events, held in memory, each logged at a
+   level, of which `fury log` shows `info` and above unless asked for more; a run's is kept
    in the store (§10).
 6. **Failure**: a failed step skips its dependants; independent steps continue, so one
    build reports every failure it can. Fail-fast is an occasion-class flag. There are **no
@@ -274,12 +275,18 @@ uses) rather than on the identity above. As built:
 - Machines are declared in `config.tel` (§11) or the shared
   `~/.config/pyrocosm/machines.tel`; a machine listens when its configuration says `listen`,
   on port 8092 unless `listen-port` says otherwise.
-- Each exchange is one short connection. There is no membership, heartbeat or
-  advertisement, and no hub.
+- A connection is kept only where it is asked for — `fury connect <machine>`, or a `connect`
+  line of the configuration — and otherwise an exchange is one short connection. A kept
+  connection carries a `beat` from each end every second; an end which hears nothing for
+  three seconds takes it for lost, and the end which made it makes it again, after a pause
+  which doubles with each failure in a row, to half a minute at most. This is the heartbeat
+  of the capacity paragraph above, without what it is to carry: there is no advertisement,
+  no membership and no hub.
 - The framing is Pyrocosm's `Channel` — a four-byte length, a tag byte, a BinTEL body — and
   the handshake names the protocol by a fingerprint of the message schema, which must match
   exactly.
-- The messages are `ping`, carrying a note, and the `pong` that answers it (`fury ping`).
+- The messages are `ping`, carrying a note, the `pong` that answers it (`fury ping`), and
+  `beat`.
 
 The identity model above remains the target, for Fury and for fume together; the messages
 and the journal carry over to it unchanged.
@@ -589,8 +596,9 @@ workspace`; `fury watch` with cancellation; `--force`.
 **Track B — swarm** (after A's scheduler). Keys, invite and accept; capability
 advertisement and heartbeat; the Fury protocol over TLS with BinTEL framing; the remote
 worker with blob fetch; then watcher-driven sync to capable members; placement policies
-beyond greedy. Its first rung was taken early, before step 2: a listener, `fury ping` and
-`fury log`, on the interim transport of §8. The rest still waits for the scheduler.
+beyond greedy. Its first rungs were taken early, before step 2: a listener, `fury ping`,
+kept connections with a heartbeat, and `fury log`, on the interim transport of §8. The rest
+still waits for the scheduler.
 
 **Track C — web** (after A's run log). The run list, the run page with its DAG, live
 updates; the swarm page.
