@@ -270,17 +270,29 @@ uses) rather than on the identity above. As built:
 
 - A machine has one self-signed EC certificate, shared by every Pyrocosm tool on it. The
   caller pins it by the SHA-256 fingerprint its `machine` block declares, and proves itself
-  with a shared token. It is not mutual TLS, there is no ML-DSA key, and `invite` and
-  `accept` do not exist: `fury identity` prints what the other machine must be told.
+  with a token. It is not mutual TLS, and there is no ML-DSA key.
+- Machines join by invitation, in Pyrocosm so that fume shares it. `fury swarm invite` prints
+  one word holding the machine's addresses, port, fingerprint, and a token which admits one
+  machine once before it expires (an hour by default); `fury swarm join` presents it, and the
+  listener exchanges it, in a `granted` step of Pyrocosm's handshake, for a token of the
+  joiner's own, revocable with `fury swarm revoke`. Joining is one-way: the joiner can reach
+  the inviter. This is the `invite` of the identity paragraph above, without its keypair.
 - Machines are declared in `config.tel` (§11) or the shared
-  `~/.config/pyrocosm/machines.tel`; a machine listens when its configuration says `listen`,
-  on port 8092 unless `listen-port` says otherwise.
-- A connection is kept only where it is asked for — `fury connect <machine>`, or a `connect`
-  line of the configuration — and otherwise an exchange is one short connection. A kept
-  connection carries a `beat` from each end every second; an end which hears nothing for
-  three seconds takes it for lost, and the end which made it makes it again, after a pause
-  which doubles with each failure in a row, to half a minute at most. This is the heartbeat
-  of the capacity paragraph above. There is no membership and no hub.
+  `~/.config/pyrocosm/machines.tel`, where `join` writes them; a machine listens when its
+  configuration says `listen`, or from `fury swarm listen` or `invite`, on port 8092 unless
+  `listen-port` says otherwise.
+- A machine may have several addresses (`host`, repeated). A connection is made to the
+  nearest which answers — private addresses and `.local` names, then other names, then public
+  addresses — each tried 250ms after the one before (RFC 8305), so that a laptop away from
+  home loses a quarter-second to its home address, and one at home uses it. An invitation
+  lists the inviter's IPv4 and IPv6 unique-local addresses and its hostname. Discovery on the
+  local network without any address waits for mDNS (soundness#2172).
+- A connection is kept only where it is asked for — `fury swarm connect <machine>`, `join`,
+  or a `connect` line of the configuration — and otherwise an exchange is one short
+  connection. A kept connection carries a `beat` from each end every second; an end which
+  hears nothing for three seconds takes it for lost, and the end which made it makes it
+  again, after a pause which doubles with each failure in a row, to half a minute at most.
+  This is the heartbeat of the capacity paragraph above. There is no membership and no hub.
 - The framing is Pyrocosm's `Channel`: a four-byte length, a tag byte, and a payload, which
   is Fury's own.
 - The protocol has one schema, `wire.schema.tel` in the Fury repository, in which the
@@ -296,7 +308,7 @@ uses) rather than on the identity above. As built:
   one — changes the base, so a build which changes them must go on accepting the earlier
   form as a further alternative to talk to builds which have not. Retracting cases by layer
   (soundness#2164) narrows what an end accepts; it does not let a base be widened.
-- The messages are `ping`, carrying a note, the `pong` that answers it (`fury ping`),
+- The messages are `ping`, carrying a note, the `pong` that answers it (`fury swarm ping`),
   `beat`, and `advert`. An `advert` is the first of the capacity paragraph's advertisement:
   each end of a kept connection says once what it is — hostname, operating system,
   architecture and cores — and every `beat` carries its load. Universes, tool releases, store
@@ -610,8 +622,9 @@ workspace`; `fury watch` with cancellation; `--force`.
 **Track B — swarm** (after A's scheduler). Keys, invite and accept; capability
 advertisement and heartbeat; the Fury protocol over TLS with BinTEL framing; the remote
 worker with blob fetch; then watcher-driven sync to capable members; placement policies
-beyond greedy. Its first rungs were taken early, before step 2: a listener, `fury ping`,
-kept connections with a heartbeat, and `fury log`, on the interim transport of §8. The rest
+beyond greedy. Its first rungs were taken early, before step 2: a listener, `fury swarm ping`,
+kept connections with a heartbeat, joining by invitation, and `fury log`, on the interim
+transport of §8. The rest
 still waits for the scheduler.
 
 **Track C — web** (after A's run log). The run list, the run page with its DAG, live
