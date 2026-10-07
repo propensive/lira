@@ -725,7 +725,7 @@ they grade like contracts (newer tzdata = minor). They deserve their own kind
 | `isa` — instruction sets, microarchitecture (avx2, neon, CUDA level) | the egress specializes unconditionally: `-march=native` made deployment-safe, closing the gap that `native-exe/<triple>` underspecifies microarchitecture |
 | `device` (/dev/urandom), loopback, IPv6 | non-blocking secure randomness; dead-path elimination |
 | writable tmpdir | temp-file creation total (weak temporal class: capacity is liveness) |
-| `tty` — terminal capabilities | total terminal control for CLI applications; notable for extending "environment" to *invocation context* (xeq tools) |
+| `tty` — terminal capabilities | total terminal control for CLI applications; notable for extending "environment" to *invocation context* (xek tools) |
 
 **Admission-gate kinds (deploy-constrain only; totality unsound):** resource floors
 (`memory`, `disk` at path — the mounted-volume-with-capacity case), `clock` (NTP skew

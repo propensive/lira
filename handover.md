@@ -340,7 +340,7 @@ Structure: `command` blocks (build/dev/test) → `toolchain tools` (scalac, java
 - The empty `realm jvm` block reads correctly as pure opt-in.
 - Delta blocks (`add`/`remove` inside `sources`, `require`, `include`) mirror §9.3 overlays.
 - `service main2 example/image` — the positional form is the right answer for deployment.
-- `produce xeq` on `test` matches a real application type (the xeq-bundle egress).
+- `produce xek` on `test` matches a real application type (the xek-bundle egress).
 
 ## Concept mapping (condensed from `builds.md` §2)
 
