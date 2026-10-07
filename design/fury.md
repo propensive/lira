@@ -233,8 +233,8 @@ replaces that as a later step.
   initiator's public key; the receiving daemon matches a pending `fury swarm invite` token
   or its user runs `fury swarm accept <fingerprint>`; thereafter both sides reconnect by
   key. Membership is **per user** and lives in Fury's own configuration (§11); nothing
-  about a swarm appears in project files. Discovery is by explicit host only, with a fixed
-  default port; mDNS advertisement is a liked later step.
+  about a swarm appears in project files. Discovery is by explicit host, with a fixed
+  default port, and on the local network by mDNS while an invitation is open (below).
 - **Topology.** A **star around the initiator**, for now: the machine that ran `connect` is
   the hub and members talk only to it. Members are identified by fingerprint, never by
   hub-assigned ids, and dispatch messages are hub-agnostic, so a later move to a clique —
@@ -285,8 +285,14 @@ uses) rather than on the identity above. As built:
   nearest which answers — private addresses and `.local` names, then other names, then public
   addresses — each tried 250ms after the one before (RFC 8305), so that a laptop away from
   home loses a quarter-second to its home address, and one at home uses it. An invitation
-  lists the inviter's IPv4 and IPv6 unique-local addresses and its hostname. Discovery on the
-  local network without any address waits for mDNS (soundness#2172).
+  lists the inviter's IPv4 and IPv6 unique-local addresses and its hostname.
+- While an invitation is open, the inviter advertises itself on the local network by DNS-SD
+  over mDNS (`_fury._tcp`, Soundness's syndesis), with its certificate fingerprint in the TXT
+  record. `join` looks for it for a few seconds, matching the fingerprint against the
+  invitation's, and tries the `.local` name and addresses it finds ahead of those the
+  invitation lists. Nothing changes if it is not found: discovery supplements the invitation
+  and never fails a join. The advertisement ends when the invitation is used, expires, or the
+  listener stops. One mDNS responder per daemon, opened only when it invites or joins.
 - A connection is kept only where it is asked for — `fury swarm connect <machine>`, `join`,
   or a `connect` line of the configuration — and otherwise an exchange is one short
   connection. A kept connection carries a `beat` from each end every second; an end which
@@ -503,7 +509,8 @@ Kept here so they are not relitigated; the section that explains each is in brac
     published layers (§7).
 13. Swarm: dedicated ML-DSA keypair with explicit accept; TLS bound to it; star around the
     initiator (clique later, messages hub-agnostic); hub is a worker; advertised budgets;
-    one Fury protocol; sync to capable members only; explicit host, mDNS later;
+    one Fury protocol; sync to capable members only; explicit host, and mDNS while an
+    invitation is open;
     membership per user; orphaned steps finish and keep outputs (§8). Until that keypair
     exists, the transport and identity are Pyrocosm's, as fume's are (§8).
 14. Runs by start time, grouped by tree hash, in a `build/` store tier (§10).
@@ -696,7 +703,7 @@ atomization); `presume`/`guarantee` once `envvar/1` and `file/1` are specified (
 `registry.tel` replacing the hardcoded registry (§7); the `run` settings model and the
 deployment round (builds.md §10); publishing; remote store sharing beyond the swarm; raw
 local binaries; same-form codegen edges; the LSP route; the multi-version Fever layout;
-mDNS discovery; incremental compilation if ever needed.
+mDNS discovery beyond invitations; incremental compilation if ever needed.
 
 ## 18. Milestone acceptance
 
