@@ -9,4 +9,4 @@
 # Soundness's `reliquary` until they moved here) depend on Soundness alone; the tool is NOT a
 # Pyrocosm application, so Soundness is the only pin. The flair plugin and fume, which this
 # repository merely runs, are tools rather than dependencies: see etc/tools.
-propensive/soundness	0.70.0
+propensive/soundness	0.71.0

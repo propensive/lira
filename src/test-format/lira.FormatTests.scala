@@ -132,7 +132,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         . assert(_ == t"ok")
 
         test(m"$name.tel reconstructs equal to the hand-encoded value"):
-          Tels.Reconstructor.equivalent(Tels.Reconstructor.fromTel(resource(name).read[Tel]), tels)
+          Tels.Reconstructor.equivalent(resource(name).read[Tel].as[Tels], tels)
         . assert(identity)
 
         test(m"$name schema signature matches its pinned value"):

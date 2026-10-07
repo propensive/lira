@@ -878,7 +878,7 @@ object Lira:
 
     private val hashScalar: ScalarDefinition = scalar("Hash", "base-256-hash")
 
-    // `Tels.Reconstructor.fromTel` prefixes every reconstructed schema's scalars with the TEL
+    // Reading a schema (`tel.as[Tels]`) prefixes every reconstructed schema's scalars with the TEL
     // built-ins, so the hand-encoded values carry them identically for structural equality.
     private val builtins: Array[ScalarDefinition] = Array(
       scalar("Identifier", "identifier"),
