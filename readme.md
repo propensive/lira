@@ -92,8 +92,8 @@ make check       # check the sources with flair
 ```
 
 A release — the `lira` and `lira-tool` jars, then the per-platform executables built from them — is
-published to GitHub Releases by a signed tag, after bumping `liraVersion` in `build.mill` and
-merging it, exactly as fume, flair and flame are released:
+published to GitHub Releases by a signed tag on a commit CI has passed, exactly as fume, flair
+and flame are released; the tag is the only place the version is declared:
 
 ```sh
 git tag -s X.Y.Z && git push --tags
