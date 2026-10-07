@@ -44,7 +44,7 @@ context cells, presumptions, cell coordinates, settings.
 DNS-proven. Manifests carry bare module names; the domain lives at resolution.
 
 **deliverable** — A pair of a closed artifact format and a host contract:
-`jvm-app`, `js-app`, `xeq-bundle`, `oci-image`, and the triple-parameterized families
+`jvm-app`, `js-app`, `xek-bundle`, `oci-image`, and the triple-parameterized families
 `native-exe/<triple>`, `native-image/<triple>`, `oci-image/<platform>`. What an egress
 produces. A registry object, never a manifest object. Distinct from **deployable
 release**, the `app`-realm release that carries one.

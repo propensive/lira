@@ -82,7 +82,7 @@ JS *and* WASM" puzzle:
   and **wasi-component** (WASM component against a WIT world, WASI 0.2), which in turn packages
   to **wasi-oci** (that component as a Wasm OCI Artifact).
 - `jvm` has egresses to **jvm-app** (jar), **android-app** (DEX/APK, via D8),
-  **native-image/⟨triple⟩** (GraalVM native-image), and **xeq-bundle** (a jar appended to a
+  **native-image/⟨triple⟩** (GraalVM native-image), and **xek-bundle** (a jar appended to a
   native launcher stub, wrapped in a polyglot script).
 
 A library never chooses its egress; an application does. That is *why* the sjsir section is
@@ -180,7 +180,7 @@ graph LR
   subgraph applications
     JAR[jvm-app jar → JVM ≥ N]
     APK[android-app apk → ART ≥ api]
-    XEQ[xeq-bundle → shell + JVM ≥ N]
+    XEK[xek-bundle → shell + JVM ≥ N]
     NIMG[native-image/triple → os/triple]
     JSAPP[js-app bundle → browser/Node]
     WASMB[wasm-browser → browser]
@@ -204,7 +204,7 @@ graph LR
   JVM -->|jar link| JAR
   JVM -->|d8 dex| APK
   JVM -->|graal native-image| NIMG
-  JAR -->|xeq package| XEQ
+  JAR -->|xek build| XEK
   SJSIR -->|sjs linker| JSAPP
   SJSIR -->|sjs linker wasm| WASMB
   SJSIR -->|sjs linker component| WASI2
@@ -224,10 +224,10 @@ graph LR
 (LLVM sits invisibly inside the three edges into `EXE`/`NIMG`; DEX inside the edge into
 `APK`. `EXE` and `NIMG` are families, one node per triple, elided here to one box each.)
 
-Two edges run between application nodes rather than out of a universe: `JAR → XEQ` and
+Two edges run between application nodes rather than out of a universe: `JAR → XEK` and
 `WASI2 → WASIOCI`. Both are packaging steps, which take a closed artifact and re-envelope it for
 a different host, so their input is an application artifact and not a set of library artifacts.
-Resolution treats them like any other edge — the path from `jvm` to `xeq-bundle` simply runs two
+Resolution treats them like any other edge — the path from `jvm` to `xek-bundle` simply runs two
 tools — and nothing about either is visible to a library.
 
 ### 4.1 Resolution
@@ -437,7 +437,7 @@ artifact is not an egress: it closes over nothing and reads no `.lira` file, so 
 the compatibility algebra entirely.
 
 Nothing on the application axis is a schema object, so the nodes and edges added here — the
-`wasi-oci` and `xeq-bundle` deliverables, the packaging edges reaching them, and the
+`wasi-oci` and `xek-bundle` deliverables, the packaging edges reaching them, and the
 triple-parameterized native families — change no manifest, no atom and no buildpath rule. They
 are the pipeline registry's business (item 2 below), and are recorded here so that the registry
 has something to be faithful to.
@@ -451,6 +451,6 @@ Still proposed:
    is a registry concern rather than a spec one.
 2. The machine-readable pipeline registry (`registry.tel`) driving §4.1 step 4, so that
    egresses, joins and the tools implementing them are registry entries rather than build-tool
-   code. Application-to-application packaging edges (`jar → xeq-bundle`,
+   code. Application-to-application packaging edges (`jar → xek-bundle`,
    `wasi-component → wasi-oci`) belong in it on the same footing as the egresses out of a
    universe.

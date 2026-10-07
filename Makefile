@@ -45,9 +45,10 @@ lira.jar: assembly
 # Package the repackaged JAR as a native executable for this machine with the pinned `xek` builder
 # (fetched into dist/xek and verified against etc/xek.tsv). This replaces the older
 # `java -Dbuild.executable=lira -jar lira.jar` step, which produced an Ethereal-wrapped executable
-# without burdock externalization; the released executables are built exactly this way.
+# without burdock externalization; the released executables are built exactly this way, and
+# likewise require Java 25.
 lira: lira.jar xek-fetch
-	dist/xek build lira.jar lira
+	dist/xek build --java-min 25 --java 25 lira.jar lira
 
 # Fetch the pinned `xek` builder into dist/xek.
 xek-fetch:
