@@ -321,13 +321,13 @@ private def usage(help: Optional[Help], exit: Exit)(using cli: Cli): Exit =
   Out.println(t"in the vendor's history — beginning a fresh lineage.")
   exit
 
-private def quit()(using service: DaemonService[?], cli: Cli): Exit =
+private def quit()(using service: Resident, cli: Cli): Exit =
   given Stdio = cli.stdio
   Out.println(t"lira: shutting down")
   service.shutdown()
   Exit.Ok
 
-private def installCompletions()(using cli: Cli, service: DaemonService[?])
+private def installCompletions()(using cli: Cli, service: Resident)
   ( using erased Effectful )
 :   Exit =
 

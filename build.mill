@@ -34,8 +34,8 @@ object settings:
   // is evaluated, and neither a fresh daemon nor `--no-daemon` propagates the variable. To switch
   // toolchains, edit the defaults here. The `SOUNDNESS_SCALA_RELEASE", "…"` literal must stay on
   // one line: the shared `scala-ci.yml` (propensive/.github) `sed`s it to key the toolchain cache.
-  val scalaVersion = sys.env.getOrElse("SOUNDNESS_SCALA_VERSION", "3.9.0-p16")
-  val scalaRelease = sys.env.getOrElse("SOUNDNESS_SCALA_RELEASE", "3.9.0-p16")
+  val scalaVersion = sys.env.getOrElse("SOUNDNESS_SCALA_VERSION", "3.9.1-dev-p17")
+  val scalaRelease = sys.env.getOrElse("SOUNDNESS_SCALA_RELEASE", "3.9.1-dev-p17")
 
   // Empty by default → download `scalaRelease`.
   val scalaHome = sys.env.getOrElse("SOUNDNESS_SCALA_HOME", "")
@@ -47,7 +47,7 @@ object settings:
   // Bump (and commit) per release; release.sh (in propensive/.github) refuses to release
   // when this pin disagrees with the tag being released. Snapshots override it through
   // `publishVersion` (below), never here.
-  val liraVersion = "0.1.0"
+  val liraVersion = "0.2.0"
 
   val scalaOptions = Seq(
     // The fork's opt-in behaviours, enabled by name, exactly as the Soundness build enables them —
