@@ -47,7 +47,7 @@ lira.jar: assembly
 # `java -Dbuild.executable=lira -jar lira.jar` step, which produced an Ethereal-wrapped executable
 # without burdock externalization; the released executables are built exactly this way.
 lira: lira.jar xek-fetch
-	dist/xek lira.jar lira
+	dist/xek build lira.jar lira
 
 # Fetch the pinned `xek` builder into dist/xek.
 xek-fetch:
