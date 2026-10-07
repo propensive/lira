@@ -46,7 +46,7 @@ Closed forms paired with host contracts; registry objects, never manifest object
 | --- | --- |
 | `jvm-app` | Executable jar × JDK |
 | `android-app` | DEX/APK × Android |
-| `xeq-bundle` | Jar on a native launcher stub in a polyglot script × OS+shell |
+| `xek-bundle` | Jar on a native launcher stub in a polyglot script × OS+shell |
 | `native-image/<triple>` | GraalVM native image × OS+libc for the triple |
 | `native-exe/<triple>` | Linked native executable × OS+libc for the triple |
 | `js-app` | ESM/CJS/script bundle × Node or browser |
@@ -103,7 +103,7 @@ Built-in unless noted. Each carries edges; edge ids default to output forms.
 | `jar` | jvm→jvm-app | |
 | `d8` | jvm→android-app | |
 | `native-image` | jvm→native-image/<triple> | GraalVM; join edge from `native` |
-| `xeq` | jvm-app→xeq-bundle | Packaging edge |
+| `xek` | jvm-app→xek-bundle | Packaging edge |
 | `docker` | dockerfile+context→oci-image/<platform> | Packaging edge; frozen environment-of-one (builds.md §15) |
 | `oci` | wasi-component→wasi-oci; oci-image/*→oci-index | Packaging edges |
 | `clang` | c→native/<triple> | The parameterized-edge motivating case |
