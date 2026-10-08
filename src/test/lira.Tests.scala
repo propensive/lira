@@ -136,11 +136,45 @@ object Tests extends Suite(m"LIRA tool tests"):
 
     // `prune` (lira.LiraTool.scala) keeps files out of the help tree by testing `group.present`,
     // so a subcommand declared without a group is silently absent from the usage text.
+    suite(m"Self-upgrade"):
+      val manifest: Text =
+        t"version\t0.3.0\nbuild\t3000\nsigned-by\tabc123\n"
+        + t"macos-arm64\thttps://example.com/lira-macos-arm64\tDEADBEEF\n"
+        + t"linux-x64\thttps://example.com/lira-linux-x64\t0123\n"
+
+      test(m"A manifest's version and build are read"):
+        UpgradeManifest.parse(manifest).let { release => t"${release.version} ${release.build}" }
+      . assert(_ == t"0.3.0 3000")
+
+      test(m"A manifest's executable for a platform is read"):
+        UpgradeManifest.parse(manifest).let(_.executable(t"macos-arm64")).let(_.sha256)
+      . assert(_ == t"DEADBEEF")
+
+      test(m"A platform the manifest does not name has no executable"):
+        UpgradeManifest.parse(manifest).let(_.executable(t"windows-x64")).absent
+      . assert(_ == true)
+
+      test(m"An empty signed-by is no signing key"):
+        UpgradeManifest.parse(t"version\t0.3.0\nbuild\t3000\nsigned-by\t\n").let(_.signedBy).absent
+      . assert(_ == true)
+
+      test(m"A manifest without a build is not a release"):
+        UpgradeManifest.parse(t"version\t0.3.0\n").absent
+      . assert(_ == true)
+
+      test(m"A manifest with a non-numeric build is not a release"):
+        UpgradeManifest.parse(t"version\t0.3.0\nbuild\tthree\n").absent
+      . assert(_ == true)
+
+      test(m"A build id stands for its version"):
+        scala.List(SelfUpgrade.version(3000), SelfUpgrade.version(1002003))
+      . assert(_ == scala.List(t"0.3.0", t"1.2.3"))
+
     suite(m"Command surface (design/tool.md §5)"):
       val subcommands = scala.List
         (lira.Verify, lira.Harvest, lira.Jar, lira.Assign, lira.Diff, lira.Delta, lira.AtomsCmd,
          lira.Id, lira.Add, lira.Cache, lira.Pin, lira.Unpin, lira.Gc, lira.Fsck, lira.Install,
-         lira.Help, lira.Quit)
+         lira.Help, lira.Quit, lira.UpgradeCommand)
 
       val flags = scala.List[Flag](lira.Major, lira.Budget, lira.DeltaBlob, lira.Output, lira.Realm,
         lira.Classpath, lira.Only, lira.Owner)
