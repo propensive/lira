@@ -143,6 +143,31 @@ only implementation of for some time. Fever's side of the convention:
   the script path adds only the entry-point check and the launcher, and every diagnostic,
   memo hit and identity rule applies unchanged.
 
+**Fever as the interpreter, first.** Scripts arrived in Fever ahead of track E, with Fever
+itself as the interpreter directive (`#!/usr/bin/env fever`) and no Fury involved: `fever
+<file> [arguments…]`, where a bare operand is a script only when it contains a `/` (a shebang
+always passes the path as the shell resolved it, so it always does; a bare word is always a
+subcommand), and `fever run <file>` as the explicit form. The header stays in Fury's vocabulary
+under `script.schema.tel`, published from the fever repository and to be Fury's base — Fury's
+schema extends it by layers, so the same file runs under `fury` unchanged when track E lands.
+What the first implementation settled, and Fury inherits:
+
+- The `##` line is TEL's own document separator, and the header is read by single-document
+  parsing (TEL §6.1): `Tel.Metadata.continuation` names the line the body starts on, so the
+  split needs no second parser. Every violation of the header is reported at once, as
+  `file:line: error: … (at /pointer)`; the body is compiled with the header's lines blanked,
+  so the compiler's positions are already the file's.
+- The entry-point check is made on the compiled TASTy, not the source text: a top-level
+  `main` whose one clause is `(using Runtime)`, returning `Unit`.
+- `Runtime` is Pyrocosm's (`pyrocosm-script`), not Fever's, so that any tool can run a script
+  and scripts compile against a small, slowly-changing lineage rather than a Fever release.
+  It *is* a `Stdio`, an `Environment` and a `WorkingDirectory` — the three have no member in
+  common — so a body with a `Runtime` in scope needs no other given and no import at all.
+- The body is compiled with Soundness and `pyrocosm` in its root imports, against the
+  classpath Fever itself runs with; this Soundness-inclusion is provisional, pending `include`.
+- A whole-file hash (Fever's version, the file, the classpath entries) names a directory in
+  the user's cache; a script Fever has seen runs from it with nothing compiled.
+
 ## 7. Open questions
 
 1. The LSP route (§5), and with it whether Fury gains any notion of hosting a service.
@@ -154,6 +179,6 @@ only implementation of for some time. Fever's side of the convention:
 4. What Fever offers beyond compilation and the LSP — formatting, semantic rendering as
    in flame's REPL, TASTy inspection — and which of those are edges (graded, in the
    descriptor) versus daemon commands (not).
-5. The `Runtime` a script's `main` receives (§6a): which capabilities it bundles, whether
-   it is Fever's type or a small published contract module of its own so that scripts
-   compile against a lineage rather than a Fever release.
+5. ~~The `Runtime` a script's `main` receives (§6a)~~ — resolved: a small published module of
+   Pyrocosm's own (`pyrocosm-script`), bundling arguments, environment, working directory and
+   standard streams (§6a).
