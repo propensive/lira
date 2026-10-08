@@ -116,6 +116,16 @@ val Install =
 
 val Help = Subcommand("help", "show usage information", group = Housekeeping)
 val Quit = Subcommand("quit", "shut down the background daemon", group = Housekeeping)
+
+// `upgrade` is always accepted, but suggested only while a newer release is known: the hidden
+// twin is what the dispatch matches against otherwise (see `SelfUpgrade`).
+val UpgradeCommand =
+  Subcommand("upgrade", "replace this executable with the newest release", group = Housekeeping)
+
+val HiddenUpgrade =
+  Subcommand
+   ("upgrade", "replace this executable with the newest release", group = Housekeeping,
+    hidden = true)
 val Major = Flag[Unit]("major", false, Nil, "begin a new major series (a fresh lineage)")
 val Budget = Flag[Text]("budget", false, Nil, "byte budget for unpinned cached releases")
 val DeltaBlob = Flag[Text]("blob", false, Nil, "also write the delta blob to this path")
@@ -203,7 +213,11 @@ object LiraTool:
       executives.completionsExecutive.help
         (t"lira", cli0.environment, cli0.workingDirectory, cli0.stdio, cli0.login)(dispatch)
 
-    def dispatch(using Cli): Execution = positional match
+    def dispatch(using Cli): Execution =
+      val upgrade = if SelfUpgrade.available.present then UpgradeCommand else HiddenUpgrade
+
+      positional match
+      case upgrade() :: _ => execute(SelfUpgrade.upgrade())
       case Verify() :: Pathname(file) :: Nil => execute(verify(file))
       case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
       case Add() :: rest if !rest.stdlib.isEmpty => execute(addCommand(rest.map(_())))
@@ -275,6 +289,16 @@ object LiraTool:
         execute(manifest(file))
 
       case _ => execute(usage(help, Exit.Fail(1)))
+
+    // What the launcher did with an upgrade staged earlier, and the daily check for a newer
+    // release: for a real invocation only, never for a tab-completion.
+    summon[Cli] match
+      case _: Invocation =>
+        SelfUpgrade.report()
+        SelfUpgrade.check()
+
+      case _ =>
+        ()
 
     dispatch
 

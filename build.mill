@@ -144,6 +144,7 @@ object settings:
   // Note what is absent: Pyrocosm. lira is not a Pyrocosm application — nothing here compiles
   // against pyrocosm-model or its frontends. See etc/refs.
   def soundnessDeps(soundness: String) = Seq(
+    mvn"dev.propensive:aviation-core:$soundness",           // the daily upgrade check
     mvn"dev.propensive:burdock-core:$soundness",            // externalize + the repackager
     mvn"dev.propensive:dendrology-tree:$soundness",          // the `--tree` renderings
     mvn"dev.propensive:digression-ansi:$soundness",          // stack-trace diagnostics
@@ -153,12 +154,16 @@ object settings:
     mvn"dev.propensive:eucalyptus-core:$soundness",          // logging.silentLogging
     mvn"dev.propensive:exoskeleton-completions:$soundness",  // cli + tab-completion
     mvn"dev.propensive:exoskeleton-manpage:$soundness",      // `lira install`'s manpage
+    mvn"dev.propensive:gastronomy-core:$soundness",          // the upgrade's digest check
     mvn"dev.propensive:galilei-jvm:$soundness",              // the filesystem
     mvn"dev.propensive:hieroglyph-core:$soundness",          // charEncoders/charDecoders
     mvn"dev.propensive:iridescence-core:$soundness",         // the palette
     mvn"dev.propensive:monotonous-core:$soundness",          // alphabets.hexLowerCase
     mvn"dev.propensive:parasite-core:$soundness",            // threading.platformThreading
-    mvn"dev.propensive:stratiform-core:$soundness")          // TEL rendering and BinTEL
+    mvn"dev.propensive:stratiform-core:$soundness",          // TEL rendering and BinTEL
+    mvn"dev.propensive:telekinesis-core:$soundness",         // fetching the upgrade manifest
+    mvn"dev.propensive:telekinesis-jvm:$soundness",          // httpBackends.javaNetHttp
+    mvn"dev.propensive:urticose-core:$soundness")            // HttpUrl
 
   // The `lira.tool` contract is built on anthology's types (fury.md §6).
   def anthologyDeps(soundness: String) = Seq(
