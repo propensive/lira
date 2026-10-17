@@ -71,12 +71,12 @@ object Store:
   // §5.2 fixes the byte layout, so splitting a file needs no TEL parsing: the separator is
   // the first line consisting of exactly `##`.
   def separatorIndex(data: Data): Optional[Int] =
-    val bytes = data.readable
     var index = 0
 
+    // Read unchecked: the loop condition keeps all four indices within the data.
     while index + 4 <= data.length do
-      if bytes(index) == '\n' && bytes(index + 1) == '#' && bytes(index + 2) == '#'
-          && bytes(index + 3) == '\n'
+      if data.readUnchecked(index) == '\n' && data.readUnchecked(index + 1) == '#'
+          && data.readUnchecked(index + 2) == '#' && data.readUnchecked(index + 3) == '\n'
       then return index
       index += 1
 

@@ -123,11 +123,10 @@ object DeltaFile:
   private def separatorFrom(data: Data, from: Int): Optional[Int] =
     var index = from
 
+    // Read unchecked: the loop condition keeps all four indices within the data.
     while index + 4 <= data.length do
-      val bytes = data.readable
-
-      if bytes(index) == '\n' && bytes(index + 1) == '#' && bytes(index + 2) == '#'
-          && bytes(index + 3) == '\n'
+      if data.readUnchecked(index) == '\n' && data.readUnchecked(index + 1) == '#'
+          && data.readUnchecked(index + 2) == '#' && data.readUnchecked(index + 3) == '\n'
       then return index
       index += 1
 
@@ -136,7 +135,7 @@ object DeltaFile:
   private def startsWith(data: Data, offset: Int, prefix: Data): Boolean =
     if offset + prefix.length > data.length then false else
       var i = 0
-      while i < prefix.length && data.readable(offset + i) == prefix.readable(i) do i += 1
+      while i < prefix.length && data.readUnchecked(offset + i) == prefix.readUnchecked(i) do i += 1
       i == prefix.length
 
   def isDelta(data: Data): Boolean =
@@ -229,7 +228,7 @@ object DeltaFile:
   def produce(base: Blobstore, target: Blobstore, pairing: Map[Text, Int], window: Int)
   :   Produced =
 
-    val baseBlobs = base.blobs.to[Array].readable
+    val baseBlobs = base.blobs.to[Array].stdlib
     val count = baseBlobs.length
     var commands: List[Command] = List()
     var cursor = 0
@@ -309,7 +308,7 @@ object DeltaFile:
   // checked against `budget` — the target manifest's signed `payload.length` — before any bytes
   // are decoded for it. The result is the target's blob stream, which the caller verifies as one.
   def apply(header: Header, base: Blobstore, body: Data, budget: Long): Data raises DeltaError =
-    val baseBlobs = base.blobs.to[Array].readable
+    val baseBlobs = base.blobs.to[Array].stdlib
     var chunks: List[Data] = List()
     var offset = 0
     var cursor = 0

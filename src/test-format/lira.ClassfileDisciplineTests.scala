@@ -45,7 +45,7 @@ import probates.cancelProbate
 import strategies.throwUnsafely
 import systems.javaBaseSystem
 import temporaryDirectories.systemTemporaryDirectory
-import threading.platformThreading
+import threads.platformThreads
 
 // The `classfile/1` and `jsig/1` disciplines, JVM profiles and host contracts, moved from
 // Soundness's mandible suite with the disciplines themselves.

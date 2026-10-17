@@ -44,20 +44,19 @@ import probates.cancelProbate
 import strategies.throwUnsafely
 import systems.javaBaseSystem
 import temporaryDirectories.systemTemporaryDirectory
-import threading.platformThreading
+import threads.platformThreads
 
 // The `tasty/1` discipline over a real compilation, moved from Soundness's degustation suite with
 // the discipline itself. Skipped where no proscala release is cached to compile the fixture with.
 object TastyDisciplineTests extends Suite(m"LIRA tasty/1 discipline tests"):
+  // The standard library of the proscala release the embedded compiler IS: the cache holds one
+  // directory per release, and a compiler of one version given another's library crashes in its
+  // inline-trait phases rather than reporting a mismatch.
   def proscalaLibrary(): Optional[java.nio.file.Path] =
     val home = java.lang.System.getProperty("user.home").nn
-    val root = Paths.get(home, ".cache", "soundness", "proscala").nn
+    val lib = Paths.get(home, ".cache", "soundness", "proscala", Scalac.version.s, "lib").nn
 
-    if !Files.isDirectory(root) then Unset else
-      Files.list(root).nn.iterator.nn.asScala.to(scala.List).sortBy(_.toString).reverse
-      . map(_.resolve("lib").nn)
-      . find { lib => Files.isDirectory(lib) && Files.exists(lib.resolve("scala3-library.jar")) }
-      . getOrElse(Unset)
+    if Files.exists(lib.resolve("scala3-library.jar")) then lib else Unset
 
   val fixture: Text =
     t"""|package fixture

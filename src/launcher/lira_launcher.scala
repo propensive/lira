@@ -41,5 +41,8 @@ import soundness.*
 // released ones, so `soundness.repackage` rewrites it into an on-demand `Burdock-Require` download
 // rather than inlining its classes. The whole command dispatch lives in `lira.LiraTool.run` in the
 // (published) `core` module.
-@main
-def lira(): Unit = externalize(LiraTool.run())
+// An object with a plain `main` rather than a `@main` method: `LiraTool` declares its use of the
+// global `threads` and `Watcher`, so whatever names it must declare the same, and a top-level
+// definition can carry no `uses` clause. The entry point is still the class `lira.lira`.
+object lira uses parasite.threads, surveillance.Watcher:
+  def main(args: Array[String]): Unit = externalize(LiraTool.run())

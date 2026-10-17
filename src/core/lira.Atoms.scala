@@ -266,10 +266,10 @@ private def listings
 // so that a discipline claiming by extension still claims it.
 private def expand(file: Path on Local, data: Data)
 :   proscenium.List[(TreePath, Data)] raises Lira.Error =
-  val bytes = data.readable
-
+  // The four signature bytes are read unchecked: the length is checked first.
   val zipped =
-    data.length > 4 && bytes(0) == 'P' && bytes(1) == 'K' && bytes(2) == 3 && bytes(3) == 4
+    data.length > 4 && data.readUnchecked(0) == 'P' && data.readUnchecked(1) == 'K'
+      && data.readUnchecked(2) == 3 && data.readUnchecked(3) == 4
 
   if !zipped then
     proscenium.List((TreePath(file.name), data))

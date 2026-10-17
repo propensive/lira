@@ -64,7 +64,7 @@ object Tests extends Suite(m"LIRA tool tests"):
 
       // `Data` is an immutable array, so `==` on two of them is reference equality; compare the
       // bytes they hold.
-      def bytes(data: Optional[Data]): Optional[scala.List[Byte]] = data.let(_.readable.toList)
+      def bytes(data: Optional[Data]): Optional[scala.List[Byte]] = data.let(_.stdlib.toList)
 
       test(m"The separator index is the newline that opens the `##` line"):
         val data = file(manifestText, payloadText)
@@ -92,13 +92,13 @@ object Tests extends Suite(m"LIRA tool tests"):
       test(m"Equal bytes hash equally"):
         val once = Store.manifestBytesHash(utf8Codepage.encoded(manifestText))
         val again = Store.manifestBytesHash(utf8Codepage.encoded(manifestText))
-        once.readable.toList == again.readable.toList
+        once.stdlib.toList == again.stdlib.toList
       . assert(_ == true)
 
       test(m"Different bytes hash differently"):
         val one = Store.manifestBytesHash(utf8Codepage.encoded(manifestText))
         val other = Store.manifestBytesHash(utf8Codepage.encoded(t"lira 1.0\n\nname other\n"))
-        one.readable.toList == other.readable.toList
+        one.stdlib.toList == other.stdlib.toList
       . assert(_ == false)
 
       test(m"The hash is a Blake3 digest, so 32 bytes wide"):
@@ -109,7 +109,7 @@ object Tests extends Suite(m"LIRA tool tests"):
       // `lira/1:manifest` domain, which hashes the canonical signing encoding instead.
       test(m"The domain prefix is applied, so this is not a bare Blake3 of the content"):
         val content = utf8Codepage.encoded(manifestText)
-        Store.manifestBytesHash(content).readable.toList == Blake3.hashOf(content).readable.toList
+        Store.manifestBytesHash(content).stdlib.toList == Blake3.hashOf(content).stdlib.toList
       . assert(_ == false)
 
     suite(m"Store layout (design/tool.md §2)"):
@@ -238,11 +238,11 @@ object Tests extends Suite(m"LIRA tool tests"):
       . assert(_ == 4100)
 
       test(m"The prefix opens with WBITS 24, ISLAST 0, MNIBBLES 4 and the low bit of MLEN − 1"):
-        prefix.readable(0) & 0xff
+        prefix.readUnchecked(0) & 0xff
       . assert(_ == 0x8f)
 
       test(m"The prefix ends with the empty metadata meta-block"):
-        prefix.readable(prefix.length - 1) & 0xff
+        prefix.readUnchecked(prefix.length - 1) & 0xff
       . assert(_ == 0x06)
 
       test(m"An empty base primes to two bytes"):

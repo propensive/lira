@@ -77,12 +77,12 @@ object AtomsBlob:
           tel
 
     val discipline =
-      document.childCompounds.readable.find(_.keyword == t"discipline")
+      document.childCompounds.stdlib.find(_.keyword == t"discipline")
       . map: compound => atomTexts(compound)
       . flatMap(_.headOption)
       . getOrElse(abort(badBlob(t"the discipline identifier is missing")))
 
-    val rows = document.childCompounds.readable.filter(_.keyword == t"atom").toVector
+    val rows = document.childCompounds.stdlib.filter(_.keyword == t"atom").toVector
 
     val atoms = rows.map: compound =>
       val atoms0 = atomTexts(compound)
@@ -123,7 +123,7 @@ object AtomsBlob:
     Lira.Error(Reason.InvalidManifest(t"the atoms blob is invalid: $detail"))
 
   private def atomTexts(compound: Tel.Compound): scala.collection.immutable.Vector[Text] =
-    compound.atoms.readable.collect:
+    compound.atoms.stdlib.collect:
       case Tel.Atom.Inline(text, _)  => text
       case Tel.Atom.Source(text)     => text
       case Tel.Atom.Literal(_, text) => text
