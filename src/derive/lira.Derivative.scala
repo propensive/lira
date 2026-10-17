@@ -68,6 +68,7 @@ object Derivative:
     // Hoisted out of the `map` lambda below: a `t"…"` interpolation evaluated inside a
     // combinator lambda trips the compiler's `wildApprox` assertion.
     val notZipPath = t"the path is not a zip path"
+    val duplicatePath = t"two entries have the same path"
 
     val entries: List[Zip.Entry] = tree.entries.map: entry =>
       val ref =
@@ -80,8 +81,18 @@ object Derivative:
 
       Zip.Entry(ref, store.resolve(entry.blob))
 
+    // Serialising checks the entries for a duplicate path (and raises before producing a byte);
+    // in a tree that is an invalid tree, as a path that is not a zip path is.
+    val serialized =
+      import errorDiagnostics.emptyDiagnostics
+
+      mitigate:
+        case _: Zip.Error => Lira.Error(Reason.InvalidTree(duplicatePath))
+
+      . protect(Zipfile(entries, Unset, Unset).serialize)
+
     Array.collect[Byte](): out =>
-      Zipfile(entries, Unset, Unset).serialize.drain: region =>
+      serialized.drain: region =>
         range =>
           val interval: Interval = range
 

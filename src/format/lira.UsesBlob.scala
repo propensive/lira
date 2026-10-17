@@ -91,7 +91,7 @@ object UsesBlob:
           tel
 
     def texts(compound: Tel.Compound): scala.collection.immutable.Vector[Text] =
-      compound.atoms.readable.collect:
+      compound.atoms.stdlib.collect:
         case Tel.Atom.Inline(text, _)  => text
         case Tel.Atom.Source(text)     => text
         case Tel.Atom.Literal(_, text) => text
@@ -99,11 +99,11 @@ object UsesBlob:
       . toVector
 
     val module =
-      document.childCompounds.readable.find(_.keyword == t"module")
+      document.childCompounds.stdlib.find(_.keyword == t"module")
       . map(texts(_)).flatMap(_.headOption)
       . getOrElse(abort(bad(t"the module name is missing")))
 
-    val atoms = document.childCompounds.readable.filter(_.keyword == t"atom").toVector.map:
+    val atoms = document.childCompounds.stdlib.filter(_.keyword == t"atom").toVector.map:
       compound =>
         val row = texts(compound)
         if row.length != 1 then abort(bad(t"an atom row does not have exactly one atom"))

@@ -236,14 +236,14 @@ object Lira:
         . protect(Base256.decodeStrict(text))
 
       def texts(compound: Tel.Compound): scala.collection.immutable.Vector[Text] =
-        compound.atoms.readable.collect:
+        compound.atoms.stdlib.collect:
           case Tel.Atom.Inline(text, _)  => text
           case Tel.Atom.Source(text)     => text
           case Tel.Atom.Literal(_, text) => text
 
         . toVector
 
-      val compounds = document.childCompounds.readable
+      val compounds = document.childCompounds.stdlib
 
       val added = compounds.filter(_.keyword == t"add").toVector.map: compound =>
         val atoms = texts(compound)
@@ -969,7 +969,7 @@ object Lira:
           field("algorithm", identifier),
           field("key", hash),
           field("value", string))),
-      scalars  = Array.frozen(builtins.readable ++ Array(
+      scalars  = builtins + Array(
         hashScalar,
         scalar("ModuleName", "module-name"),
         scalar("Namespace", "namespace"),
@@ -979,7 +979,7 @@ object Lira:
         scalar("DisciplineId", "discipline-id"),
         scalar("ProfileId", "profile-id"),
         scalar("TreePath", "tree-path"),
-        scalar("Guarantee", "guarantee")).readable),
+        scalar("Guarantee", "guarantee")),
       selects  = Array(
         select("Realm",
           variant("jvm"),
@@ -1004,7 +1004,7 @@ object Lira:
         record("Entry",
           field("path", Reference(t"TreePath")),
           field("blob", hash))),
-      scalars  = Array.frozen(builtins.readable ++ Array(hashScalar, scalar("TreePath", "tree-path")).readable),
+      scalars  = builtins + Array(hashScalar, scalar("TreePath", "tree-path")),
       selects  = Array.empty[SelectDefinition])
 
     val atoms: Tels = Tels(
@@ -1021,10 +1021,10 @@ object Lira:
           field("class", Reference(t"AtomClass")),
           field("hash", hash),
           field("key", string))),
-      scalars  = Array.frozen(builtins.readable ++ Array(
+      scalars  = builtins + Array(
         hashScalar,
         scalar("DisciplineId", "discipline-id"),
-        scalar("AtomClass", "atom-class")).readable),
+        scalar("AtomClass", "atom-class")),
       selects  = Array.empty[SelectDefinition])
 
     val uses: Tels = Tels(
@@ -1037,7 +1037,7 @@ object Lira:
       layers   = Array.empty[Tels.Layer],
       sigil    = Unset,
       records  = Array.empty[RecordDefinition],
-      scalars  = Array.frozen(builtins.readable ++ Array(hashScalar, scalar("ModuleName", "module-name")).readable),
+      scalars  = builtins + Array(hashScalar, scalar("ModuleName", "module-name")),
       selects  = Array.empty[SelectDefinition])
 
     val delta: Tels = Tels(
@@ -1053,7 +1053,7 @@ object Lira:
         record("Replacement",
           field("old", hash),
           field("new", hash))),
-      scalars  = Array.frozen(builtins.readable ++ Array(hashScalar).readable),
+      scalars  = builtins + Array(hashScalar),
       selects  = Array.empty[SelectDefinition])
 
     // The capability listing of a host contract with no formal carrier (hosts.md §5): the single
@@ -1136,10 +1136,10 @@ object Lira:
             tel.validate(using Lira.Schemas.tree, Lira.Validators.registry)
             tel
 
-      val compounds = document.childCompounds.readable.filter(_.keyword == t"entry").toVector
+      val compounds = document.childCompounds.stdlib.filter(_.keyword == t"entry").toVector
 
       val entries = compounds.map: compound =>
-        val atoms = compound.atoms.readable.collect:
+        val atoms = compound.atoms.stdlib.collect:
           case Tel.Atom.Inline(text, _)  => text
           case Tel.Atom.Source(text)     => text
           case Tel.Atom.Literal(_, text) => text

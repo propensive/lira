@@ -119,7 +119,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
     suite(m"Schema documents"):
       for (name, tels, signature) <- schemas do
         test(m"canonical $name.tel parses"):
-          resource(name).read[Tel].childCompounds.readable.length
+          resource(name).read[Tel].childCompounds.stdlib.length
         . assert(_ > 0)
 
         test(m"canonical $name.tel type-assigns against the tel-schema axiom"):
@@ -987,7 +987,8 @@ object FormatTests extends Suite(m"LIRA format tests"):
       . assert(_ == scala.Some(scala.List(t"a/A.sjsir", t"a/A.tasty")))
 
       test(m"a corrupted directive is L115"):
-        val data = makeLira().unsafeMutable(using Unsafe)
+        // A mutable copy of the frozen bytes, to corrupt: the original is left as it is.
+        val data: scala.Array[Byte] = Array.unsafeJvm(makeLira()).clone().nn
         data(0) = '?'.toByte
 
         capture[Lira.Error](Lira.read(Array.unsafeFrozen(data))).reason
@@ -1050,7 +1051,8 @@ object FormatTests extends Suite(m"LIRA format tests"):
       . assert(_ == Lira.Error.Reason.LineageMismatch)
 
       test(m"a corrupted compressed payload is rejected"):
-        val data = makeLira().unsafeMutable(using Unsafe)
+        // A mutable copy of the frozen bytes, to corrupt: the original is left as it is.
+        val data: scala.Array[Byte] = Array.unsafeJvm(makeLira()).clone().nn
         data(data.length - 1) = (data(data.length - 1) ^ 0x55).toByte
 
         capture[Lira.Error](Verification.install(Lira.read(Array.unsafeFrozen(data)))).reason match
@@ -1417,7 +1419,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
              Base256.encode(first.signature), Unset),
            stores = List(store), library = List() )
 
-        val fields = first.schema.document.members.readable.toList
+        val fields = first.schema.document.members.stdlib.toList
         . collect { case f: Tels.Field => f.keyword.s }.sorted.mkString(",")
 
         (first.step, fields, second.step)

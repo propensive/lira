@@ -92,14 +92,14 @@ object CapabilityDiscipline extends Discipline:
           tel.validate(using Lira.Schemas.capabilities, Lira.Validators.registry)
           tel
 
-    val compounds = document.childCompounds.readable.filter(_.keyword == t"capability").toVector
+    val compounds = document.childCompounds.stdlib.filter(_.keyword == t"capability").toVector
 
     val entries = compounds.map: compound =>
-      val fields = compound.children.readable.flatMap(_.compounds.readable).toVector
+      val fields = compound.children.stdlib.flatMap(_.compounds.stdlib).toVector
 
       def field(keyword: Text): Optional[Text] =
         val values = fields.filter(_.keyword == keyword).flatMap: field =>
-          field.atoms.readable.collect:
+          field.atoms.stdlib.collect:
             case Tel.Atom.Inline(text, _)  => text
             case Tel.Atom.Source(text)     => text
             case Tel.Atom.Literal(_, text) => text

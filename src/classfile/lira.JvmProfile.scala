@@ -77,7 +77,7 @@ object JvmProfile extends EcosystemProfile:
       if classes.nil then Map.empty else
         val surfaces: Map[Text, ClassSurface] = classes.map: (path, data) =>
           // Same erasure; the parser reads the bytes and retains nothing of them.
-          val surface = ClassSurface(data.asInstanceOf[scala.IArray[Byte]])
+          val surface = ClassSurface(data)
           surface.name -> surface
 
         . to[Map]

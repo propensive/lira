@@ -34,7 +34,7 @@ package lira
 
 import soundness.*
 
-import anthology.Format
+import anthology.Artifact
 
 // `lira.tool`: the contract lives in an object under the `lira` package, so that plugins name it as
 // `lira.tool.Tool` while the package itself stays a single segment.
@@ -45,7 +45,7 @@ object tool:
   // tool.schema.tel's, verbatim — a descriptor is the data `tool.tel` is extracted from at
   // publish — and the invocation and outcome are BinTEL documents, so that the same payload
   // crosses a method call, a UNIX socket to a tool daemon, or the swarm channel unchanged. Forms
-  // are anthology's `Format`s: the contract is built on anthology's types rather than
+  // are anthology's `Artifact`s: the contract is built on anthology's types rather than
   // duplicating them (fury.md §6), at the accepted cost of a Scala-oriented dependency for now.
   //
   // This is the skeleton the ladder's step 0 establishes; step 5 fills it in with the BinTEL
@@ -64,17 +64,17 @@ object tool:
   case class Setting(key: Text, affects: Effect)
 
   // A source-side form an edge consumes, required unless `optional`.
-  case class Input(form: Format, optional: Boolean = false)
+  case class Input(form: Artifact, optional: Boolean = false)
 
   // One invocation kind, named by its output form unless stated (builds.md §14.2): the roles are
   // `inputs` (consumed), `contexts` (dependency cells read, by universe, with the disciplines the
   // edge `employs` over them and the carriers it `emits`), and the output.
   case class Edge
-    ( output:     Format,
+    ( output:     Artifact,
       name:       Optional[Text]     = Unset,
       parameter:  Optional[Text]     = Unset,
       inputs:     List[Input]        = Nil,
-      contexts:   List[Format]       = Nil,
+      contexts:   List[Artifact]       = Nil,
       employs:    List[Text]         = Nil,
       emits:      List[Text]         = Nil,
       components: List[Text]         = Nil,

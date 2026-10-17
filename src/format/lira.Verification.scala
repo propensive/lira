@@ -149,7 +149,7 @@ object Verification:
     val trees = manifest.section.map: section =>
       (section, Lira.Tree.decode(resolve(section.tree.bytes)))
 
-    trees.each: pair => pair(1).entries.each: entry => resolve(entry.blob)
+    trees.each: pair => pair(1).entries.each(entry => resolve(entry.blob))
 
     val materialized: List[(Section, Lira.Tree)] = trees match
       case (rootSection, rootTree) :: rest =>

@@ -40,13 +40,12 @@ import backstops.silentBackstop
 import charsets.utf8Charset
 import classloaders.threadContextClassloader
 import environments.daemonClientEnvironment
-import executives.completionsExecutive
 import hyphenations.englishHyphenation
 import interpreters.posixInterpreter
 import logging.silentLogging
 import systems.javaBaseSystem
 import textSanitizers.strictSanitizer
-import threading.platformThreading
+import threads.platformThreads
 
 // The `lira` command-line tool (LIRA specification §5.1): the PATH-resolved handler that the
 // interpreter directive of every `.lira` file invokes. It runs as an Ethereal daemon — the
@@ -193,114 +192,136 @@ private def flagText(flag: Flag of Text, label: Text)
 // `externalize` so the released executable downloads its dependencies on demand rather than
 // carrying them. Keeping the dispatch here — in the published `lira` jar — is what lets the
 // launcher be the four lines it is.
-object LiraTool:
-  def run(): Unit = cli:
-    // `Pathname` resolves a relative argument against the ambient `WorkingDirectory`, and under the
-    // daemon the ambient one is the daemon's — which is wherever it happened to be started. The
-    // client's is forwarded on the `Cli`, and is the only one a user's relative path can mean.
-    given WorkingDirectory = summon[Cli].workingDirectory
-    val cli0 = summon[Cli]
+// It declares its use of the global `threads` the completions executive supervises under and the
+// `Watcher` the daemon watches its state files with, as whatever names it must too.
+object LiraTool uses parasite.threads, surveillance.Watcher:
+  def run(): Unit =
+    // The completions executive supervises under the global `threads`, a capability it declares it
+    // uses; `cli` takes a pure executive, so it is vouched pure here.
+    given executive: exoskeleton.executives.CompletionsExecutive =
+      scala.caps.unsafe.unsafeAssumePure(executives.completionsExecutive)
 
-    // The dispatch is a named block because the usage text is derived from it: `Executive.help`
-    // re-runs it in tab-completion mode against synthesized argument prefixes, discovering the
-    // subcommands and their flags from the same patterns that dispatch them. `execute` takes its
-    // body as a context function and evaluates nothing in completion mode, so those runs do no IO
-    // and this does not recur into itself.
-    //
-    // Lazy, because building the tree walks every subcommand: a command that never prints usage
-    // never pays for it.
-    lazy val help: Optional[Help] =
-      executives.completionsExecutive.help
-        (t"lira", cli0.environment, cli0.workingDirectory, cli0.stdio, cli0.login)(dispatch)
+    cli:
+      // `Pathname` resolves a relative argument against the ambient `WorkingDirectory`, and under the
+      // daemon the ambient one is the daemon's — which is wherever it happened to be started. The
+      // client's is forwarded on the `Cli`, and is the only one a user's relative path can mean.
+      given WorkingDirectory = summon[Cli].workingDirectory
+      // Sealed for `help` below, which only reads from it (the environment, directory, streams and
+      // login the usage tree is rendered with): the lazy `help` would otherwise capture the
+      // invocation's `Cli`, and a `usage` arm handed to `execute` would then hide the very
+      // capability `execute` is given, which separation checking rejects.
+      val cli0: Cli^{} = scala.caps.unsafe.unsafeAssumePure(summon[Cli])
 
-    def dispatch(using Cli): Execution =
-      val upgrade = if SelfUpgrade.available.present then UpgradeCommand else HiddenUpgrade
+      // The dispatch is a named block because the usage text is derived from it: `Executive.help`
+      // re-runs it in tab-completion mode against synthesized argument prefixes, discovering the
+      // subcommands and their flags from the same patterns that dispatch them. `execute` takes its
+      // body as a context function and evaluates nothing in completion mode, so those runs do no IO
+      // and this does not recur into itself.
+      //
+      // A method rather than a lazy value, computed only when the usage is printed: building the
+      // tree walks every subcommand, and a command that never prints usage never pays for it.
+      def help: Optional[Help] =
+        executives.completionsExecutive.help
+          (t"lira", cli0.environment, cli0.workingDirectory, cli0.stdio, cli0.login)(dispatch)
 
-      positional match
-      case upgrade() :: _ => execute(SelfUpgrade.upgrade())
-      case Verify() :: Pathname(file) :: Nil => execute(verify(file))
-      case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
-      case Add() :: rest if !rest.stdlib.isEmpty => execute(addCommand(rest.map(_())))
-      case Cache() :: rest          => execute(cache(rest.map(_())))
-      case Pin() :: target :: Nil   => execute(pin(target(), true))
-      case Unpin() :: target :: Nil => execute(pin(target(), false))
+      // No `using Cli` of its own: the block's is in scope, and taking it again as an argument
+      // overlaps with the capture, which separation checking rejects.
 
-      case Gc() :: _                =>
-        val budget = flagText(Budget, t"bytes")
-        execute(gcCommand(budget))
+      def dispatch: Execution =
+        // How a `usage` arm reaches `help`: `dispatch`, which `help` re-runs in completion mode,
+        // uses the invocation's `Cli`, so a block capturing `help` would hide the capability
+        // `execute` is given, which separation checking rejects. The thunk is sealed, since that
+        // re-run does no IO; a local of this method, as a block-level value could neither refer
+        // forward to `help` nor be referred to from it.
+        val usageHelp: () -> Optional[Help] = scala.caps.unsafe.unsafeAssumePure(() => help)
 
-      case Fsck() :: _              => execute(fsck())
-      case Id() :: Pathname(file) :: Nil => execute(identify(file))
+        val upgrade = if SelfUpgrade.available.present then UpgradeCommand else HiddenUpgrade
 
-      // The flags are read against the subcommand itself, not inside a branch that needs every
-      // operand present: a flag registers where it is read, so reading it here is what puts it in
-      // the completions from `lira assign <TAB>` onwards, and what lets `Executive.help` find it
-      // when it probes this subcommand with no operands at all.
-      case Assign() :: rest =>
-        val major = Major()
+        positional match
+        case upgrade() :: _ => execute(SelfUpgrade.upgrade())
+        case Verify() :: Pathname(file) :: Nil => execute(verify(file))
+        case Jar() :: universe :: Pathname(file) :: Nil => execute(storeJar(universe(), file))
+        case Add() :: rest if !rest.stdlib.isEmpty => execute(addCommand(rest.map(_())))
+        case Cache() :: rest          => execute(cache(rest.map(_())))
+        case Pin() :: target :: Nil   => execute(pin(target(), true))
+        case Unpin() :: target :: Nil => execute(pin(target(), false))
 
-        rest match
-          case Pathname(file) :: Nil => execute(assign(file, Unset, major.present))
+        case Gc() :: _                =>
+          val budget = flagText(Budget, t"bytes")
+          execute(gcCommand(budget))
 
-          case Pathname(file) :: Pathname(previous) :: Nil =>
-            execute(assign(file, previous, major.present))
+        case Fsck() :: _              => execute(fsck())
+        case Id() :: Pathname(file) :: Nil => execute(identify(file))
 
-          case _ => execute(usage(help, Exit.Fail(1)))
+        // The flags are read against the subcommand itself, not inside a branch that needs every
+        // operand present: a flag registers where it is read, so reading it here is what puts it in
+        // the completions from `lira assign <TAB>` onwards, and what lets `Executive.help` find it
+        // when it probes this subcommand with no operands at all.
+        case Assign() :: rest =>
+          val major = Major()
 
-      case Diff() :: rest =>
-        val blob = flagText(DeltaBlob, t"file")
+          rest match
+            case Pathname(file) :: Nil => execute(assign(file, Unset, major.present))
 
-        rest match
-          case Pathname(previous) :: Pathname(next) :: Nil =>
-            execute(diff(previous, next, blob))
+            case Pathname(file) :: Pathname(previous) :: Nil =>
+              execute(assign(file, previous, major.present))
 
-          case _ => execute(usage(help, Exit.Fail(1)))
+            case _ => execute(usage(usageHelp(), Exit.Fail(1)))
 
-      case Delta() :: rest =>
-        val out = flagText(Output, t"file")
+        case Diff() :: rest =>
+          val blob = flagText(DeltaBlob, t"file")
 
-        rest match
-          case coord :: from :: to :: Nil => execute(deltaCommand(coord(), from(), to(), out))
-          case _                          => execute(usage(help, Exit.Fail(1)))
+          rest match
+            case Pathname(previous) :: Pathname(next) :: Nil =>
+              execute(diff(previous, next, blob))
 
-      case AtomsCmd() :: rest =>
-        val realm = flagText(Realm, t"realm")
-        val classpath = flagText(Classpath, t"a:b")
-        val discipline = flagText(Only, t"discipline")
-        val owner = flagText(Owner, t"prefix")
+            case _ => execute(usage(usageHelp(), Exit.Fail(1)))
 
-        rest match
-          case Pathname(file) :: Nil =>
-            execute(atomsCommand(file, realm, classpath, discipline, owner))
+        case Delta() :: rest =>
+          val out = flagText(Output, t"file")
 
-          case _ => execute(usage(help, Exit.Fail(1)))
+          rest match
+            case coord :: from :: to :: Nil => execute(deltaCommand(coord(), from(), to(), out))
+            case _                          => execute(usage(usageHelp(), Exit.Fail(1)))
 
-      case Harvest() :: kind :: Pathname(out) :: rest =>
-        execute(harvest(kind(), out, rest.map(_())))
+        case AtomsCmd() :: rest =>
+          val realm = flagText(Realm, t"realm")
+          val classpath = flagText(Classpath, t"a:b")
+          val discipline = flagText(Only, t"discipline")
+          val owner = flagText(Owner, t"prefix")
 
-      case Install() :: _           => execute(installCompletions())
-      case Help() :: _              => execute(usage(help, Exit.Ok))
-      case Quit() :: _              => execute(quit())
+          rest match
+            case Pathname(file) :: Nil =>
+              execute(atomsCommand(file, realm, classpath, discipline, owner))
 
-      // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand. Since
-      // Soundness #1784, `Pathname` composes its suggestions with the subcommands' rather than
-      // replacing them, so the first word completes as both.
-      case Pathname(file) :: Nil =>
-        execute(manifest(file))
+            case _ => execute(usage(usageHelp(), Exit.Fail(1)))
 
-      case _ => execute(usage(help, Exit.Fail(1)))
+        case Harvest() :: kind :: Pathname(out) :: rest =>
+          execute(harvest(kind(), out, rest.map(_())))
 
-    // What the launcher did with an upgrade staged earlier, and the daily check for a newer
-    // release: for a real invocation only, never for a tab-completion.
-    summon[Cli] match
-      case _: Invocation =>
-        SelfUpgrade.report()
-        SelfUpgrade.check()
+        case Install() :: _           => execute(installCompletions())
+        case Help() :: _              => execute(usage(usageHelp(), Exit.Ok))
+        case Quit() :: _              => execute(quit())
 
-      case _ =>
-        ()
+        // The interpreter directive's own case (§5.1): `lira <file.lira>` with no subcommand. Since
+        // Soundness #1784, `Pathname` composes its suggestions with the subcommands' rather than
+        // replacing them, so the first word completes as both.
+        case Pathname(file) :: Nil =>
+          execute(manifest(file))
 
-    dispatch
+        case _ => execute(usage(usageHelp(), Exit.Fail(1)))
+
+      // What the launcher did with an upgrade staged earlier, and the daily check for a newer
+      // release: for a real invocation only, never for a tab-completion.
+      summon[Cli] match
+        case _: Invocation =>
+          SelfUpgrade.report()
+          SelfUpgrade.check()
+
+        case _ =>
+          ()
+
+      dispatch
 
 // `helpTree` builds the tree from the *suggestions* each argument position offers, and a position
 // taking a path offers the working directory's contents — indistinguishable, at that point, from
@@ -352,7 +373,7 @@ private def quit()(using service: Resident, cli: Cli): Exit =
   Exit.Ok
 
 private def installCompletions()(using cli: Cli, service: Resident)
-  ( using erased Effectful )
+  ( using erased effectful: Effectful )
 :   Exit =
 
   given Stdio = cli.stdio
@@ -449,13 +470,13 @@ private def stem(file: Path on Local): Text =
 private def manifest(file: Path on Local)(using cli: Cli): Exit = command:
   given Stdio = cli.stdio
   val data = load(file)
-  val bytes = data.readable
   var index = 0
   var found = -1
 
+  // Read unchecked: the loop condition keeps all four indices within the data.
   while found < 0 && index + 4 <= data.length do
-    if bytes(index) == '\n' && bytes(index + 1) == '#' && bytes(index + 2) == '#'
-        && bytes(index + 3) == '\n'
+    if data.readUnchecked(index) == '\n' && data.readUnchecked(index + 1) == '#'
+        && data.readUnchecked(index + 2) == '#' && data.readUnchecked(index + 3) == '\n'
     then found = index
     index += 1
 
