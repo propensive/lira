@@ -1,6 +1,6 @@
 tel 1.0
 
-# Flair checks lira's Scala sources: everything under src/, against Consequent Style, with the
+# Flare checks lira's Scala sources: everything under src/, against Consequent Style, with the
 # licence header every file begins with (etc/header.txt, the LIRA banner). `make check` runs the
 # profile; CI does not, since findings are warnings and the count is not yet zero.
 
@@ -18,7 +18,7 @@ rule imperative
 profile default
   source src/**/*.scala
 
-  # The `-language` features the build compiles with, so flair parses the sources exactly as the
+  # The `-language` features the build compiles with, so flare parses the sources exactly as the
   # build does. Kept in step with `settings.scalaOptions` in build.mill — including capture and
   # separation checking, which lira compiles with and tel does not.
   language implicitConversions

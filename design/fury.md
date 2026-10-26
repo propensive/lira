@@ -12,7 +12,7 @@ lives in [Fever](fever.md), the Scala compiler service, which Fury reaches only 
 tool contract of builds.md §14.3. Both are Pyrocosm-family tools — `pyrocosm.Tool.standard`
 for the command line, an Ethereal daemon, the Configurator cascade for configuration, the
 `Tool.Web` hook for a browser front-end — each in its own repository (`propensive/fury`,
-`propensive/fever`), laid out and released as fume, flair and flame are, and building against
+`propensive/fever`), laid out and released as fume, flare and flame are, and building against
 the libraries this repository publishes.
 The three are **separate binaries sharing library code**: `lira` reads, verifies and serves
 LIRA files ([`tool.md`](tool.md)); `fury` builds them; `fever` compiles Scala for `fury` and
@@ -529,7 +529,7 @@ Kept here so they are not relitigated; the section that explains each is in brac
 
 ## 14. Layout
 
-Three repositories, each with the layout and the tag-driven release of fume, flair and flame:
+Three repositories, each with the layout and the tag-driven release of fume, flare and flame:
 
 ```
 propensive/lira      the format, the disciplines, the store and the lira CLI, published as the
