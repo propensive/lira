@@ -80,19 +80,19 @@ command surface and the store. All seven are published together as one jar, `dev
 with the plugin contract beside it as `dev.propensive:lira-tool`. `launcher` is the one-line
 invocation point, and `test`, with `test-format`, holds the suites. It depends on Soundness alone and is not a
 Pyrocosm application. The Soundness release it builds against is pinned in
-[`etc/refs`](etc/refs), and the tools it runs (fume, flair) in [`etc/tools`](etc/tools).
+[`etc/refs`](etc/refs), and the tools it runs (fume, flare) in [`etc/tools`](etc/tools).
 
 ```sh
 make sync-deps   # install the pinned Soundness release into ~/.ivy2/local
-make tools       # install fume and flair
+make tools       # install fume and flare
 make test        # run the suite with fume  (make test-plain uses plain java)
 make lira        # build the native executable for this machine
 make install     # copy it to ~/.local/bin, which is what a `.lira` file's `#!` line resolves
-make check       # check the sources with flair
+make check       # check the sources with flare
 ```
 
 A release — the `lira` and `lira-tool` jars, then the per-platform executables built from them — is
-published to GitHub Releases by a signed tag on a commit CI has passed, exactly as fume, flair
+published to GitHub Releases by a signed tag on a commit CI has passed, exactly as fume, flare
 and flame are released; the tag is the only place the version is declared:
 
 ```sh
