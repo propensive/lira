@@ -1,8 +1,8 @@
-# The Scala Discipline `tasty/1` — Specification Draft
+# The Scala Discipline `tasty/2` — Specification Draft
 
 ## Abstract
 
-`tasty/1` is the LIRA discipline for Scala libraries. It atomizes a module's public API
+`tasty/2` is the LIRA discipline for Scala libraries. It atomizes a module's public API
 from TASTy — the interface carrier shared by the `jvm`, `sjsir` and `nir` universes — applying
 the folding principle of the LIRA specification (§10.3) so that Scala's compatibility rules are
 encoded in the decomposition itself: adding anything consumers can safely gain is a standalone
@@ -16,7 +16,9 @@ normative transcription of its rules.
 
 This document is a working draft, versioned in lockstep with the discipline identifier: any
 change to the canonicalization defined here — however small — is a new discipline
-(`tasty/2`), never a revision of this one (LIRA §11.1).
+(`tasty/3`), never a revision of this one (LIRA §11.1). `tasty/2` succeeds `tasty/1`, whose
+atomization ran over the Scala compiler's own reflection of the unpickled trees; §16 lists what
+changed, and a release may declare both while consumers migrate (LIRA §11.1).
 
 ## 2. Scope and Guarantee
 
@@ -47,15 +49,42 @@ All other content falls to whatever discipline claims it — declared resources 
 
 ## 4. Extraction
 
-Atomization is performed over the **semantic model** of TASTy as unpickled by the Scala
-compiler itself (via the `tasty-inspector` interface), never over raw TASTy bytes. Extraction
-therefore requires the module's dependency classpath — which the buildpath supplies at assembly
-and publish time, the only times atomization runs (LIRA §16, step 4). The compiler used is
-recorded in the manifest's `toolchain` (LIRA §14); the TASTy version window it accepts is the
-compiler's own.
+Atomization is performed over a **semantic model** of TASTy that the discipline builds for
+itself, never over raw TASTy bytes and never by running the Scala compiler. The pickled trees
+are read with the TASTy format's reader (`tasty-core`, the format library, not the compiler),
+and the two questions the bytes cannot answer — what a reference names, and what a declaration
+erases to — are answered by resolving against the module's own files and its dependency
+classpath, TASTy and classfiles alike, under the compiler's own rules for name resolution,
+member lookup, alias expansion and erasure (§4.1). Extraction therefore requires the module's
+dependency classpath — which the buildpath supplies at assembly and publish time, the only
+times atomization runs (LIRA §16, step 4) — but no compiler: the model is the same on every
+platform the reader runs on. The compiler that *produced* the TASTy is recorded in the
+manifest's `toolchain` (LIRA §14); the TASTy version window accepted is the reader's.
 
 The following never enter the model: positions, comments, source-file attributes, tool version
-strings, pickled UUIDs, and the compiler's tree- and type-sharing structure.
+strings, pickled UUIDs, and the pickler's tree- and type-sharing structure.
+
+### 4.1 The Compiler's View
+
+The model reproduces the types the compiler presents for declarations when it reads TASTy
+*without capture checking*, so that a module compiled with capture checking and one compiled
+without atomize identically:
+
+- the capture annotations `scala.annotation.retains`, `retainsCap` and `retainsByName` are
+  removed from every type;
+- in a parameter's type, an alias reference or application whose expansion that removal changes
+  is replaced by its expansion (the compiler's alias-following maps); any other alias stands as
+  written. In every other member's type, aliases stand as written, except that a
+  non-synthetic member's reference to an unqualified-private alias is expanded;
+- a parameter whose type is `into[T]` carries it as `scala.Conversion.into[T]`; a repeated
+  parameter's type is `<repeated>[T]`;
+- a selection `x.T` on a term whose type refines `T` as an alias denotes the alias; a
+  constructor-call parent is dealiased; a Java static nested class belongs to its outer class's
+  module class (`Outer$.Inner`).
+
+These rules are fixed: unlike a compiler run, in which the presence of a capture-checking
+language import anywhere in the files read changes how every later type is mapped, the model
+does not depend on the order in which files are read.
 
 ## 5. Visibility
 
@@ -72,7 +101,7 @@ Included:
 - qualified-private (`private[scope]`) members, conservatively. (A refinement is anticipated:
   where `scope` lies within the module's own `owns` namespaces, namespace disjointness — LIRA
   L112 — guarantees no consumer can ever be inside the scope, so such members could be
-  excluded. `tasty/1` includes them; a future discipline version may tighten this.)
+  excluded. `tasty/2` includes them; a future discipline version may tighten this.)
 - synthetic members that are real API: case-class and enum companions' generated members
   (`apply`, `copy`, `unapply`, `fromProduct`, ordinals and friends) are atomized as ordinary
   members, which makes constructor-parameter changes ripple into member removals-plus-additions
@@ -94,6 +123,11 @@ Every atom's key is stable text:
   definition between files is a value change — honest, since consumer TASTy references the
   carrier — while keys stay clean.
 - **Replaceable atoms**: the corresponding rigid key suffixed `[inline]`.
+
+Fully-qualified names are spelled as the compiler spells them: a module class's qualified name
+has `<` and `>` replaced by `$` (`object <:<` in `scala` is the module class `scala.$:$$`, and
+its member `refl` is keyed `scala.$:$$.refl(1)scala.=:=`), while a class or member name keeps
+them (`Foo.<init>`). A constructor's default getter is keyed `$lessinit$greater$default$N`.
 
 Key text is what reference lists name (§13) and what Atoms listings display; it participates in
 no hash.
@@ -235,7 +269,7 @@ strict vocabularies of §7 and §11 turn compiler-evolution surprises into error
 producer, where they are curable, rather than silent hash drift at consumers.
 
 Across compiler releases, the discipline's promise is that any two toolchains implementing
-`tasty/1` produce identical atoms for the same semantic model. A compiler change that
+`tasty/2` produce identical atoms for the same semantic model. A compiler change that
 would alter canonical output for any input requires a new discipline version; a change that is
 canonically invisible does not. The manifest's `toolchain` records which compiler produced a
 release; ecosystem profiles may impose coherence over it (LIRA §13.3).
@@ -266,3 +300,29 @@ sealed child list `[fixture.Alpha]`; rigid atoms for `Alpha`, its constructor, `
 `scala.Int.*(scala.Int)scala.Int`. Adding a `case class Beta` changes `fixture.Choice`'s value
 (major); adding a third overload adds one atom (minor); changing `double`'s body to `n + n`
 changes only the `[inline]` atom's value (minor, with staleness computable).
+
+## 16. Changes from `tasty/1`
+
+`tasty/1` atomized the compiler's reflection of the unpickled trees (through the
+`tasty-inspector` interface); `tasty/2` atomizes its own model (§4). The encoding (§7), keys
+(§6), atom classes (§8–§11) and reference lists (§12) are unchanged, and over a corpus of some
+hundred and fifty modules the two produce byte-identical atoms, except where the compiler's
+output was an artifact of the run rather than of the API:
+
+1. **Constructor proxies of exported aliases.** An `export` of a type alias to a concrete,
+   companionless class gets an `apply` proxy forwarder in the exporting object. The compiler
+   emitted it only when the class had already been completed through the classpath before the
+   exporting file was read — an order-dependent accident — so `tasty/1` listed it for some files
+   and not others. `tasty/2` lists it always.
+2. **Capture annotations.** The compiler maps types differently once any file it has read
+   carries a `captureChecking` language import: from then on it keeps capture annotations and
+   stops following the aliases they decorate, so a `tasty/1` run over a module whose
+   dependencies include such a file produced `@retainsCap`-annotated types, or undealiased
+   aliases, for declarations read after that point and plain types for those read before.
+   `tasty/2` applies §4.1 uniformly.
+3. **Compiler crashes.** A handful of modules could not be atomized under `tasty/1` because the
+   compiler's unpickler failed on them (owner-discrepancy assertions in inlined code, a
+   `NoSymbol` in a package object); `tasty/2` atomizes them.
+
+Everything else that differs between a `tasty/1` and a `tasty/2` listing is a defect in one of
+them.
