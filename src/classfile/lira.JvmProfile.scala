@@ -85,7 +85,7 @@ object JvmProfile extends EcosystemProfile:
         val outcome =
           ClassfileAtomizer.atomize(surfaces, section.classpath, ClassfileAtomizer.Fold.Linkage)
 
-        outcome.unresolved.prim.let: name =>
+        outcome.unresolved.head.let: name =>
           abort(Discipline.Error(id, Discipline.Error.Reason.Unresolved(name)))
 
         outcome.atoms.map { atom => atom.key -> atom }.to[Map]

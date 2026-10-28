@@ -89,7 +89,7 @@ private def deltaCommand(coord: Text, from: Text, to: Text, out: Optional[Text])
 
           val head = store.fetch(Store.Tier.Manifest, target.hex)
           val file = DeltaFile.assemble(head, header, compressed)
-          val name = coord.cut(t"/").reverse.prim.or(coord)
+          val name = coord.cut(t"/").reverse.head.or(coord)
           val path = resolve(out.or(t"$name-$from-$to.lira"))
           save(path, file)
 
