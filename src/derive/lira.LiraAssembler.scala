@@ -161,9 +161,9 @@ object LiraAssembler:
 
       entries.to[Set]
 
-    // `inputs` is `Populated`, so `atomized` is non-empty too; `prim` discharges that in the one
+    // `inputs` is `Populated`, so `atomized` is non-empty too; `head` discharges that in the one
     // place the proof cannot travel through `map`, and the default is unreachable.
-    val rootAtoms: List[Atomization] = atomized.prim.lay(List())(_(1))
+    val rootAtoms: List[Atomization] = atomized.head.lay(List())(_(1))
     val rootSummary = summary(rootAtoms)
 
     val numberedAtomizations: List[((Text, List[Atomization]), Ordinal)] = atomized.indexed
@@ -174,10 +174,10 @@ object LiraAssembler:
         val entries: Set[Entry] = summary(pair(1))
         val difference: Set[Entry] = entries.except(rootSummary) + rootSummary.except(entries)
 
-        // A `Set` has no positional `prim`, so the sample is drawn from a list view of it.
+        // A `Set` has no positional `head`, so the sample is drawn from a list view of it.
         val samples: List[Entry] = difference.to[List]
 
-        samples.prim.lay(()): sample =>
+        samples.head.lay(()): sample =>
           abort(Lira.Error(Reason.ApiDivergence(divergence(pair(0), sample(1)))))
 
     // Blobs: every content item, every tree, every metadata blob — deduplicated by the stream.

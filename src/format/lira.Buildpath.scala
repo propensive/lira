@@ -122,7 +122,7 @@ case class Buildpath(releases: List[Lira.Manifest]):
         case section if section.derivative.let(_ == hash).or(false) =>
           (manifest, section)
 
-    found.prim
+    found.head
 
   // The integrations a release offers, in canonical order (§13.3): ascending `rank`, then
   // ascending `id`. A release declaring none offers exactly one, its implicit `Unset`. An
@@ -167,7 +167,7 @@ case class Buildpath(releases: List[Lira.Manifest]):
       manifest.dependency.filter: dependency =>
         dependency.module == module && dependency.serves.present
 
-    . prim.let(_.serves).or(primary)
+    . head.let(_.serves).or(primary)
 
   // A pin is how a consumer states a preference the manifests cannot imply (§13.3): the named
   // release takes the named integration, the remaining releases their canonical choices.

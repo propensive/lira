@@ -176,8 +176,8 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
     // A constant presents through the subclass too, and javac will have inlined `Derived.CONSTANT`
     // into consumers just as readily as `Base.CONSTANT`, so both are replaceable.
     test(m"a static final constant is replaceable wherever it presents"):
-      baseline.replaceable.stdlib.map(_.key.s).toSet
-    . assert(_ == Set("fixture/Base.CONSTANT:I", "fixture/Derived.CONSTANT:I"))
+      baseline.replaceable.map(_.key).to[Set]
+    . assert(_ == Set(t"fixture/Base.CONSTANT:I", t"fixture/Derived.CONSTANT:I"))
 
     test(m"atomization is deterministic across separate compilations"):
       listing(atomize(base, derived, api)) == listing(atomize(base, derived, api))
@@ -416,7 +416,7 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
 
     test(m"a supertype outside the claimed content is a boundary, not an error"):
       val (content, _) = compile(base, derived, api)
-      val derivedOnly = (content.filter { pair => pair(0).text.s.contains("Derived") }).to(List)
+      val derivedOnly = content.filter { pair => pair(0).text.s.contains("Derived") }
 
       // The classpath is empty, so `Base` is unresolvable: `classfile/1` must fail here, and
       // `jsig/1` must not — the presented set simply lacks what the boundary hides.
@@ -508,7 +508,7 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
 
     def consumerContent(baseSource: Text, consumer: Text): List[(TreePath, Data)] =
       val (content, _) = compile(baseSource, derived, api, consumer)
-      (content.filter { pair => pair(0).text.s.contains("Consumer") }).to(List)
+      content.filter { pair => pair(0).text.s.contains("Consumer") }
 
     test(m"references spell membership keys and exclude the content's own classes"):
       val refs = UsedSets.references(consumerContent(base, consumerOld))
@@ -626,8 +626,8 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
 
     test(m"references partition across per-module contract listings"):
       val (surface, _) = compile(base, derived, api)
-      val baseOnly = (surface.filter { pair => pair(0).text.s.contains("Base") }).to(List)
-      val apiOnly = (surface.filter { pair => pair(0).text.s.contains("Api") }).to(List)
+      val baseOnly = surface.filter { pair => pair(0).text.s.contains("Base") }
+      val apiOnly = surface.filter { pair => pair(0).text.s.contains("Api") }
 
       val contracts = List(
         (t"mod.base", JsigDiscipline.atomize(baseOnly, Discipline.Context(t"host"))),

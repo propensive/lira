@@ -41,6 +41,7 @@ import degustation.*
 import rudiments.*
 
 import errorDiagnostics.emptyDiagnostics
+import galilei.filesystemBackends.javaBaseFilesystem
 
 // The `tasty/1` discipline, adapted to the discipline SPI. It claims `.tasty` files — the
 // interface carrier shared by the `jvm`, `sjsir` and `nir` universes — for atomization, and

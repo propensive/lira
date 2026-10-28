@@ -194,7 +194,7 @@ object DeltaFile:
         ordinals.at(baseKey).let { ordinal => paired = paired.define(key, ordinal) }
 
     val baseSections = baseManifest.section
-    val root = baseSections.prim
+    val root = baseSections.head
 
     targetManifest.section.each: section =>
       val same = baseSections.seek(_.key == section.key)
@@ -207,7 +207,7 @@ object DeltaFile:
         case (_, root: Section) => List(root)
         case _                  => List()
 
-      candidates.prim.let { counterpart => pair(section.tree.bytes, counterpart.tree.bytes) }
+      candidates.head.let { counterpart => pair(section.tree.bytes, counterpart.tree.bytes) }
       val tree = Lira.Tree.decode(target.resolve(section.tree.bytes))
 
       val baseTrees = candidates.map: counterpart =>

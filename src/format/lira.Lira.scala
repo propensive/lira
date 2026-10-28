@@ -42,7 +42,7 @@ import gossamer.*
 import hieroglyph.*
 import pneumatic.*
 import revolution.*
-import rudiments.{at, each, exists, filter, flatMap, has, map, prim, sort, to}
+import rudiments.{at, each, exists, filter, flatMap, has, head, map, sort, to}
 import stratiform.*
 import symbolism.*
 import turbulence.*
@@ -645,7 +645,7 @@ object Lira:
       signature:   List[Lira.Manifest.Signature]    = List() ):
 
     // The root section is the first (§9.1); overlays materialize against it.
-    def root: Optional[Section] = section.prim
+    def root: Optional[Section] = section.head
 
     def development: Boolean = version.absent
 
@@ -1105,7 +1105,7 @@ object Lira:
       // `zip(drop(1))` pairing expressed before.
       def unique(rows: List[TreeEntry]): Unit = rows match
         case a :: rest =>
-          rest.prim.let: b =>
+          rest.head.let: b =>
             if a.path == b.path
             then abort(Lira.Error(Reason.InvalidTree(t"the path ${a.path.text} appears twice")))
 

@@ -449,10 +449,14 @@ object lira extends Project:
       mvn"dev.propensive:hellenism-jvm:${deps.soundness()}",
       mvn"dev.propensive:zeppelin-core:${deps.soundness()}"))
 
-  // The `tasty/1` discipline over degustation's TASTy reader.
+  // The `tasty/1` discipline over degustation's TASTy reader, which reads its inputs through
+  // galilei's filesystem backend (the JVM one, `javaBaseFilesystem`, is in `galilei-jvm`).
   object tasty extends Component(format), Publishing:
     override def scalacOptions = settings.uncheckedOptions ++ settings.predef
-    def mvnDeps = Task(Seq(mvn"dev.propensive:degustation-core:${deps.soundness()}"))
+
+    def mvnDeps = Task(Seq(
+      mvn"dev.propensive:degustation-core:${deps.soundness()}",
+      mvn"dev.propensive:galilei-jvm:${deps.soundness()}"))
 
   // The `classfile/1` and `jsig/1` disciplines, JVM profiles and host contracts over mandible.
   object classfile extends Component(format, derive), Publishing:
