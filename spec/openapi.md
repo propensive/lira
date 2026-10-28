@@ -41,7 +41,7 @@ convention the carrier cannot enforce: that consumers ignore unknown response fi
 particular client. A claim resting on an ecosystem convention belongs to an ecosystem profile
 (LIRA §11.6, §11.2 requirement 7): an anticipated `http-json/1` profile imposes must-ignore
 tolerance and status-class fallback as predicates and certifies linkage over `openapi/1`'s
-atoms, on exactly the division of labor between `tasty/1` and `jvm/1` — the discipline
+atoms, on exactly the division of labor between `tasty/2` and `jvm/1` — the discipline
 atomizes the level it can prove; the profile certifies the level the ecosystem's conventions
 deliver; and a lineage step that satisfies the atoms while breaking the wire records
 `breaks linkage` (LIRA §12.4), which services.md §7 reads as a coordinated deploy.

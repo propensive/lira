@@ -91,7 +91,7 @@ object ClassfileAtomizer:
       if (mask & pair(0)) != 0 then bits | (1L << pair(1)) else bits
 
   // --- canonical binary encoding ---------------------------------------------------------------
-  // The same tag-length-value scheme `tasty/1` uses (`tasty.md` §7): unsigned LEB128 lengths,
+  // The same tag-length-value scheme `tasty/2` uses (`tasty.md` §7): unsigned LEB128 lengths,
   // length-prefixed UTF-8 strings, single-character constructor tags.
 
   private def uvarint(out: Scribe[Byte], value0: Long): Unit =

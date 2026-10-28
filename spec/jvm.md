@@ -25,7 +25,7 @@ to a predicate defined here is a new profile (`jvm/2`), never a revision of this
 
 The profile certifies **linkage**, for the `jvm` universe. It adds no predicate about
 recompilation: a profile adds guarantees and never subtracts them (L129), and in the motivating
-ecosystem `tasty/1` already certifies recompilation over the same release.
+ecosystem `tasty/2` already certifies recompilation over the same release.
 
 A release declaring this profile is asserting that it satisfies §5 and §6 against its
 predecessor, or that it has recorded in `breaks linkage` the levels it does not (LIRA §12.4).

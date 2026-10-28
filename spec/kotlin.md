@@ -10,7 +10,7 @@ actually depend on.
 
 It exists because the metadata is real API that no other discipline covers. A dependency
 flipping a return type from `T` to `T?` changes no descriptor and no TASTy — `classfile/1` and
-`tasty/1` are both blind to it — yet every consumer reading the metadata sees a different
+`tasty/2` are both blind to it — yet every consumer reading the metadata sees a different
 contract. Registering this discipline makes that change a major, which it is.
 
 It is named for the carrier, not the language (LIRA §11.1): the `@Metadata` annotation is the
@@ -99,7 +99,7 @@ Keys are:
   bodies, and a replaceable atom whose value cannot be computed from the claimed content would
   violate LIRA §11.2's purity requirement. The inline flag's *existence* folds into the rigid
   signature atom, so gaining or losing inline-ness registers; body churn is invisible at this
-  level, exactly as classfile-level bridge churn is invisible to `tasty/1`, and a
+  level, exactly as classfile-level bridge churn is invisible to `tasty/2`, and a
   `kmeta/2` MAY add body tracking over a carrier that has one.
 
 ## 7. Canonical Encoding

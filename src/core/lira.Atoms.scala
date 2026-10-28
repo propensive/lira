@@ -56,7 +56,7 @@ import textSanitizers.strictSanitizer
 // bytes, so both are flags, and an unresolvable supertype fails rather than under-reporting.
 
 // The disciplines lira can name, in claiming order (§11.4). `classfile/1` precedes `jsig/1`, which
-// also claims `.class`, and both precede `tasty/1`, which holds derived binaries atomless: in the
+// also claims `.class`, and both precede `tasty/2`, which holds derived binaries atomless: in the
 // other order a jar of classfiles would list nothing at all.
 //
 // The spec drafts a discipline per language — `dts/1` (spec/dts.md), `webidl/1`, `wit/1`,
@@ -74,7 +74,7 @@ private case class Decomposition(owner: Text, member: Text)
 // The key syntax each discipline mints, by id. `classfile/1` and `jsig/1` append a selector to the
 // owning class's name — `#<name>:<descriptor>` for a method, `.<name>:<descriptor>` for a field
 // (mandible.ClassSurface.Member.selector) — so the first `#` or `.` that precedes a `:` divides
-// them, and a class's own atom, which is the bare name, does not divide at all. `tasty/1` keys are
+// them, and a class's own atom, which is the bare name, does not divide at all. `tasty/2` keys are
 // `<owner>.<member><signature>` (degustation.Atomizer.keyOf), so the last `.` before the signature
 // divides them. A discipline not named here decomposes nothing and its atoms list flat, which is
 // what `resource/1` and `opaque/1` want anyway: their keys are paths, not members.

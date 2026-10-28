@@ -213,7 +213,7 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
       grade(base, derived, edit(api, t"int one();", t"int one();\n  int two();"))
     . assert(_ == Grade.Major)
 
-    // Registry ordering (§11.2): `tasty/1` claims `.class` atomless, and the registry claims by
+    // Registry ordering (§11.2): `tasty/2` claims `.class` atomless, and the registry claims by
     // first match, so a registry that lists it first leaves `classfile/1` nothing to atomize.
 
     test(m"the discipline claims classfiles and nothing else"):

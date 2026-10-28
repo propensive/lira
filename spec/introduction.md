@@ -169,7 +169,7 @@ membership in a verified list.
 
 Somebody has to turn a `.class` file, a `.d.ts` declaration, or an OpenAPI document into
 atoms, and that somebody must know the language's rules. LIRA quarantines this expertise
-into **disciplines**: named, versioned canonicalization procedures — `tasty/1` for Scala's
+into **disciplines**: named, versioned canonicalization procedures — `tasty/2` for Scala's
 typed trees, `dts/1` for TypeScript declarations, `wit/1` for WebAssembly interface types,
 `webidl/1` for browser APIs, `cheader/1` for C headers, `kmeta/1` for Kotlin's metadata,
 `openapi/1` for HTTP surfaces. Everything above the atom level — snapshots, lineages,
@@ -180,7 +180,7 @@ three).
 
 Disciplines are also where honesty about *guarantee levels* lives. Each discipline states
 which levels its atoms certify, and may claim only what its canonical encoding actually
-enforces. `tasty/1` certifies recompilation — it atomizes typed trees, and the JVM's
+enforces. `tasty/2` certifies recompilation — it atomizes typed trees, and the JVM's
 *linkage* surface lives in a lower representation it never sees. A bytecode discipline can
 certify linkage and only linkage. The two levels genuinely diverge in both directions
 (§2's examples are the spec's own), so LIRA refuses to average them into one claim.
