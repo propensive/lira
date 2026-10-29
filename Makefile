@@ -81,13 +81,6 @@ test-plain:
 	./mill lira.test.assembly
 	java -cp out/lira/test/assembly.dest/out.jar lira.runTests
 
-# Install every library pinned in etc/refs — releases and snapshots alike, transitively — into the
-# local ivy repository, as CI does, so the build resolves exactly the pinned jars rather than
-# whatever a sibling checkout's `publishLocal` last installed under the same version. A snapshot not
-# yet on GitHub is built from the sibling checkout named by the pin's commit.
-sync-deps:
-	./etc/shared sync-deps.sh
-
 # Check every source against Consequent Style and the project's own rules with flare (the release
 # pinned in etc/tools; `make tools` installs it), as configured in .pyrocosm/flare/config.tel.
 # Findings are warnings, so CI does not run this; PATHS restricts the check to files beneath them.
@@ -112,4 +105,4 @@ snapshot-prune:
 dev:
 	./mill -w __.compile
 
-.PHONY: publishLocal assembly release xek-fetch install run test test-plain sync-deps check tools snapshot snapshot-prune dev
+.PHONY: publishLocal assembly release xek-fetch install run test test-plain check tools snapshot snapshot-prune dev
