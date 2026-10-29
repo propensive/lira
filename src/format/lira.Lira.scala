@@ -1201,7 +1201,7 @@ object Lira:
   //  - `namespace`:      dotted package-style segments (letters, digits, `_`; no leading digit)
   //  - `semver`:         exactly `major.minor.patch`, each a natural; no prerelease/build suffixes
   //  - `natural`:        a decimal natural with no superfluous leading zero
-  //  - `discipline-id`:  `<kebab-name>/<positive integer>`, e.g. `tasty/1`
+  //  - `discipline-id`:  `<kebab-name>/<positive integer>`, e.g. `tasty/2`
   //  - `profile-id`:     the same grammar as a discipline (§11.6), e.g. `jvm/1`
   //  - `guarantee`:      `linkage` or `recompilation` (§11.5; behavior is not certifiable)
   //  - `tree-path`:      relative `/`-separated path; no empty, `.` or `..` segments

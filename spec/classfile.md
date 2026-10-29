@@ -7,7 +7,7 @@ declaration surface of Java classfiles — the representation the JVM actually r
 so that a release which breaks an already-compiled consumer registers as a break in the atom
 algebra itself.
 
-It exists because `tasty/1` cannot make this claim and does not try to. TASTy is a *higher*
+It exists because `tasty/2` cannot make this claim and does not try to. TASTy is a *higher*
 representation than the one the JVM links against, so a discipline over it certifies
 recompilation and holds `.class` files atomless (`tasty.md` §3). The two levels diverge in both
 directions (LIRA Appendix D.1), and a format that certifies one and calls it "compatible" is
@@ -34,7 +34,7 @@ recompilation.
 
 It does **not** certify recompilation, and MUST NOT be read as doing so. Bytecode has erased the
 type arguments, variance, implicit specificity and type aliases that decide whether a consumer's
-*next compile* succeeds. That level is `tasty/1`'s in a Scala ecosystem, and belongs to a
+*next compile* succeeds. That level is `tasty/2`'s in a Scala ecosystem, and belongs to a
 declaration-surface discipline in any other.
 
 ## 3. Domain and the Cross-Section Invariant
@@ -47,8 +47,8 @@ single-universe domain is exactly the case LIRA §11.2 requirement 1 exempts fro
 
 The discipline claims `**/*.class`, atomized. It claims nothing else.
 
-**Claiming order is load-bearing.** LIRA §11.2 partitions content by first match, and `tasty/1`
-claims `.class` files *atomless*. A registry that lists `tasty/1` first therefore leaves this
+**Claiming order is load-bearing.** LIRA §11.2 partitions content by first match, and `tasty/2`
+claims `.class` files *atomless*. A registry that lists `tasty/2` first therefore leaves this
 discipline nothing to atomize, silently. A release registering both MUST list `classfile/1`
 first.
 
@@ -234,4 +234,4 @@ is genuine:
 **Register `classfile/1` where linkage is the ecosystem's primary contract** — where consumers
 are ordinarily shipped prebuilt bytecode and recompilation is not an option. **Declare the
 `jvm/1` profile otherwise**, which is most JVM ecosystems, and certainly any that also carries a
-recompilation-level discipline such as `tasty/1`.
+recompilation-level discipline such as `tasty/2`.

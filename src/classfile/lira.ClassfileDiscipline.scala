@@ -41,7 +41,7 @@ import vacuous.let
 
 // The `classfile/1` discipline: the JVM's *linkage* contract, as atoms.
 //
-// Registering it is a deliberate choice with a cost, and the cost is the reason `tasty/1` holds
+// Registering it is a deliberate choice with a cost, and the cost is the reason `tasty/2` holds
 // `.class` files atomless rather than doing this itself. Atoms feed the snapshot, and the
 // snapshot is API identity (§12.1), so folding bytecode surface into atoms means a release whose
 // source-level interface is untouched but whose bridge methods moved acquires a *different* API
@@ -52,7 +52,7 @@ import vacuous.let
 // primary contract; declare the `jvm/1` profile where it is not.
 //
 // Registry order is load-bearing (§11.2): `Discipline.Registry` claims by first match, and
-// `tasty/1` claims `.class` atomless, so this discipline must precede it —
+// `tasty/2` claims `.class` atomless, so this discipline must precede it —
 // `Discipline.Registry(List(ClassfileDiscipline, TastyDiscipline))`. In the other order it claims nothing.
 object ClassfileDiscipline extends Discipline:
   def id: Text = ClassfileAtomizer.id
@@ -69,7 +69,7 @@ object ClassfileDiscipline extends Discipline:
 
   // Linkage only. Bytecode has erased the type arguments, variance and implicit specificity that
   // decide whether a consumer's *next compile* succeeds, so this discipline cannot certify
-  // recompilation and must not claim it (§11.2 requirement 7). That level is `tasty/1`'s, and the
+  // recompilation and must not claim it (§11.2 requirement 7). That level is `tasty/2`'s, and the
   // two are independent in both directions (Appendix D.1).
   def guarantees(universe: Text): Set[Discipline.Guarantee] = Set(Discipline.Guarantee.Linkage)
 

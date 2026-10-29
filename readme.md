@@ -65,7 +65,7 @@ Focus languages: **Scala**, **Kotlin**, **TypeScript**, **Rust**; also Java and 
 
 Status: specification and implementation in progress. The language-blind core — container,
 compatibility algebra, buildpath validation, signing, and canonical derivative artifacts — is
-implemented in this repository's `format` and `derive` modules, beside the disciplines: `tasty/1`,
+implemented in this repository's `format` and `derive` modules, beside the disciplines: `tasty/2`,
 `classfile/1` and `jsig/1`, and the foreign surfaces `dts/1`, `webidl/1`, `wit/1`, `cheader/1`
 and `kotlin-metadata/1`. They were Soundness's `reliquary` module and its `lira` adapter
 components until they moved here. The `lira` command-line tool covers the artifact commands
@@ -104,5 +104,5 @@ git tag -s X.Y.Z && git push --tags
 alike, reconstructing a delta's release from its cached base. Two commands are narrower than
 [`design/tool.md`](design/tool.md) describes, because the tool does not yet depend on the
 `foreign` module that implements the other disciplines: `lira atoms` names `classfile/1`,
-`jsig/1`, `tasty/1` and `capability/1` only, and `lira harvest` takes `jdk` and `android` but not
+`jsig/1`, `tasty/2` and `capability/1` only, and `lira harvest` takes `jdk` and `android` but not
 `dts` or `wit`. Both are marked in the source, to be restored once it does.

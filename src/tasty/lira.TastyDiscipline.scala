@@ -43,13 +43,13 @@ import rudiments.*
 import errorDiagnostics.emptyDiagnostics
 import galilei.filesystemBackends.javaBaseFilesystem
 
-// The `tasty/1` discipline, adapted to the discipline SPI. It claims `.tasty` files — the
+// The `tasty/2` discipline, adapted to the discipline SPI. It claims `.tasty` files — the
 // interface carrier shared by the `jvm`, `sjsir` and `nir` universes — for atomization, and
 // claims the derived binaries (`.class`, `.sjsir`, `.nir`) *atomless*: their interface is
 // exactly the TASTy's, so they contribute no atoms of their own and never fall through to
 // `opaque/1`, where every rebuild would register as a major event.
 object TastyDiscipline extends Discipline:
-  def id: Text = t"tasty/1"
+  def id: Text = t"tasty/2"
 
   // The domain is the fixed set of TASTy-carrying universes (`tasty.md` §3) — not universal:
   // the cross-section invariant (§9.6) binds exactly these, which is what makes "one API on
@@ -77,8 +77,9 @@ object TastyDiscipline extends Discipline:
     val tasty = content.filter: pair => pair(0).text.s.endsWith(".tasty")
 
     if tasty.nil then Atomization.of(id, List()) else
-      // The compiler's unpickler reads files, so the claimed `.tasty` content is written to a
-      // throwaway directory for the duration of the inspection.
+      // `Inspection.atomize` reads files by path, so the claimed `.tasty` content is written to a
+      // throwaway directory for the duration of the inspection. `Degustation.atomize` takes the
+      // content directly, but only `Inspection` builds a `ClassSource` over a classpath.
       val directory = java.nio.file.Files.createTempDirectory("degustation").nn
 
       try

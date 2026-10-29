@@ -51,7 +51,7 @@ object tool:
   // This is the skeleton the ladder's step 0 establishes; step 5 fills it in with the BinTEL
   // codecs and the first implementation (Fever's `scalac` edges). One evolution rule from day
   // one (builds.md §14.3): plugins IMPLEMENT `Tool`, so an abstract addition is a major under
-  // `tasty/1`; the trait grows by defaulted methods or optional side-traits, never by abstract
+  // `tasty/2`; the trait grows by defaulted methods or optional side-traits, never by abstract
   // members.
 
   // Whether a setting affects the output bytes (and so belongs in manifests and in the step's

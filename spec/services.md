@@ -455,7 +455,7 @@ table, keys and canonical encoding are openapi.md §5–§8.
 **Certifies**: recompilation — regeneration, per §11.5's transposition — and nothing else.
 The wire-level claim rests on a convention the carrier cannot enforce (consumers ignoring
 unknown response fields), so it belongs to the anticipated `http-json/1` ecosystem profile
-([`openapi.md`](openapi.md) §2), on exactly the division of labor between `tasty/1` and
+([`openapi.md`](openapi.md) §2), on exactly the division of labor between `tasty/2` and
 `jvm/1`. A future `proto/1` is the family's `classfile/1`: Protobuf's tag numbers and
 unknown-field rules are defined by the wire format itself, so its linkage claim is
 correspondingly stronger.

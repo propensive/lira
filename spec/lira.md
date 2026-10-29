@@ -369,7 +369,7 @@ The domain strings of this specification are:
 | `lira/1:derivative`        | the bytes of a canonical derivative artifact (§13.6)     |
 
 `<discipline>` is the full discipline identifier including its version (§11.1), e.g.
-`tasty/1`. Because the discipline identifier participates in the domain, atoms produced by
+`tasty/2`. Because the discipline identifier participates in the domain, atoms produced by
 different disciplines — or by different versions of one discipline — can never collide or alias.
 
 The `lira/1` prefix is the **format epoch**. Any future revision of this specification that
@@ -701,7 +701,7 @@ atomless in `app` sections (**L144**, §9.4), where it may diverge freely across
 
 The invariant is also scoped to the discipline's **domain** (§11.2) — the universes it atomizes
 at all. A discipline may be **universal**, atomizing a representation carried in every universe
-the release supports (`tasty/1` is the motivating case, and enforcing L108 across its whole
+the release supports (`tasty/2` is the motivating case, and enforcing L108 across its whole
 domain is the point of it), or **universe-specific**, atomizing a representation that exists in
 one universe only. A bytecode-level discipline over classfiles has no counterpart in `sjsir` or
 `nir`; for it the invariant is vacuous, not violated. Claiming nothing and claiming atomless are
@@ -778,7 +778,7 @@ does not participate in any hash):
 ```text
 tel 1.0  <lira-atoms schema signature>
 
-discipline tasty/1
+discipline tasty/2
 
 # class        # hash    # key
 atom rigid       Ef56…     gossamer.Text.length():Int
@@ -881,7 +881,7 @@ A discipline defines, deterministically:
    levels the discipline certifies (§11.5): declaration keying is sound exactly where every
    reference a certified consumer can make resolves through the declaring type. It holds for a
    discipline certifying recompilation over a metadata format whose references name the declaring
-   owner — `tasty/1` is such a case, and keys by declaration ([`tasty.md`](tasty.md) §6). It fails
+   owner — `tasty/2` is such a case, and keys by declaration ([`tasty.md`](tasty.md) §6). It fails
    for a discipline certifying linkage in a universe whose call sites name the receiver, since a
    type's linkage surface then includes members it does not declare. Disciplines MUST state their
    choice, because it determines whether a change to a supertype in another module registers in
@@ -914,7 +914,7 @@ This specification and its companion documents register the following discipline
   exports, content-tracked resources, and scanned directories claimed atomless. Its domain is
   every universe; it certifies presence, which is the recompilation level for content addressed
   by name.
-- **`tasty/1`** (informative here; normative specification in [`tasty.md`](tasty.md)): the Scala
+- **`tasty/2`** (informative here; normative specification in [`tasty.md`](tasty.md)): the Scala
   discipline sketched in Appendix A. Its domain is the fixed set `{jvm, sjsir, nir}` — the
   universes whose sections carry TASTy — and the cross-section invariant over that domain is what
   makes "one API on every platform" checkable. Its keying is by declaration ([`tasty.md`](tasty.md) §6). It
@@ -980,7 +980,7 @@ This specification and its companion documents register the following discipline
   than by conservatism, and a schema reachable in both polarities atomizes once per direction.
   It certifies **recompilation** — regeneration, in the transposition of
   [`services.md`](services.md) §7; a wire-level linkage claim is deliberately left to an
-  ecosystem profile, on exactly the division of labor between `tasty/1` and `jvm/1`.
+  ecosystem profile, on exactly the division of labor between `tasty/2` and `jvm/1`.
 - **`environment/1`** (informative here; normative specification in
   [`environments.md`](environments.md)): the environment-topology discipline. Its domain is
   the single realm `{env}`; its keying is by declaration; it emits only rigid atoms and
@@ -1712,7 +1712,7 @@ scalar Natural
   validate natural
 
 scalar DisciplineId
-  description  A discipline identifier, e.g. tasty/1.
+  description  A discipline identifier, e.g. tasty/2.
   validate     discipline-id
 
 scalar ProfileId
@@ -2206,7 +2206,7 @@ to reproduce and attest a release.
   trusting the signature, and SHOULD prefer independent rebuild (§17) where the stakes warrant
   it; attestation of rebuild evidence is anticipated but out of scope.
 
-## Appendix A (Informative): The Scala Discipline `tasty/1`
+## Appendix A (Informative): The Scala Discipline `tasty/2`
 
 The Scala discipline is specified normatively in the companion document
 [`tasty.md`](tasty.md); this appendix is an orientation. Atomization is performed
@@ -2227,7 +2227,7 @@ members sorted). Illustrative decomposition, applying the folding principle:
   consumers, enabling used-set closure and staleness computation. Replaceability soundness holds
   because the compiler guarantees everything an inline body reaches is public or accessor-wrapped
   — all of which is rigid-atomized.
-- TASTy-level and classfile-level compatibility diverge in both directions; `tasty/1`
+- TASTy-level and classfile-level compatibility diverge in both directions; `tasty/2`
   atomizes the TASTy level and certifies **recompilation**. The classfile-level invariants are
   the JVM ecosystem profile's (Appendix D), not the discipline's.
 
@@ -2249,7 +2249,7 @@ harmless — implicit ambiguity, sealed-hierarchy exhaustivity, inherited-member
 the folding principle resolves an unclear case to the sound side by construction. Where a
 language offers an explicit marker distinguishing the two (Rust's `#[non_exhaustive]` is the
 clearest instance), a discipline SHOULD read it and fold accordingly; Scala offers no such
-marker for parent lists, so `tasty/1` pays the cost in false majors rather than risk unsound
+marker for parent lists, so `tasty/2` pays the cost in false majors rather than risk unsound
 minors. A future `tasty/2` could introduce an annotation to opt a type into addition-friendly
 atomization — a discipline version bump, exactly as §11.1 requires.
 
@@ -2270,7 +2270,7 @@ information needed to check it.
 
 ### A.3 Keying, and Where Inherited Members Live
 
-Under §11.2's keying requirement `tasty/1` keys by **declaration**: a member is atomized once,
+Under §11.2's keying requirement `tasty/2` keys by **declaration**: a member is atomized once,
 under the type that declares it, with the erased-signature disambiguator of
 [`tasty.md`](tasty.md) §6. Inherited members are not re-atomized under each type that presents
 them.
@@ -2283,7 +2283,7 @@ then follows from A.2 rather than from redundant keys.
 
 Membership keying would be required for a discipline certifying _classfile_ linkage, where a
 call site names the receiver and a type's linkage surface therefore includes members it does not
-declare. That is exactly the surface `tasty/1` scopes out to the JVM ecosystem profile
+declare. That is exactly the surface `tasty/2` scopes out to the JVM ecosystem profile
 (Appendix D), so the keying choice and the guarantee claim stay consistent: the discipline keys
 the way the representation it atomizes actually references things, and the profile covers the
 representation that references them differently.
@@ -2309,7 +2309,7 @@ toolchain
   version 3.9.0-RC4-p6
 
 api
-  discipline tasty/1
+  discipline tasty/2
   atoms Vw12…
 
 api
@@ -2421,7 +2421,7 @@ unrelated to Appendix C, which uses "profile" in the narrower sense of a canonic
 
 ### D.1 The Two Levels Diverge in Both Directions
 
-`tasty/1` certifies recompilation (§11.3). It does not certify JVM linkage, and cannot, because
+`tasty/2` certifies recompilation (§11.3). It does not certify JVM linkage, and cannot, because
 the linkage surface is a property of the classfiles — a representation below the one it
 atomizes. Concretely:
 
