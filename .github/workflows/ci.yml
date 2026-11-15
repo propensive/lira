@@ -4,6 +4,10 @@ name: CI
 # workflow — see propensive/.github for what it does and what it expects of this repository (the
 # ./mill wrapper, etc/shared, and the pins in etc/refs).
 #
+# The TASTy discipline tests compile a fixture with the embedded compiler, against the standard
+# library of the Proscala release in build.mill, which `proscala_library` installs; without it
+# they run no tests, which counts as a failure.
+#
 # The launcher resolves its libraries (lira, lira-tool) as published coordinates, so every
 # publishing module is published locally first (`__.publishLocal`).
 
@@ -20,7 +24,7 @@ on:
 # one is `scala / build`.
 jobs:
   scala:
-    uses: propensive/.github/.github/workflows/scala-ci.yml@main
+    uses: propensive/.github/.github/workflows/scala-ci.yml@proscala-library
     with:
       compile: >-
         lira.format.compile lira.derive.compile lira.tasty.compile lira.classfile.compile
@@ -29,3 +33,4 @@ jobs:
       assembly:      lira.launcher.assembly
       test_assembly: lira.test.assembly
       test_main:     lira.runTests
+      proscala_library: true
