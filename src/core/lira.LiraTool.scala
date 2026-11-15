@@ -459,7 +459,12 @@ private def save(file: Path on Local, data: Data)(using Cli)(using Tactic[Io.Err
   import filesystemOptions.overwritePreexisting
 
   file.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
-    handle.write(Chain(data))
+    mitigate:
+      case error: Truncation.Error =>
+        given Diagnostics = error.diagnostics
+        Io.Error(file, Io.Error.Operation.Write, Io.Error.Reason.Physical)
+
+    . protect(handle.write(Chain(data)))
 
 private def stem(file: Path on Local): Text =
   val name = file.encode

@@ -41,6 +41,8 @@ import murmuration.exists
 import contingency.*
 import gossamer.*
 import anthology.*
+import anthology.Toolchain.Universe
+import anthology.Toolchain.Universe
 
 // Reads compilation outputs into `LiraAssembler` section inputs. Each universe's section
 // carries its IR alongside the TASTy interface files: the shared interface is stored once by

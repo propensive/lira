@@ -150,7 +150,12 @@ class Store(val root: Path on Linux):
 
     if target.existent() then false else
       target.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
-        handle.write(Chain(data))
+        mitigate:
+          case error: Truncation.Error =>
+            given Diagnostics = error.diagnostics
+            Io.Error(target, Io.Error.Operation.Write, Io.Error.Reason.Physical)
+
+        . protect(handle.write(Chain(data)))
 
       true
 
@@ -211,7 +216,12 @@ class Store(val root: Path on Linux):
     if !journalPath.existent() then journalPath.create[File](CreateFlag.Parents): handle ?=> ()
 
     Eof(journalPath).open(Write): handle ?=>
-      handle.write(Chain(t"$verb $hex\n".in[Data]))
+      mitigate:
+        case error: Truncation.Error =>
+          given Diagnostics = error.diagnostics
+          Io.Error(journalPath, Io.Error.Operation.Write, Io.Error.Reason.Physical)
+
+      . protect(handle.write(Chain(t"$verb $hex\n".in[Data])))
 
   def recency(): Map[Text, Int] raises Io.Error =
     if !journalPath.existent() then Map() else
@@ -227,7 +237,12 @@ class Store(val root: Path on Linux):
     val target = child(pinDir, hex)
 
     target.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
-      handle.write(Chain(label.in[Data]))
+      mitigate:
+        case error: Truncation.Error =>
+          given Diagnostics = error.diagnostics
+          Io.Error(target, Io.Error.Operation.Write, Io.Error.Reason.Physical)
+
+      . protect(handle.write(Chain(label.in[Data])))
 
   def unpin(hex: Text): Unit raises Io.Error =
     child(pinDir, hex).wipe()
@@ -334,7 +349,12 @@ class Store(val root: Path on Linux):
         . map { release => t"add ${release.hex}" }
 
       journalPath.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
-        handle.write(Chain(Text(lines.map(_.s).mkString("", "\n", "\n")).in[Data]))
+        mitigate:
+          case error: Truncation.Error =>
+            given Diagnostics = error.diagnostics
+            Io.Error(journalPath, Io.Error.Operation.Write, Io.Error.Reason.Physical)
+
+        . protect(handle.write(Chain(Text(lines.map(_.s).mkString("", "\n", "\n")).in[Data])))
 
     Sweep(List.from(evicted.map(_.hex)), payloadsRemoved, blobsRemoved, derivativesRemoved)
 
