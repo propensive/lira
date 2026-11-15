@@ -24,7 +24,7 @@ on:
 # one is `scala / build`.
 jobs:
   scala:
-    uses: propensive/.github/.github/workflows/scala-ci.yml@proscala-library
+    uses: propensive/.github/.github/workflows/scala-ci.yml@main
     with:
       compile: >-
         lira.format.compile lira.derive.compile lira.tasty.compile lira.classfile.compile
