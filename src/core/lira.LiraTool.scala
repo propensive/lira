@@ -422,14 +422,14 @@ private def command(using cli: Cli)
   given Stdio = cli.stdio
 
   recover:
-    case error: Lira.Error      => report(error.message)
-    case error: StoreError      => report(error.message)
-    case error: DeltaError      => report(error.message)
-    case error: Io.Error         => report(error.message)
-    case error: Path.Error      => report(error.message)
-    case error: Discipline.Error => report(error.message)
-    case error: Name.Error      => report(error.message)
-    case error: Truncation.Error     => report(error.message)
+    case error: Lira.Error      => report(error.labelled)
+    case error: StoreError      => report(error.labelled)
+    case error: DeltaError      => report(error.labelled)
+    case error: Io.Error         => report(error.labelled)
+    case error: Path.Error      => report(error.labelled)
+    case error: Discipline.Error => report(error.labelled)
+    case error: Name.Error      => report(error.labelled)
+    case error: Truncation.Error     => report(error.labelled)
 
   . protect(block)
 
@@ -537,7 +537,7 @@ private def assign(file: Path on Local, previous: Optional[Path on Local], force
 // vendor modularizes — the JDK — one contract module per platform module, coordinated across a
 // vendor release by a shared tag (hosts.md §3, "Granularity"); for a flat platform — Android —
 // one contract module. Majors — the removals in a vendor's history — require explicit `+<tag>`
-// sanction (L110), applied per module wherever that vendor release removed surface. Emitted
+// sanction (↯/l.1.10), applied per module wherever that vendor release removed surface. Emitted
 // files carry the executable bit, as §5.1 requires of producers.
 //
 // The `dts` and `wit` kinds harvest declaration carriers (`.d.ts`, `.wit`) rather than stub
@@ -570,10 +570,11 @@ private def harvest(kind: Text, out: Path on Local, extra: proscenium.List[Text]
           case error: Lira.Error =>
             error.reason match
               case Lira.Error.Reason.UngradedSuccessor(tag) =>
-                Out.println(t"lira: $module: $tag grades as a major over its predecessor (a")
-                Out.println(t"      removal in the vendor's history); sanction it with +$tag")
+                Out.println(t"lira: $module: ${error.bolt.label} $tag grades as a major over its")
+                Out.println(t"      predecessor (a removal in the vendor's history); sanction it")
+                Out.println(t"      with +$tag")
 
-              case _ => Out.println(t"lira: $module: ${error.message}")
+              case _ => Out.println(t"lira: $module: ${error.labelled}")
 
             Unset
 

@@ -17,7 +17,7 @@ adopted. Nothing here is normative yet.
 A `.lira` file today has two kinds of consumer. A **compiler** consumes a buildpath: the
 composition is judged (spec §13.3), materialized (§13.5), closed by an egress, and the
 composition moment is over. A **deployer** consumes an environment: the composition is
-judged again (§13.7, services.md §6), a transition is checked (L146), and the artifact
+judged again (§13.7, services.md §6), a transition is checked (↯/l.1.46), and the artifact
 starts running.
 
 But the second composition does not end the way the first one does. An egress closes over a
@@ -51,13 +51,13 @@ The transposition table, with the two cells the environment currently leaves emp
 
 | Judgment            | Buildpath (§13.3)                  | Environment (§13.7, services.md §6)   |
 | ------------------- | ---------------------------------- | ------------------------------------- |
-| Closure             | rule 4 (L113)                      | rule 1 (L145)                         |
-| Satisfaction        | rule 5 (L114); rule 7 (L136)       | rule 2, per hosts.md §7               |
+| Closure             | rule 4 (↯/l.1.13)                      | rule 1 (↯/l.1.45)                         |
+| Satisfaction        | rule 5 (↯/l.1.14); rule 7 (↯/l.1.36)       | rule 2, per hosts.md §7               |
 | Aggregation         | hosts.md §10                       | rule 3                                |
 | Profile coherence   | rule 6                             | rule 4                                |
 | Canonical choice    | canonical assignment               | routing pin (a tool-level MAY)        |
-| Uniqueness          | rule 1 (L111)                      | **deliberately dropped**              |
-| Disjointness        | rules 2–3 (L112, L126)             | **empty**                             |
+| Uniqueness          | rule 1 (↯/l.1.11)                      | **deliberately dropped**              |
+| Disjointness        | rules 2–3 (↯/l.1.12, ↯/l.1.26)             | **empty**                             |
 | Publication         | every member is a signed release   | **"a set a tool is handed"**          |
 | Hand-off            | materialization (§13.5)            | **unstated**                          |
 
@@ -87,7 +87,7 @@ versus **actual state**.
 - The **desired state** is a statement of intent: what is supposed to be deployed, and where
   each provider is supposed to answer. It is manifest-shaped, and every validity judgment in
   the algebra is a judgment about it. This is already true today without being said: nothing
-  in L145 or L146 inspects a process — they read manifests — so the deploy-time rules *are*
+  in ↯/l.1.45 or ↯/l.1.46 inspects a process — they read manifests — so the deploy-time rules *are*
   desired-state rules, and no new label family is needed to make them so.
 - The **actual state** is knowable only by looking, and looking is the third verification
   moment (hosts.md §9). Extended over an artifact's whole life, readiness becomes liveness,
@@ -127,7 +127,7 @@ no address-level grade at all.
 release to one environment: the same artifact must require the production address in
 production and the test address in test, so either the release is rebuilt per environment —
 destroying the one-artifact-many-environments property that makes variants cheap (§8) — or
-the address is a lie in all environments but one. Requirements name *modules* (L137's two
+the address is a lie in all environments but one. Requirements name *modules* (↯/l.1.37's two
 provider kinds), and where the provider is a third party nobody deploys — a vendor API — the
 spec already has its category: capability *granted* rather than deployed (services.md §6), a
 platform contract (hosts.md §3), which §5 will simply allow to be bound to an address like
@@ -153,7 +153,7 @@ one environment: the platform contracts that are granted, the releases that are 
 A **binding** is the unit of that last part: a record of
 
 - an **address** — a DNS name or URL prefix, the environment's own kind of name;
-- a **provider module** — either L137 kind: a deployable service, or a host contract for a
+- a **provider module** — either ↯/l.1.37 kind: a deployable service, or a host contract for a
   granted/third-party surface;
 - a **selection** — which releases of that module the binding admits: a snapshot, a lineage
   constraint, or an exact implementation identity.
@@ -161,8 +161,8 @@ A **binding** is the unit of that last part: a record of
 Now the three empty cells of §2's table fill at one stroke, and the derivation is the same
 shape as hosts.md's polarity inversion:
 
-**Bindings are the transposed uniqueness rule.** L111 exists because a buildpath must answer
-"which release provides module M?" with one release. L145 deliberately dropped it, because
+**Bindings are the transposed uniqueness rule.** ↯/l.1.11 exists because a buildpath must answer
+"which release provides module M?" with one release. ↯/l.1.45 deliberately dropped it, because
 two releases of one module serving concurrently is the normal state of a rolling deploy —
 and dropping it left the question unanswered rather than answered differently. The address
 answers it: *the binding disambiguates at run time what uniqueness disambiguated at build
@@ -170,7 +170,7 @@ time.* Two majors of one service coexist by holding two addresses; a rolling dep
 releases transiently inside one binding's selection; and "which provider does this consumer
 get?" is decided per address instead of per path.
 
-**Binding disjointness is the transposed L112.** One address, one binding: two bindings
+**Binding disjointness is the transposed ↯/l.1.12.** One address, one binding: two bindings
 whose addresses are equal — or where one is a prefix of the other, path-extension clashing
 exactly as "a namespace and any dotted extension of it clash" — are invalid in one
 environment manifest. Addresses are compared as authored strings on the `owns` precedent: no
@@ -213,26 +213,26 @@ its precedent, and the unsettled ones flagged for §9:
 
 - **A `.lira`-style document.** A TEL manifest with the same discipline the release manifest
   has: canonically encodable, signed (spec §15). Whether it is literally a
-  release — a module in a new realm, following the one-section shape pattern of L135 and
-  L143 — or a sibling document under its own schema is open (§9); the one-section-realm
+  release — a module in a new realm, following the one-section shape pattern of ↯/l.1.35 and
+  ↯/l.1.43 — or a sibling document under its own schema is open (§9); the one-section-realm
   pattern has twice proven the cheap way to give new content ordinary verification.
 - **Contents**: the environment's name; the platform contracts that are granted (module +
   snapshot, satisfied from their published releases); the deploy records (module, release
   identity, `app` section — realm and integration, per §13.7); the bindings of §5; and the
   operator's signature over the whole.
-- **Pinning, against L118.** Desired state wants exactness — "this build, not whatever the
-  lineage says next" — but a `build` pin makes a manifest unpublishable (L118), and for good
+- **Pinning, against ↯/l.1.18.** Desired state wants exactness — "this build, not whatever the
+  lineage says next" — but a `build` pin makes a manifest unpublishable (↯/l.1.18), and for good
   reason on the dependency axis. The precedent that fits is the other pin the spec already
   has: the `artifact` pin (services.md §4.2, spec §14), which pins exact closed content in a
   publishable manifest. A binding's selection pinning an implementation identity is a claim
   of the same kind — about a deployed artifact, not about a composable dependency — and
-  L118's rationale (unpublishable development coupling) does not reach it. The document
+  ↯/l.1.18's rationale (unpublishable development coupling) does not reach it. The document
   recommends selection-by-snapshot as the default and selection-by-implementation-identity
-  as the exact form, with L118 untouched.
+  as the exact form, with ↯/l.1.18 untouched.
 - **Validity**: §13.7's rules, with the two additions of §5 — binding disjointness, and rule
   2's quantifier re-scoped per binding — each of which would take a fresh label in the
-  §13.3 style (one rule, one label) rather than silently widening L145. Deployability
-  (L146) is unchanged in form: a transition of the *document* — including a rebinding, which
+  §13.3 style (one rule, one label) rather than silently widening ↯/l.1.45. Deployability
+  (↯/l.1.46) is unchanged in form: a transition of the *document* — including a rebinding, which
   is judged as the transition it is: valid iff every consumer resolved to the address
   remains satisfied by the new occupant. No address-level grade exists (§4a).
 - **The aggregate, at last published.** The environment manifest's provision side — the
@@ -315,7 +315,7 @@ Production and test are two environment manifests. That sentence is most of the 
   environment, and neither judgment touches the artifacts.
 - **Overlays.** With environments as documents, "test is prod with three substitutions"
   can be literal: the overlay calculus of §9.3 — delete, replace-or-add, minimality on pain
-  of invalidity (L107) — transposes from section trees to environment manifests, so the
+  of invalidity (↯/l.1.7) — transposes from section trees to environment manifests, so the
   difference between test and prod is a computed, minimal, signed delta rather than a
   README. This is the payoff of §4(c)'s reification that nothing else provides: you cannot
   diff a set a tool is handed.
@@ -323,7 +323,7 @@ Production and test are two environment manifests. That sentence is most of the 
 ## 9. Open questions
 
 1. **The environment manifest's identity.** Is it a release of a module in a new realm
-   (one-section shape, L135/L143 pattern) — in which case: what are its atoms (plausibly
+   (one-section shape, ↯/l.1.35 and ↯/l.1.43 pattern) — in which case: what are its atoms (plausibly
    none, on the leaf-application precedent of services.md §4.3), and is its lineage the
    environment's history, making environment evolution gradeable? Or a sibling document
    under its own schema, outside the release machinery? The lineage-as-history idea is
@@ -350,7 +350,7 @@ Production and test are two environment manifests. That sentence is most of the 
 
 > **Status.** Adopted: [`spec/environments.md`](../spec/environments.md) is the normative
 > home, with the `env` realm, the `grant`/`deploy`/`binding` records, `environment/1`,
-> resolution, and provisioning in the base spec (§9.4, §11.3, §13.7, §14; L148–L150). Two
+> resolution, and provisioning in the base spec (§9.4, §11.3, §13.7, §14; ↯/l.1.48 to ↯/l.1.50). Two
 > corrections were made in adoption: the environment's substance became **manifest records**,
 > not a payload document — the judgments that read it read manifests, per the spec's
 > manifests-alone principle — and atoms cover address + provider module (bindings) and
@@ -358,7 +358,7 @@ Production and test are two environment manifests. That sentence is most of the 
 > track *topology* rather than occupancy. §9's questions resolved: **9.1** an env-realm
 > release, atoms as above, lineage as topology history; **9.2** as recommended — occupant
 > rebinding is gradeless transition validity — with topology changes additionally graded and
-> majors gated by L110; **9.3** the report vocabulary is environments.md §8, cadence is
+> majors gated by ↯/l.1.10; **9.3** the report vocabulary is environments.md §8, cadence is
 > tooling; **9.4** unchanged (hosts.md §11; a third-party endpoint is a grant bound to an
 > address); **9.5** re-affirmed (environments.md §10: a broker is a grant, a topic is not an
 > address); **9.6** the operator reuses §15 verbatim, anchoring out of scope as for
@@ -376,7 +376,7 @@ In the format of universes.md §6 — what this design would change, none of it 
    re-scoped rule-2 quantifier as fresh labels; state canonical binding resolution beside
    the canonical assignment.
 3. **Schema**: the environment-manifest schema (or realm), with `grant`, `deploy` and
-   `binding` records; selection semantics defended against L118 via the `artifact`-pin
+   `binding` records; selection semantics defended against ↯/l.1.18 via the `artifact`-pin
    precedent.
 4. **services.md §8**: liveness as the third moment sustained; drift's advisory standing;
    provisioning as the §13.5 analog.

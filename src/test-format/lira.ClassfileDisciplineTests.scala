@@ -327,7 +327,7 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
        JvmProfile.check(before, evidence(base, derived, api, bounded)).stdlib)
     . assert(_ == (Grade.Major, scala.List()))
 
-    // The audit (L128/L130) is what turns a finding into a verdict about the release.
+    // The audit (↯/l.1.28 and ↯/l.1.30) is what turns a finding into a verdict about the release.
 
     test(m"an unrecorded linkage break is rejected"):
       val registry = EcosystemProfile.Registry(List(JvmProfile))
@@ -356,7 +356,7 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
       EcosystemProfile.audit(registry, declared, before, before).unchecked.stdlib
     . assert(_ == scala.List(t"unknown/1"))
 
-    test(m"a violation at an uncertified level is the profile's defect, L128"):
+    test(m"a violation at an uncertified level is the profile's defect, ↯/l.1.28"):
       val broken = new EcosystemProfile:
         def id: Text = t"broken/1"
         def certifies: Set[Discipline.Guarantee] = Set(Discipline.Guarantee.Linkage)
@@ -458,7 +458,7 @@ object ClassfileDisciplineTests extends Suite(m"LIRA classfile/1 discipline test
     . assert(_ == (scala.List("0.1.0", "0.2.0", "0.3.0"), scala.List(1, 2, 1),
         scala.List(t"jdk-17", t"jdk-18", t"jdk-19"), true))
 
-    test(m"an unsanctioned major refuses the sequence, L110"):
+    test(m"an unsanctioned major refuses the sequence, ↯/l.1.10"):
       val (v1, _) = compile(base, derived, api)
 
       val (v2, _) = compile(edit(base, t"protected int guarded() { return 2; }", t""),

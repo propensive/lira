@@ -28,14 +28,14 @@ a host to its consumers, publishing its network surface as its own release's ato
 
 This document is a working draft. It is normative for the `host` realm (LIRA §9.4), the
 `requires` mechanism (LIRA §13.2–§13.3, §14), and the `capability/1` discipline; the labels
-**L135**, **L136** and **L137** are defined in the base specification and elaborated here.
+**↯/l.1.35**, **↯/l.1.36** and **↯/l.1.37** are defined in the base specification and elaborated here.
 
 ## 2. Motivation: Requirements Are Not Dependencies
 
 The obvious encoding — a discipline atomizing a library's requirements as its own atoms — fails
 three ways ([`universes.md`](../design/universes.md) §5.1): there is no content to atomize, since
 command and API availability is a property of the environment rather than of any blob (LIRA
-**L127** makes such a discipline undeclarable); the polarity is inverted, since rigid atoms are
+**↯/l.1.27** makes such a discipline undeclarable); the polarity is inverted, since rigid atoms are
 monotonic because _addition is safe_, while adding a requirement breaks consumers whose
 environment lacks it; and the claim is not derivable, since no atomizer can decide from bytecode
 which commands a program will invoke.
@@ -92,7 +92,7 @@ formal grammar there is nothing to harvest, which is exactly the case that disci
 for.
 
 Content claiming inside a `host` section follows LIRA §11.2 unchanged, including the claiming
-order (**L134**) and the `opaque/1` fallback; **L127** applies unchanged, so a host contract can
+order (**↯/l.1.34**) and the `opaque/1` fallback; **↯/l.1.27** applies unchanged, so a host contract can
 declare only disciplines whose domain includes `host`.
 
 **Versioning.** The derived-version algebra (LIRA §12.5) applies unchanged, and marketing
@@ -111,7 +111,7 @@ fractures the lineage of consumers who never touched it; per-module contracts gi
 surface its own honest history, and a platform module's removal simply ends its lineage. What
 coordinates a platform _release_ across them is the tag: every module contract harvested from
 one vendor release carries the same tag, and "JDK 19" is the set of releases tagged `jdk-19`
-across the `java.*` contract modules — resolved per L142's uniqueness, validated by handing
+across the `java.*` contract modules — resolved per ↯/l.1.42's uniqueness, validated by handing
 rule 7 the whole set, whose aggregation (§10) already spans contract modules. A library's
 per-module requirements are then computable rather than authored: its used-set partitions by
 the module that carries each reference, and the modules with non-empty parts are the
@@ -133,7 +133,7 @@ content is _ordinary content_ — held in a tree, deduplicated in the payload, h
 verified and signed by the machinery every release already gets — rather than a parallel
 structure with parallel rules.
 
-**L135** (defined at LIRA §9.4) fixes the shape: a release carrying a `host` section is a host
+**↯/l.1.35** (defined at LIRA §9.4) fixes the shape: a release carrying a `host` section is a host
 contract; it carries exactly that one section, declares no integrations and no dependencies, and
 its section carries no `requires` records. The exclusions are not arbitrary: an integration is
 an alternative dependency vector and a contract has no dependencies to vary; and a contract
@@ -201,7 +201,7 @@ short one.
 A library section MAY carry `requires` records (LIRA §14): each names a host contract's module
 and a required snapshot, optionally with a Uses blob against the contract and a human-readable
 version hint. A `requires` record naming a module whose releases are neither host contracts
-nor deployable releases is invalid (**L137**, LIRA §13.3) — checkable wherever the named
+nor deployable releases is invalid (**↯/l.1.37**, LIRA §13.3) — checkable wherever the named
 module's manifest is in hand, since the two kinds of provider are recognizable by their `host`
 and `app` sections respectively; requirements on deployed services are the subject of
 [`services.md`](services.md) §5, and this document's rules are stated for contracts.
@@ -209,7 +209,7 @@ and `app` sections respectively; requirements on deployed services are the subje
 Requirements sit on **sections**, not on releases, because needs genuinely differ per universe
 and per integration: a library may shell out only in its `jvm` implementation, or touch the DOM
 only in its `sjsir` one. This does not collide with the cross-section API invariant (LIRA §9.6):
-**L108** constrains what a release _presents_, requirements are not API, and two sections
+**↯/l.1.8** constrains what a release _presents_, requirements are not API, and two sections
 presenting one interface while needing different things of their environments is ordinary, not a
 violation.
 
@@ -262,7 +262,7 @@ genuinely assume an environment, and only those.
 
 A host contract release `H` **satisfies** a requirement `(module, api)` iff `H` is a release of
 that module and the required snapshot `api` appears in `H`'s lineage — LIRA §13.2's rule,
-verbatim (**L136**, LIRA §13.3 rule 7).
+verbatim (**↯/l.1.36**, LIRA §13.3 rule 7).
 
 Where the requirement carries a Uses blob — the contract atoms the section actually depends on —
 satisfaction extends by **spanning**, and in a form dependency spanning does not need:
@@ -315,7 +315,7 @@ from configuration and input; reflection and dynamic loading hide API use from a
 reading. The declaration is irreducibly an assertion about the code, and a reader who assumes
 `requires` was checked _against the code_ has misread the format. What is machine-checked is
 everything around the assertion: the contract's atoms are recomputed from its payload (LIRA
-§16), satisfaction is decided from manifests (**L136**), and the _environment_ is checked at the
+§16), satisfaction is decided from manifests (**↯/l.1.36**), and the _environment_ is checked at the
 third moment:
 
 **Probing, at install or launch time.** Whether the actual host honors the contract the

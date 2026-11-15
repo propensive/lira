@@ -78,15 +78,16 @@ object EcosystemProfile:
     def apply(id: Text): Optional[EcosystemProfile] =
       profiles.seek: profile => profile.id == id
 
-  // L128 and L130, the two rules that make a `profile` record a claim rather than decoration.
+  // ↯/l.1.28 and ↯/l.1.30, the two rules that make a `profile` record a claim rather than
+  // decoration.
   //
   // A release declares the profiles it satisfies and, per §12.4, the guarantee levels this step
   // *breaks*. Checking is therefore not a matter of computing the `breaks` list — the author
   // states it — but of confirming that it accounts for what the predicates actually found:
   //
   //   - a violation at a level the profile certifies, which the release does not record, is
-  //     **L130**: the step does not preserve the level and says nothing about it;
-  //   - a violation at a level the profile does not certify at all is **L128**: the profile
+  //     **↯/l.1.30**: the step does not preserve the level and says nothing about it;
+  //   - a violation at a level the profile does not certify at all is **↯/l.1.28**: the profile
   //     claims a predicate it does not enforce, which is a broken profile, not a broken release.
   //
   // A declared profile with no implementation in the registry is *not* an error. It is a gap in
@@ -155,8 +156,8 @@ object EcosystemProfile:
     case Discipline.Guarantee.Recompilation => t"recompilation"
 
 // A named, versioned set of predicates an ecosystem imposes in addition to those of the core
-// specification (§11.6). Profiles add predicates and add guarantees; they never subtract (L129),
-// so a file the core rejects is rejected under every profile.
+// specification (§11.6). Profiles add predicates and add guarantees; they never subtract
+// (↯/l.1.29), so a file the core rejects is rejected under every profile.
 //
 // The alternative to a profile is a universe-specific discipline, and §11.6 explains why it is
 // the wrong default: atoms feed the snapshot, and the snapshot is API identity, so folding an

@@ -50,11 +50,11 @@ object Buildpath:
   // local registry stand-in until the distribution network exists). A release that fails any of
   // these is a development release and must stay one.
   def publishable(manifest: Lira.Manifest, published: List[Lira.Manifest]): Unit raises Lira.Error =
-    // L117: a published release carries a strictly numeric version.
+    // ↯/l.1.17: a published release carries a strictly numeric version.
     val version = manifest.version.or(abort(Lira.Error(Reason.VersionRequired)))
     if !Versioning.numeric(version) then abort(Lira.Error(Reason.VersionRequired))
 
-    // L142: a tag names exactly one release of its module, forever. A tag carried by any other
+    // ↯/l.1.42: a tag names exactly one release of its module, forever. A tag carried by any other
     // published release of the module is a reassignment; and a re-signed manifest for the
     // *same* release (the same implementation identity) may add tags but never drop one a
     // published manifest carries.
@@ -72,14 +72,14 @@ object Buildpath:
           if !manifest.tag.has(tag) then abort(Lira.Error(Reason.TagReassigned(tag)))
 
     manifest.dependency.each: dependency =>
-      // L118: build pins are development-only; publication requires snapshot requirements. The
+      // ↯/l.1.18: build pins are development-only; publication requires snapshot requirements. The
       // pin is bound to a typed local first: reading an `Optional` directly inside a lambda whose
       // enclosing call still has live type variables has crashed the compiler's implicit-scope
       // collection.
       val build: Optional[Lira.Hash] = dependency.build
       build.let: _ => abort(Lira.Error(Reason.BuildPinned(dependency.module)))
 
-      // L119: every dependency snapshot must appear in the lineage of a published release.
+      // ↯/l.1.19: every dependency snapshot must appear in the lineage of a published release.
       def matches(candidate: Lira.Manifest): Boolean =
         candidate.module == dependency.module && candidate.version.present &&
           Lineage.contains(candidate.lineage, dependency.api)
@@ -88,7 +88,7 @@ object Buildpath:
 
       if !satisfied then abort(Lira.Error(Reason.UnpublishedDependency(dependency.module)))
 
-    // L120 (manifest-only part): for a stable series (major ≥ 1) the minor number is the count
+    // ↯/l.1.20 (manifest-only part): for a stable series (major ≥ 1) the minor number is the count
     // of minor steps in the lineage — the rule is stated as a count, which is why the linear
     // `size` of the lineage is taken here rather than restructured away. The 0 series is exempt:
     // there, breaking changes bump the minor and begin fresh lineages, so the minor is not a
@@ -228,8 +228,8 @@ case class Buildpath(releases: List[Lira.Manifest]):
           case _ => false
 
   // §13.3 structural rules, which no assignment can affect: at most one release per module
-  // (L111) and pairwise-disjoint `owns` claims (L112). Host contracts are exempt from rules 2–3
-  // (hosts.md §8): a contract describes an environment and contributes no namespace claims and
+  // (↯/l.1.11) and pairwise-disjoint `owns` claims (↯/l.1.12). Host contracts are exempt from rules
+  // 2–3 (hosts.md §8): a contract describes an environment and contributes no namespace claims and
   // no resources, so one mistakenly placed among the releases must not clash with anything.
   private def structural(): Unit raises Lira.Error =
     releases.group(_.module).each: (module, group) =>
@@ -260,9 +260,9 @@ case class Buildpath(releases: List[Lira.Manifest]):
 
     pairwise(claims)
 
-    // L126: `export` and `track` paths are pairwise disjoint across modules, so a classpath-style
-    // reference resolves to exactly one module. `scan` directories are exempt — cross-module
-    // aggregation under a shared directory is precisely their purpose.
+    // ↯/l.1.26: `export` and `track` paths are pairwise disjoint across modules, so a
+    // classpath-style reference resolves to exactly one module. `scan` directories are exempt —
+    // cross-module aggregation under a shared directory is precisely their purpose.
     val named = libraries.flatMap: manifest =>
       manifest.resource
         . filter(_.mode != Lira.Manifest.ResourceMode.Scan)
@@ -273,9 +273,9 @@ case class Buildpath(releases: List[Lira.Manifest]):
         case _ :: _ :: _ => abort(Lira.Error(Reason.ResourceClash(path)))
         case _           => ()
 
-  // Closure (L113) and satisfaction (L114) under one assignment, reporting the precise rule that
-  // fails. `resolve` answers only whether *some* assignment works; this says why a given one does
-  // not, which is what a diagnostic needs.
+  // Closure (↯/l.1.13) and satisfaction (↯/l.1.14) under one assignment, reporting the precise rule
+  // that fails. `resolve` answers only whether *some* assignment works; this says why a given one
+  // does not, which is what a diagnostic needs.
   private def audit(universe: Text, joins: List[Text], assignment: Assignment)
   :   List[Lira.Advisory] raises Lira.Error =
 
@@ -331,7 +331,7 @@ case class Buildpath(releases: List[Lira.Manifest]):
   def requiredContracts(universe: Text, assignment: Assignment): List[Text] =
     selected(universe, assignment).flatMap(_.requires.map(_.module)).distinct
 
-  // §13.3 rule 7 (L136, L137): every `requires` record of every selected section must be
+  // §13.3 rule 7 (↯/l.1.36, ↯/l.1.37): every `requires` record of every selected section must be
   // satisfied by the given contracts, per hosts.md §7 — the required snapshot appears in the
   // named contract's lineage, or the requirement's used-set is contained in a contract's atom
   // set. The latter extends across contracts of *different* modules, which is sound because
@@ -354,7 +354,7 @@ case class Buildpath(releases: List[Lira.Manifest]):
 
     selected(universe, assignment).each: section =>
       section.requires.each: requirement =>
-        // L137, from the other end: a requirement naming a module whose releases are ordinary
+        // ↯/l.1.37, from the other end: a requirement naming a module whose releases are ordinary
         // libraries is a category error, checkable wherever that module's manifest is in hand.
         apply(requirement.module).let: release =>
           if !release.hostContract
@@ -394,7 +394,7 @@ case class Buildpath(releases: List[Lira.Manifest]):
   // unpinned releases take their canonical ones. `profiles` supplies rule 6's implementations:
   // every profile declared by any release imposes its buildpath predicates over the whole path,
   // and only an implemented profile can be checked here — an unimplementable declared profile
-  // is a registry's refusal at publish time (L140), not re-litigated on every resolution.
+  // is a registry's refusal at publish time (↯/l.1.40), not re-litigated on every resolution.
   def resolved
     ( universe:  Text,
       joins:     List[Text]         = List(),

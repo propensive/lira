@@ -5,9 +5,9 @@ A `.lira` release carries one dependency vector. It can hold several *universes*
 This document works through lifting that restriction, and the surprisingly small set of changes
 it turns out to need.
 
-> **Status.** Adopted: spec §9.5, §13.2–§13.3 (L131–L133) implement this design. Terminology
+> **Status.** Adopted: spec §9.5, §13.2–§13.3 (↯/l.1.31 to ↯/l.1.33) implement this design. Terminology
 > has moved on since it was written: the matrix axis is now the **realm** (spec §4.1), "valid
-> for a universe" reads "valid for a target" (L132), the `against` stub discussed in §2 was
+> for a universe" reads "valid for a target" (↯/l.1.32), the `against` stub discussed in §2 was
 > removed rather than extended (dependency records carry `integration` scopes instead), and
 > deployable releases (`app` realm, [`spec/services.md`](../spec/services.md)) participate in
 > the matrix with one `app` section per integration.
@@ -77,7 +77,7 @@ fields.
 
 ## 4. The load-bearing rule: one API across the whole matrix
 
-Spec §9.6 (**L108**) requires every universe to atomize to an identical atom set. Generalize the
+Spec §9.6 (**↯/l.1.8**) requires every universe to atomize to an identical atom set. Generalize the
 quantifier to the whole (universe × integration) matrix and everything downstream survives
 untouched: one release still has exactly one API identity, so the snapshot, the lineage, §13.2
 satisfaction and diamond resolution need no changes at all. Integrations become invisible to
@@ -196,11 +196,11 @@ manifests turn out to bloat.
 
 ## 8. Spec impact
 
-Applied to the spec: §9.5 becomes "Integrations", §9.6's L108 ranges over the matrix, §13.2
+Applied to the spec: §9.5 becomes "Integrations", §9.6's ↯/l.1.8 ranges over the matrix, §13.2
 gains integration scoping beside universe scoping, §13.3 gains the assignment quantifier and the
 canonical-assignment rule, §13.5 selects by universe *and* integration, §14 gains the
 `Integration` record and the `integration` fields, §16 verifies every cell, and `against` is
-removed. New labels: L131 (well-formed declarations), L132 (an assignment exists), L133 (a
+removed. New labels: ↯/l.1.31 (well-formed declarations), ↯/l.1.32 (an assignment exists), ↯/l.1.33 (a
 declared integration has at least one section).
 
 One incidental strengthening: §13.6's derivative hash now identifies a (universe, integration)

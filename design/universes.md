@@ -275,7 +275,7 @@ It does not work, in three independent ways:
 
 - **Nothing to atomize.** A discipline is `content → atoms` (spec §11.2), claiming blobs by path
   and bytes. Command availability is a property of the environment, not of any blob. Spec
-  **L127** now invalidates a release declaring a discipline whose domain is disjoint from the
+  **↯/l.1.27** now invalidates a release declaring a discipline whose domain is disjoint from the
   sections it carries, which is exactly this case.
 - **Inverted polarity.** Atoms describe what a module *provides*, and rigid atoms are monotonic
   because *addition is safe* (spec §10.2–§10.3). A requirement is what a module *needs*, and
@@ -309,7 +309,7 @@ The polarity is now correct at every point, and no new algebra is needed:
 
 Requirements sit on **sections**, not on the release: a library may shell out only in its `jvm`
 implementation. This does not collide with the cross-section API invariant (spec §9.6), because
-requirements are not API — L108 constrains what a release *presents*, and two sections presenting
+requirements are not API — ↯/l.1.8 constrains what a release *presents*, and two sections presenting
 one interface while needing different things of their hosts is ordinary, not a violation.
 
 ### 5.3 Shell commands: the informal case
@@ -411,7 +411,7 @@ an omission, never prove the list complete.
 Three of the four questions this section originally posed are resolved by
 [`spec/hosts.md`](../spec/hosts.md): the section question — a `host` **realm**, a section key
 that is not a universe, so contract content is ordinary content and the §1 litmus test is
-preserved by naming rather than bent (spec §4.1, §9.4, L135); the probe question — an advisory
+preserved by naming rather than bent (spec §4.1, §9.4, ↯/l.1.35); the probe question — an advisory
 `probe` field on `capability/1` rows, excluded from every atom, treated as untrusted input
 (hosts.md §5, §9); and transitive aggregation — required, per hosts.md §10, with joint
 satisfiability by the diamond rule.

@@ -6,7 +6,7 @@ The buildpath is judged and then closed; an environment is judged and then *live
 Services keep calling each other, deploys keep arriving, and the compatibility question a
 buildpath answers once is asked continuously, for as long as anything runs. This document
 specifies the object that keeps the question answerable: the **environment release** — an
-ordinary `.lira` release of the `env` realm (LIRA §9.4, **L148**) whose manifest states one
+ordinary `.lira` release of the `env` realm (LIRA §9.4, **↯/l.1.48**) whose manifest states one
 environment's **desired state**: the platform contracts it supplies (`grant`), the releases
 intended to run (`deploy`), and the **addresses** at which providers answer (`binding`). It
 also specifies **`environment/1`**, the discipline that atomizes an environment's topology,
@@ -23,9 +23,9 @@ which is the design's whole content, derived in [`execution.md`](../design/execu
 
 This document is a working draft. It is normative for the `env` realm (LIRA §9.4), the
 `grant`, `deploy` and `binding` records (LIRA §14), the `environment/1` discipline, and
-resolution and provisioning (LIRA §13.7); the labels **L148**, **L149** and **L150** are
-defined in the base specification and elaborated here. Environment *validity* (L145) and
-deployment (L146) remain the subject of [`services.md`](services.md), unchanged in
+resolution and provisioning (LIRA §13.7); the labels **↯/l.1.48**, **↯/l.1.49** and **↯/l.1.50** are
+defined in the base specification and elaborated here. Environment *validity* (↯/l.1.45) and
+deployment (↯/l.1.46) remain the subject of [`services.md`](services.md), unchanged in
 substance by this document.
 
 ## 2. Motivation: the Judgments Need a Home
@@ -40,32 +40,32 @@ that arrangement, each derived at length in [`execution.md`](../design/execution
    confessed early: hosts.md §10 calls the aggregated requirement set a "host contract in
    all but publication." The provision side had the same status, and this document ends it.
 2. **The dropped uniqueness rule left a question unanswered.** A buildpath answers "which
-   release provides module M?" by rule 1 (L111); the environment deliberately dropped
+   release provides module M?" by rule 1 (↯/l.1.11); the environment deliberately dropped
    uniqueness for rolling deploys, and with it the answer. The **binding** answers it by
    address: two majors of one service coexist at two addresses — or, for consumers that
    negotiate per use, inside one selection (§4, §7) — and "which provider does this consumer
-   get?" is decided per address (L149, L150) instead of per path.
-3. **Concurrent majors were inexpressible.** Under L145 rule 2's unrefined quantifier, two
+   get?" is decided per address (↯/l.1.49, ↯/l.1.50) instead of per path.
+3. **Concurrent majors were inexpressible.** Under ↯/l.1.45 rule 2's unrefined quantifier, two
    concurrently-serving releases with disjoint lineages fail every lineage-only consumer;
    the routing pin that fixes this was tool lore "the manifests cannot imply." The binding's
-   selection makes it a manifest fact (L150).
+   selection makes it a manifest fact (↯/l.1.50).
 
 What this document deliberately does **not** do: give addresses lineages (an address has
 nothing to atomize — its API is the bound release's, borrowed; execution.md §4), let
 requirements name addresses (a release naming an address is welded to one environment), or
 make environments requirable or dependable (LIRA §9.4: an environment is neither provider
-kind under L137, and no dependency names one under L147 — environments are judged and
+kind under ↯/l.1.37, and no dependency names one under ↯/l.1.47 — environments are judged and
 consulted, never composed against).
 
 ## 3. The Environment Release
 
 An environment release is an ordinary `.lira` release: a module with a name, a lineage,
 `api` records, a payload, and signatures, to which everything in the base specification
-applies unchanged. **L148** (LIRA §9.4) fixes the shape: exactly one `env` section; no
+applies unchanged. **↯/l.1.48** (LIRA §9.4) fixes the shape: exactly one `env` section; no
 integrations, no dependencies, no `requires` records; the `grant`, `deploy` and `binding`
 records that are its substance — and that no other kind of release may carry; and the
 `environment/1` discipline declared over them. The `env` section's tree holds only ancillary
-content (probe metadata, operator notes; atomless by default, **L144**) and MAY be empty:
+content (probe metadata, operator notes; atomless by default, **↯/l.1.44**) and MAY be empty:
 unlike a host contract, whose carrier is content, an environment's substance is manifest
 records, because they are exactly what the composition judgments read, and every judgment
 input in this specification is manifest-level (LIRA §13.1).
@@ -92,15 +92,15 @@ Three record families (LIRA §14), one desired state:
 
 **`grant`** — a platform contract this environment supplies: module and snapshot. Polarity
 matters: a grant is *provision*, not requirement — it is read by environment closure
-(services.md §6 rule 1) from the provision side, which is why L148 forbids `requires` on the
+(services.md §6 rule 1) from the provision side, which is why ↯/l.1.48 forbids `requires` on the
 `env` section rather than spelling grants as requirements. The satisfied side is the
 deployed releases' `requires` records, per hosts.md §7 unchanged.
 
 **`deploy`** — a release intended to run: module; **`build`**, the implementation identity
 of the exact artifact (desired state names artifacts, not hopes); optionally an `api` hint;
 the `integration` naming which `app` section is deployed (LIRA §13.7); and `route` pins
-(§6). The `build` pin is publishable, and deliberately so — the boundary with **L118**
-(LIRA §13.2) is that L118 governs the *dependency* axis, where a pin is development coupling
+(§6). The `build` pin is publishable, and deliberately so — the boundary with **↯/l.1.18**
+(LIRA §13.2) is that ↯/l.1.18 governs the *dependency* axis, where a pin is development coupling
 and satisfaction must remain lineage-decidable for future composition; a deploy pin is
 desired-state exactness about a closed artifact that composes into nothing, on the
 `artifact`-pin precedent (services.md §4.2), and remains publishable even when it names a
@@ -111,10 +111,10 @@ development release — which, in continuous deployment, it usually does.
 - The **address** is the environment's own kind of name: a DNS name or URL prefix, compared
   as authored — the `owns` precedent, no canonicalization; operators who want normalization
   apply it before authoring. Within one manifest, addresses MUST be pairwise disjoint:
-  neither equal to, nor a path-prefix of, one another (**L149**) — L112's prefix-clash rule
+  neither equal to, nor a path-prefix of, one another (**↯/l.1.49**) — ↯/l.1.12's prefix-clash rule
   transposed, so `orders.internal` clashes with `orders.internal/v2` exactly as a namespace
   clashes with its dotted extension.
-- The **provider module** is either L137 kind: a deployable service, or a host contract — the
+- The **provider module** is either ↯/l.1.37 kind: a deployable service, or a host contract — the
   latter being how a third-party endpoint (a vendor API nobody here deploys) enters an
   environment: as a grant, bound to the address it answers at.
 - The **selection** admits releases to the binding: `api`, one or more snapshots, a release
@@ -122,7 +122,7 @@ development release — which, in continuous deployment, it usually does.
   rolling deploy is two releases transiently inside one selection, and a selection naming
   snapshots of two lineages is how a cross-major roll happens behind one address, for the
   consumers that negotiate: LIRA §13.7, services.md §7), or `build`, an exact implementation
-  identity (the L118 boundary above applies verbatim). A binding selects; it never satisfies — satisfaction remains the
+  identity (the ↯/l.1.18 boundary above applies verbatim). A binding selects; it never satisfies — satisfaction remains the
   consumer's requirement against the selected releases, per services.md §5.
 
 One address, one provider, at a time: rebinding an address is a **transition** (§7), never a
@@ -161,11 +161,11 @@ environment's evolution exactly as operations would wish:
 | address removed or retargeted to a different module | major |
 | grant withdrawn                                     | major |
 
-The major row is a **safety interlock**, obtained for free from **L110**: a publishing tool
+The major row is a **safety interlock**, obtained for free from **↯/l.1.10**: a publishing tool
 refuses to extend the lineage with a topology-destroying successor unless the operator
 explicitly requests a major. "Can I turn this off?" (services.md §7) thus acquires a
 publish-time gate to go with its validity-time answer. Grades *record and gate*; they never
-schedule: deployability is judged by L146 alone, and rebinding an address's occupant within
+schedule: deployability is judged by ↯/l.1.46 alone, and rebinding an address's occupant within
 its selection is the gradeless transition-validity case, exactly as
 [`execution.md`](../design/execution.md) §9 recommended.
 
@@ -185,7 +185,7 @@ satisfied member (LIRA §13.7). A `route` pin on the consumer's deploy record na
 candidate binding of a group — its group being the section's one group with a member on the
 route's `module`, two such groups making the pin ambiguous — and that binding is then
 chosen; a route pins a binding, never a member. A `route` naming an address that is not a
-candidate of its group, or whose group is ambiguous, is invalid (**L148**): a pin states a
+candidate of its group, or whose group is ambiguous, is invalid (**↯/l.1.48**): a pin states a
 preference among satisfying options, never an escape from satisfaction. Routes live on deploy records — in
 the environment release, authored by the operator — and never in any release manifest, which
 would weld the release to one environment (execution.md §4); the route is the buildpath's
@@ -211,23 +211,23 @@ tools is the build's (LIRA §13.5).
 
 ## 7. Transitions
 
-Every change to an environment release's records is a transition, judged by **L146**
+Every change to an environment release's records is a transition, judged by **↯/l.1.46**
 (services.md §7): the posterior state — and, for rolling changes, the overlap state — must
 be valid. The record-level reading of the three shapes:
 
 - **Deploying** adds or replaces `deploy` rows (and, mid-rollout, two releases stand
-  transiently inside one binding's selection — L150's quantifier covers exactly them — a
+  transiently inside one binding's selection — ↯/l.1.50's quantifier covers exactly them — a
   successor of another lineage included where the selection admits it, which is the state a
   negotiated group exists to be judged in; a static consumer of the same binding objects,
   by name, and rightly).
-- **Rebinding** retargets a `binding` row. Its validity condition falls out of L145 with no
+- **Rebinding** retargets a `binding` row. Its validity condition falls out of ↯/l.1.45 with no
   new rule: every consumer whose requirement resolves to that address must be satisfied by
   the new occupant's selected releases. Same-module retargeting is patch-grade; retargeting
   to a different module is additionally a topology major (§5), so the interlock and the
   validity judgment fire together.
 - **Retiring** removes rows. Removing a binding or grant is valid only if no requirement
   resolves to it — closure names the objecting consumers — and is a topology major behind
-  L110's gate: the algebra requires the operator to *say* they mean it.
+  ↯/l.1.10's gate: the algebra requires the operator to *say* they mean it.
 
 ## 8. Drift and Liveness (Informative)
 

@@ -126,7 +126,8 @@ object Discipline:
       case Reason.Nondeterminism(detail) => m"the canonicalization is unstable: $detail"
 
   case class Error(discipline: Text, reason: Error.Reason)(using Diagnostics)
-  extends fulminate.Error(641, reason.number)(m"the discipline $discipline failed because $reason")
+  extends fulminate.Error(m"the discipline $discipline failed because $reason"):
+    override def bolt: fulminate.Bolt = fulminate.Bolt(Lira.letter, 2, 1, reason.number)
 
 // A named, versioned canonicalization procedure (§11): the single language-specific plug-in
 // point of the format. Atomization must be a pure function of the content's semantic model —
@@ -137,7 +138,7 @@ trait Discipline:
   def claims(path: TreePath, data: Data): Boolean
 
   // The three declarative requirements of §11.2. `domain` scopes the cross-section invariant
-  // (§9.6) and decides L127; `keying` and `guarantees` are contracts a discipline states and
+  // (§9.6) and decides ↯/l.1.27; `keying` and `guarantees` are contracts a discipline states and
   // this core takes on trust — neither is checkable by machine, and both change what a reader
   // may conclude from a grade (§12.4).
   def domain: Discipline.Domain

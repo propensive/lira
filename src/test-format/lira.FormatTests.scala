@@ -291,7 +291,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                     => false
       . assert(identity)
 
-      test(m"a truncated stream is a malformed payload, not an L103 violation"):
+      test(m"a truncated stream is a malformed payload, not an ↯/l.1.3 violation"):
         val stream = BlobStream.write(List(blobA, blobB))
         val short = Array.allocate[Byte](stream.length - 1)
         System.arraycopy(Array.unsafeJvm(stream), 0, short.raw, 0, stream.length - 1)
@@ -301,7 +301,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                    => false
       . assert(identity)
 
-      test(m"resolving an absent hash is an L104 error"):
+      test(m"resolving an absent hash is an ↯/l.1.4 error"):
         val store = BlobStream.read(BlobStream.write(List(blobA)))
 
         capture[Lira.Error](store.resolve(Lira.Hash(Lira.Hash.Domain.Blob, blobB).bytes)).reason match
@@ -323,7 +323,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         result.serialize[Hex] == stream.serialize[Hex]
       . assert(identity)
 
-      test(m"a payload longer than declared is an L102 error"):
+      test(m"a payload longer than declared is an ↯/l.1.2 error"):
         val compressed = Lira.Payload.compress(stream)
 
         capture[Lira.Error]
@@ -333,7 +333,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
             case _                                 => false
       . assert(identity)
 
-      test(m"a payload with the wrong declared hash is an L105 error"):
+      test(m"a payload with the wrong declared hash is an ↯/l.1.5 error"):
         val compressed = Lira.Payload.compress(stream)
         val wrong = Lira.Hash(Lira.Hash.Domain.Blob, encode(t"something else"))
 
@@ -434,14 +434,14 @@ object FormatTests extends Suite(m"LIRA format tests"):
         (overlay.entries.stdlib.size, delete.stdlib.size)
       . assert(_ == (0, 0))
 
-      test(m"a delete of an absent root path is L107"):
+      test(m"a delete of an absent root path is ↯/l.1.7"):
         capture[Lira.Error](Overlay.materialize(root, List(TreePath(t"absent")), Lira.Tree.empty))
         . reason match
             case Lira.Error.Reason.OverlayNotMinimal(_) => true
             case _                                     => false
       . assert(identity)
 
-      test(m"an overlay entry identical to the root is L107"):
+      test(m"an overlay entry identical to the root is ↯/l.1.7"):
         val overlay = Lira.Tree.of(List(entry(t"a/One.class", t"one")))
 
         capture[Lira.Error](Overlay.materialize(root, List(), overlay)).reason match
@@ -449,7 +449,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                     => false
       . assert(identity)
 
-      test(m"a deleted-and-re-added path is L107"):
+      test(m"a deleted-and-re-added path is ↯/l.1.7"):
         val overlay = Lira.Tree.of(List(entry(t"a/One.class", t"one-other")))
         val delete = List(TreePath(t"a/One.class"))
 
@@ -628,16 +628,16 @@ object FormatTests extends Suite(m"LIRA format tests"):
       val snapshot = Snapshot(base)
       val older = Snapshot(release(atom(t"a", Atom.Class.Rigid, t"1")))
 
-      test(m"a lineage ending in the release's snapshot passes L109"):
+      test(m"a lineage ending in the release's snapshot passes ↯/l.1.9"):
         Lineage.check(List(older, snapshot), snapshot)
         true
       . assert(identity)
 
-      test(m"a lineage not ending in the release's snapshot fails L109"):
+      test(m"a lineage not ending in the release's snapshot fails ↯/l.1.9"):
         capture[Lira.Error](Lineage.check(List(snapshot, older), snapshot)).reason
       . assert(_ == Lira.Error.Reason.LineageMismatch)
 
-      test(m"an empty lineage fails L109"):
+      test(m"an empty lineage fails ↯/l.1.9"):
         capture[Lira.Error](Lineage.check(List(), snapshot)).reason
       . assert(_ == Lira.Error.Reason.LineageMismatch)
 
@@ -657,7 +657,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         Versioning.extendLineage(List(older), older, Grade.Patch).stdlib.size
       . assert(_ == 1)
 
-      test(m"a major step without explicit request is refused (L110)"):
+      test(m"a major step without explicit request is refused (↯/l.1.10)"):
         capture[Lira.Error](Versioning.extendLineage(List(older), snapshot, Grade.Major)).reason
       . assert:
           case Lira.Error.Reason.UngradedSuccessor(_) => true
@@ -760,7 +760,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
       . assert(_ == (scala.List(t"r/exported.conf", t"r/tracked.json"),
           scala.List(Atom.Class.Rigid, Atom.Class.Replaceable), true, false))
 
-      test(m"a resource path declared twice is L124"):
+      test(m"a resource path declared twice is ↯/l.1.24"):
         import Lira.Manifest.{Resource, ResourceMode}
 
         capture[Lira.Error](ResourceDiscipline.check(List(
@@ -771,7 +771,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                               => false
       . assert(identity)
 
-      test(m"an export under a scanned directory is L124"):
+      test(m"an export under a scanned directory is ↯/l.1.24"):
         import Lira.Manifest.{Resource, ResourceMode}
 
         capture[Lira.Error](ResourceDiscipline.check(List(
@@ -826,7 +826,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
       . assert(_ == (scala.List(Lira.Manifest.ResourceMode.Export, Lira.Manifest.ResourceMode.Scan),
           scala.List(t"r/exported.conf"), true))
 
-      test(m"an export resolving to no item is L125"):
+      test(m"an export resolving to no item is ↯/l.1.25"):
         import Lira.Manifest.{Resource, ResourceMode}
 
         val claims = List(Resource(ResourceMode.Export, TreePath(t"r/absent.conf")))
@@ -841,7 +841,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         . reason
       . assert(_ == Lira.Error.Reason.IneffectiveResource(t"r/absent.conf"))
 
-      test(m"an export another discipline claims is L125"):
+      test(m"an export another discipline claims is ↯/l.1.25"):
         import Lira.Manifest.{Resource, ResourceMode}
 
         object Greedy extends Discipline:
@@ -915,7 +915,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           scala.List(t"new", t"old"), scala.List(t"old"),
           t"built against the rudiments 0.x line"))
 
-      test(m"two sections sharing a universe and integration are L131"):
+      test(m"two sections sharing a universe and integration are ↯/l.1.31"):
         val tree = Lira.Tree.of(List(TreeEntry(TreePath(t"a/A.class"), blob(classA).bytes)))
 
         val manifest = Lira.Manifest(
@@ -933,7 +933,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                  => false
       . assert(identity)
 
-      test(m"a section naming an undeclared integration is L131"):
+      test(m"a section naming an undeclared integration is ↯/l.1.31"):
         val manifest = Lira.Manifest(
           module      = t"example-core",
           lineage     = List(Snapshot(List())),
@@ -948,7 +948,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                  => false
       . assert(identity)
 
-      test(m"a declared integration with no section is L133"):
+      test(m"a declared integration with no section is ↯/l.1.33"):
         val manifest = Lira.Manifest(
           module      = t"example-core",
           lineage     = List(Snapshot(List())),
@@ -986,7 +986,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         sjsir.map { pair => pair(1).entries.map(_.path.text).stdlib }
       . assert(_ == scala.Some(scala.List(t"a/A.sjsir", t"a/A.tasty")))
 
-      test(m"a corrupted directive is L115"):
+      test(m"a corrupted directive is ↯/l.1.15"):
         // A mutable copy of the frozen bytes, to corrupt: the original is left as it is.
         val data: scala.Array[Byte] = Array.unsafeJvm(makeLira()).clone().nn
         data(0) = '?'.toByte
@@ -994,7 +994,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         capture[Lira.Error](Lira.read(Array.unsafeFrozen(data))).reason
       . assert(_ == Lira.Error.Reason.BadDirective)
 
-      test(m"a manifest with a sigil in its pragma is L116"):
+      test(m"a manifest with a sigil in its pragma is ↯/l.1.16"):
         val body = t"#!/usr/bin/env lira\ntel 1.0 ${Lira.Schemas.liraSignature} !\n\nmodule x\n##\n"
 
         capture[Lira.Error](Lira.read(encode(body))).reason match
@@ -1033,7 +1033,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                 => false
       . assert(identity)
 
-      test(m"a dangling atoms reference is L104"):
+      test(m"a dangling atoms reference is ↯/l.1.4"):
         val lira = Lira.read(makeLira())
         val wrong = List(Lira.Manifest.Api(t"opaque/1", blob(encode(t"absent"))))
         val tampered = lira.copy(manifest = lira.manifest.copy(api = wrong))
@@ -1043,7 +1043,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                               => false
       . assert(identity)
 
-      test(m"a lineage not ending in the snapshot is L109"):
+      test(m"a lineage not ending in the snapshot is ↯/l.1.9"):
         val lira = Lira.read(makeLira())
         val tampered = lira.copy(manifest = lira.manifest.copy(lineage = List(blob(encode(t"x")))))
 
@@ -1461,7 +1461,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
       val snapOne = Lira.Hash(Lira.Hash.Domain.Snapshot, encode(t"one"))
       val snapTwo = Lira.Hash(Lira.Hash.Domain.Snapshot, encode(t"two"))
 
-      test(m"two releases of one module are L111"):
+      test(m"two releases of one module are ↯/l.1.11"):
         val path = Buildpath(List(stub(t"alpha", List(snapOne)), stub(t"alpha", List(snapTwo))))
 
         capture[Lira.Error](path.validate(t"jvm")).reason match
@@ -1469,7 +1469,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                   => false
       . assert(identity)
 
-      test(m"nested namespace claims are L112"):
+      test(m"nested namespace claims are ↯/l.1.12"):
         val path = Buildpath(List(
           stub(t"alpha", List(snapOne), owns = List(t"gossamer")),
           stub(t"beta", List(snapTwo), owns = List(t"gossamer.text"))))
@@ -1487,7 +1487,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         path.validate(t"jvm").stdlib.size
       . assert(_ == 0)
 
-      test(m"an export path claimed by two modules is L126"):
+      test(m"an export path claimed by two modules is ↯/l.1.26"):
         import Lira.Manifest.{Resource, ResourceMode}
         val claim = List(Resource(ResourceMode.Export, TreePath(t"r/shared.conf")))
 
@@ -1498,7 +1498,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         capture[Lira.Error](path.validate(t"jvm")).reason
       . assert(_ == Lira.Error.Reason.ResourceClash(t"r/shared.conf"))
 
-      test(m"a scanned directory shared by two modules is exempt from L126"):
+      test(m"a scanned directory shared by two modules is exempt from ↯/l.1.26"):
         import Lira.Manifest.{Resource, ResourceMode}
         val claim = List(Resource(ResourceMode.Scan, TreePath(t"r/plugins")))
 
@@ -1509,7 +1509,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         path.validate(t"jvm").stdlib.size
       . assert(_ == 0)
 
-      test(m"an absent dependency is L113"):
+      test(m"an absent dependency is ↯/l.1.13"):
         val needy = stub(t"alpha", List(snapOne),
           deps = List(Lira.Manifest.Dependency(t"missing", snapTwo)))
 
@@ -1585,7 +1585,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         Buildpath(List(alpha, provider)).resolved(t"jvm")(0)(t"alpha")
       . assert(_ == t"new")
 
-      test(m"no satisfiable integration is L132"):
+      test(m"no satisfiable integration is ↯/l.1.32"):
         val provider = stub(t"beta", List(snapTwo))
 
         val alpha = stub(t"alpha", List(snapOne),
@@ -1618,7 +1618,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         Buildpath(List(needy, provider)).validate(t"jvm").stdlib.size
       . assert(_ == 0)
 
-      test(m"a span naming a snapshot the candidate does not carry is still L114"):
+      test(m"a span naming a snapshot the candidate does not carry is still ↯/l.1.14"):
         val provider = stub(t"beta", List(snapTwo))
         val other = Lira.Hash(Lira.Hash.Domain.Snapshot, encode(t"three"))
 
@@ -1641,7 +1641,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         Buildpath(List(alpha, provider)).resolved(t"jvm")(0)(t"alpha")
       . assert(_ == t"spanned")
 
-      test(m"a requirement outside the lineage is L114"):
+      test(m"a requirement outside the lineage is ↯/l.1.14"):
         val provider = stub(t"beta", List(snapTwo))
         val needy = stub(t"alpha", List(snapOne),
           deps = List(Lira.Manifest.Dependency(t"beta", snapOne)))
@@ -1697,11 +1697,11 @@ object FormatTests extends Suite(m"LIRA format tests"):
         path.byDerivative(derivative).let(_(0).module).or(t"absent")
       . assert(_ == t"alpha")
 
-      test(m"a development release is unpublishable (L117)"):
+      test(m"a development release is unpublishable (↯/l.1.17)"):
         capture[Lira.Error](Buildpath.publishable(stub(t"alpha", List(snapOne)), List())).reason
       . assert(_ == Lira.Error.Reason.VersionRequired)
 
-      test(m"a build pin is unpublishable (L118)"):
+      test(m"a build pin is unpublishable (↯/l.1.18)"):
         val pinned = stub(t"alpha", List(snapOne), version = Semver(0, 0, 0), deps = List(
           Lira.Manifest.Dependency(t"beta", snapTwo, build = blob(encode(t"pin")))))
 
@@ -1710,7 +1710,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                               => false
       . assert(identity)
 
-      test(m"an unpublished dependency is unpublishable (L119)"):
+      test(m"an unpublished dependency is unpublishable (↯/l.1.19)"):
         val needy = stub(t"alpha", List(snapOne), version = Semver(0, 0, 0),
           deps = List(Lira.Manifest.Dependency(t"beta", snapTwo)))
 
@@ -1719,7 +1719,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case _                                         => false
       . assert(identity)
 
-      test(m"a minor number defying the lineage is unpublishable (L120)"):
+      test(m"a minor number defying the lineage is unpublishable (↯/l.1.20)"):
         val wrong = stub(t"alpha", List(snapOne, snapTwo), version = Semver(1, 3, 0))
 
         capture[Lira.Error](Buildpath.publishable(wrong, List())).reason match
@@ -2064,7 +2064,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
           Discipline.Registry(List(Special)),
           toolchain = List(Lira.Manifest.Tool(t"scala", t"3.9.0")))
 
-      test(m"sections presenting different APIs are L108"):
+      test(m"sections presenting different APIs are ↯/l.1.8"):
         capture[Lira.Error]:
           LiraAssembler.assemble(t"example-core",
             List(
@@ -2078,7 +2078,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
             case _                                 => false
       . assert(identity)
 
-      test(m"a declared profile with no implementation refuses assembly, L140"):
+      test(m"a declared profile with no implementation refuses assembly, ↯/l.1.40"):
         capture[Lira.Error]:
           LiraAssembler.assemble(t"example-core",
             List(LiraAssembler.SectionInput(t"jvm", List((TreePath(t"a/A.class"), classA)))),
@@ -2096,7 +2096,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         true
       . assert(identity)
 
-      test(m"a tampered derivative hash is L138"):
+      test(m"a tampered derivative hash is ↯/l.1.38"):
         val lira = Lira.read(assembled())
         val report = Verification.install(lira)
 
@@ -2116,14 +2116,14 @@ object FormatTests extends Suite(m"LIRA format tests"):
         true
       . assert(identity)
 
-      test(m"a declared discipline with no implementation is L140 at re-atomization"):
+      test(m"a declared discipline with no implementation is ↯/l.1.40 at re-atomization"):
         val lira = Lira.read(assembled())
         val report = Verification.install(lira)
 
         capture[Lira.Error](Verification.reatomize(lira.manifest, report, List())).reason
       . assert(_ == Lira.Error.Reason.UnimplementedClaim(t"special/1"))
 
-      test(m"an atoms listing that does not recompute is L141"):
+      test(m"an atoms listing that does not recompute is ↯/l.1.41"):
         // The declared listing is computed over different bytes than the tree carries, which
         // `install` cannot see — the listing parses and the snapshot matches it — and only
         // re-atomization catches.
@@ -2247,7 +2247,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         (lira.manifest.hostContract, lira.manifest.section.stdlib.map(_.realm))
       . assert(_ == (true, scala.List(t"host")))
 
-      // L135's four exclusions, each on a hand-built manifest, since the assembler itself
+      // ↯/l.1.35's four exclusions, each on a hand-built manifest, since the assembler itself
       // refuses to produce one.
       def handBuilt
         ( integrations:  List[Lira.Manifest.Integration] = List(),
@@ -2292,21 +2292,21 @@ object FormatTests extends Suite(m"LIRA format tests"):
           case Lira.Error.Reason.BadHostContract(_) => true
           case _                                   => false
 
-      test(m"a host contract with a second section is L135"):
+      test(m"a host contract with a second section is ↯/l.1.35"):
         shapeFailure(handBuilt(extraSection = true))
       . assert(identity)
 
-      test(m"a host contract declaring an integration is L135"):
+      test(m"a host contract declaring an integration is ↯/l.1.35"):
         shapeFailure(handBuilt(
           integrations = List(Lira.Manifest.Integration(t"alt")), integrationId = t"alt"))
       . assert(identity)
 
-      test(m"a host contract declaring a dependency is L135"):
+      test(m"a host contract declaring a dependency is ↯/l.1.35"):
         shapeFailure(handBuilt(dependencies =
           List(Lira.Manifest.Dependency(t"other", blob(encode(t"snap"))))))
       . assert(identity)
 
-      test(m"a host contract carrying requirements is L135"):
+      test(m"a host contract carrying requirements is ↯/l.1.35"):
         shapeFailure(handBuilt(requires =
           List(Lira.Manifest.Requires(t"other", blob(encode(t"snap"))))))
       . assert(identity)
@@ -2386,7 +2386,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         Buildpath(List(lib)).validate(t"jvm", contracts = List(contract)).stdlib.size
       . assert(_ == 0)
 
-      test(m"an unsatisfiable requirement is L136"):
+      test(m"an unsatisfiable requirement is ↯/l.1.36"):
         val lib = library(List(Lira.Manifest.Requires(t"posix", snapA)))
         val contract = contractStub(t"posix", List(snapB))
 
@@ -2404,7 +2404,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
             case _                                 => false
       . assert(identity)
 
-      test(m"a requirement naming a library module is L137"):
+      test(m"a requirement naming a library module is ↯/l.1.37"):
         val lib = library(List(Lira.Manifest.Requires(t"other", snapA)))
         val other = library(List(), module = t"other")
         val contract = contractStub(t"posix", List(snapA))
@@ -2414,7 +2414,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         . reason
       . assert(_ == Lira.Error.Reason.NotHostContract(t"other"))
 
-      test(m"a non-contract given as a contract is L137"):
+      test(m"a non-contract given as a contract is ↯/l.1.37"):
         val lib = library(List(Lira.Manifest.Requires(t"posix", snapA)))
         val fake = library(List(), module = t"posix")
 
@@ -2500,7 +2500,7 @@ object FormatTests extends Suite(m"LIRA format tests"):
         Lira.read(bytes).manifest.tag.stdlib
       . assert(_ == scala.List(t"jdk-19", t"jdk-19.0.1"))
 
-      test(m"a tag carried by another release of the module is L142"):
+      test(m"a tag carried by another release of the module is ↯/l.1.42"):
         val earlier = release(t"jdk", List(t"jdk-19"), t"one", one)
         val later = release(t"jdk", List(t"jdk-19"), t"two", two)
 

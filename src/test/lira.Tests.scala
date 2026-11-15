@@ -271,7 +271,7 @@ object Tests extends Suite(m"LIRA tool tests"):
       . assert(_ == true)
 
       // RFC 7932 cannot tell a wrong base from the right one — the copies land at the same
-      // distances — which is why the result is verified by hash (increment.md §7, L155).
+      // distances — which is why the result is verified by hash (increment.md §7, ↯/l.1.55).
       test(m"A continuation against the wrong base decodes to the wrong bytes"):
         Priming.decode(pattern(4096, 8), continuation, Priming.Window, Priming.Block, next.length)
           . let(list(_)) != list(next)

@@ -44,7 +44,7 @@ import Lira.Error.Reason
 //   materialize(overlay) = (root − overlay.delete) ⊕ overlay.tree
 //
 // An overlay carries only content absent from, or differing from, the root; `diff` constructs
-// exactly that minimal overlay, and `materialize` refuses non-minimal input (L107), keeping
+// exactly that minimal overlay, and `materialize` refuses non-minimal input (↯/l.1.7), keeping
 // platform divergence visible in the manifest rather than buried in the payload.
 object Overlay:
 

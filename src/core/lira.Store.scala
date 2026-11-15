@@ -48,7 +48,8 @@ import logging.silentLogging
 // not hold. Corruption is never repaired silently: `fsck` quarantines, and everything else
 // aborts loudly.
 case class StoreError(detail: Text)(using Diagnostics)
-extends Error(m"store: $detail")
+extends Error(m"store: $detail"):
+  override def bolt: fulminate.Bolt = fulminate.Bolt(Lira.letter, 8, 2)
 
 // The content-addressed store of design/tool.md §2: `.lira` files are decomposed on ingest
 // into manifest bytes, the whole compressed payload, and loose blobs; canonical derivative

@@ -14,7 +14,7 @@ host requirements.*
 - The module body is the root section; `universe` blocks are overlays carrying only
   deltas (`source`, `include`/`exclude`, `require`/`obviate`) — §7, spec §9.3.
 - One release carries a section per universe under the cross-section invariant: one API
-  everywhere (L108).
+  everywhere (↯/l.1.8).
 - `scalac` is one tool with `jvm`, `sjsir` and `nir` edges; the target universe selects
   the edge, so nothing is configured per platform beyond the genuine differences —
   §14.2.
@@ -51,7 +51,7 @@ of my modules with it — eventually publishing the fork for others.*
   (`tool.tel`), atomized so edge changes are graded — §14.3.
 - Bootstrap is the §1 cache decision: a self-hosted compiler's stage0 is its own
   prebuilt release. Anything compiled by a development-release tool is build-pinned and
-  unpublishable until the tool publishes (the toolchain analogue of L118).
+  unpublishable until the tool publishes (the toolchain analogue of ↯/l.1.18).
 - Consequence: toolchains are recursively verifiable — independent rebuild applies to
   the compiler itself, enabling diverse double-compilation against trusting-trust.
 
@@ -132,7 +132,7 @@ checkout of it until the fix publishes.*
   a local checkout without touching identity — §9.
 - A dirty checkout resolves to a development release under a tree-hash source scheme;
   everything built against it carries build pins, so publication is blocked until
-  reconciled (L118) — divergence is quarantined, not forbidden.
+  reconciled (↯/l.1.18) — divergence is quarantined, not forbidden.
 - Same commit + same lockfile ⇒ same release identity on any machine: the local file
   cannot change what a release *is*, only where bytes come from.
 

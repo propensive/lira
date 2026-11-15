@@ -40,7 +40,7 @@ import Lira.Error.Reason
 
 // The resolved view of a blob stream: content addressed by hash. A hash referenced by the
 // manifest or by a metadata blob that resolves to nothing renders the file invalid (§8.2,
-// L104); unreferenced blobs are permitted, so `unreferenced` supports the advisory diagnostic
+// ↯/l.1.4); unreferenced blobs are permitted, so `unreferenced` supports the advisory diagnostic
 // rather than an error.
 class Blobstore(val blobs: List[Blob]):
   private lazy val index: Map[Text, Blob] =

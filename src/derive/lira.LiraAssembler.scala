@@ -47,7 +47,7 @@ import errorDiagnostics.emptyDiagnostics
 
 // The language-blind producer: given one body of content per section — the first is the root —
 // it atomizes every section under the discipline registry, enforces the cross-section API
-// invariant (L108), computes minimal overlays, derivative hashes, the snapshot and lineage, and
+// invariant (↯/l.1.8), computes minimal overlays, derivative hashes, the snapshot and lineage, and
 // assembles the complete `.lira` file. Everything here is deterministic for fixed inputs.
 object LiraAssembler:
 
@@ -97,9 +97,9 @@ object LiraAssembler:
 
     // Each section's content is atomized independently; the atom sets must be identical, as
     // (discipline, key, class, value hash), for the release to present one API on every universe
-    // and under every integration (L108). The classpath is a property of the section, since it
+    // and under every integration (↯/l.1.8). The classpath is a property of the section, since it
     // is exactly what distinguishes one integration from another.
-    // L124 before anything else: an ill-formed set of claims makes the partition ambiguous, so
+    // ↯/l.1.24 before anything else: an ill-formed set of claims makes the partition ambiguous, so
     // there is nothing sensible to atomize.
     ResourceDiscipline.check(resource)
 
@@ -117,10 +117,10 @@ object LiraAssembler:
         EcosystemProfile.Section
           (input.realm, input.content, input.integration, classpath(input))
 
-    // L125: an `export` or `track` declaration must be effective — a declared path that resolves
-    // to no item in any section, or that some other discipline claims, is an assembly-time
-    // error. A presence guarantee over nothing, or over content whose contract another
-    // discipline already carries, is never what the author meant.
+    // ↯/l.1.25: an `export` or `track` declaration must be effective — a declared path that
+    // resolves to no item in any section, or that some other discipline claims, is an assembly-time
+    // error. A presence guarantee over nothing, or over content whose contract another discipline
+    // already carries, is never what the author meant.
     val resourceDiscipline = ResourceDiscipline(resource)
 
     (resourceDiscipline.exports + resourceDiscipline.tracked).each: path =>
@@ -137,7 +137,7 @@ object LiraAssembler:
       if claimedByOther
       then abort(Lira.Error(Reason.IneffectiveResource(path.text)))
 
-    // L127: a declared discipline must atomize some universe this release carries. An
+    // ↯/l.1.27: a declared discipline must atomize some universe this release carries. An
     // atomization of nothing is not a claim about anything. The rule quantifies over the
     // *declared* disciplines: `resource/1` and `opaque/1` are the registry's own and universal,
     // so the question never arises for them.
@@ -237,12 +237,12 @@ object LiraAssembler:
           payload     = Lira.Manifest.Payload(t"brotli", 0L, Lira.Hash(Lira.Hash.Domain.Blob,
               Array.freeze(Array.allocate[Byte](0)))) )
 
-    // The producer never emits a file a consumer would reject: L131/L133/L135 are decidable
-    // from the manifest, so they are checked here rather than discovered at install time.
+    // The producer never emits a file a consumer would reject: ↯/l.1.31, ↯/l.1.33 and ↯/l.1.35 are
+    // decidable from the manifest, so they are checked here rather than discovered at install time.
     Verification.integrations(manifest)
     Verification.hostShape(manifest)
 
-    // L140: the assembler is about to sign every declared profile as a checked claim, so a
+    // ↯/l.1.40: the assembler is about to sign every declared profile as a checked claim, so a
     // declared profile it cannot check is refused outright — an unverifiable claim is worse
     // than an absent one (§16). This holds with or without a predecessor: implementability is
     // not a property of the step.
@@ -250,11 +250,11 @@ object LiraAssembler:
       if profiles(record.id).absent
       then abort(Lira.Error(Reason.UnimplementedClaim(record.id)))
 
-    // L128/L130. Profile predicates are diachronic, so they can only run where the caller has the
-    // predecessor's content in hand; with no predecessor there is no step to check, which is the
-    // ordinary case for the first release of a lineage. The audit runs against the assembled
-    // manifest because a profile may impose predicates over `toolchain` records (§13.3), and it
-    // runs before signing, so nothing unverified is ever signed.
+    // ↯/l.1.28 and ↯/l.1.30. Profile predicates are diachronic, so they can only run where the
+    // caller has the predecessor's content in hand; with no predecessor there is no step to check,
+    // which is the ordinary case for the first release of a lineage. The audit runs against the
+    // assembled manifest because a profile may impose predicates over `toolchain` records (§13.3),
+    // and it runs before signing, so nothing unverified is ever signed.
     predecessor.let: previous =>
       val evidence = EcosystemProfile.Evidence(profileSections, manifest)
       val audit = EcosystemProfile.audit(profiles, profile, previous, evidence)
