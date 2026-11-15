@@ -104,7 +104,7 @@ object Derivative:
   def hash(tree: Lira.Tree, store: Blobstore): Lira.Hash raises Lira.Error =
     Lira.Hash(Lira.Hash.Domain.Derivative, jar(tree, store))
 
-  // §16 step 3 (L138): every declared derivative hash must recompute from the section's
+  // §16 step 3 (↯/a.1.38): every declared derivative hash must recompute from the section's
   // materialized tree. Sections of unknown universes are never materialized (§9.4), so a
   // declared derivative there stays unchecked here, exactly as the rest of the section does.
   def verify(manifest: Lira.Manifest, report: Verification.Report): Unit raises Lira.Error =

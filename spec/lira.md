@@ -76,6 +76,18 @@ The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **
 NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** in this document are to be interpreted as
 described in RFC 2119 and RFC 8174 when, and only when, they appear in all capitals.
 
+Each rule whose violation makes a file, a release or a buildpath invalid is identified by a
+**bolt code**: `↯/a.1.`, and the number of the rule, as in **↯/a.1.8**. `a` is the letter by
+which bolt codes name LIRA, and `1` the subdivision of its codes which this specification and
+its companions ([`hosts.md`](hosts.md), [`environments.md`](environments.md),
+[`increment.md`](increment.md) and the others) define together. Each rule is given its code at
+the point where its condition is defined. A code is permanent: a number is never reused for
+another rule, and a rule which is withdrawn keeps its number, as reserved. The record of LIRA's
+codes is `a.tel` in the [bolt](https://github.com/propensive/bolt) registry. An implementation
+which rejects a file SHOULD report the code of the rule it found violated; one which reports an
+error of its own on account of a rule MAY carry the rule's code after its own, separated by
+`/`.
+
 ## 3. Normative Dependencies
 
 - **TEL** ([tel.md](https://github.com/propensive/tel/blob/main/spec/tel.md)) — the manifest's semantic model, schema language, and canonical text rendering (TEL §22.3).
@@ -275,7 +287,7 @@ A `.lira` file consists of, in order:
 
 Because the manifest opens with BinTEL's own external-schema magic `βτελ`, the first eight
 bytes of every `.lira` file are fixed: `B2 B9 B2 BB B2 C4 B5 BB` — `βιβλβτελ` under
-BASE-256. A file that does not begin with these eight bytes is invalid (**L115**) — a
+BASE-256. A file that does not begin with these eight bytes is invalid (**↯/a.1.15**) — a
 self-contained-mode manifest (`βτεμ`) included, since the composed schema is a published
 constant, never the file's to supply (§5.2). Every byte of the header is at or above `0x80`,
 so a `.lira` file cannot be mistaken for ASCII or UTF-8 text; and the LIRA magic, distinct
@@ -291,8 +303,8 @@ schema-independent boundary. A reader MUST obtain the manifest by decoding one B
 document from the fifth byte, treating the first unconsumed byte as the start of the
 payload rather than as a framing error: BinTEL's trailing-bytes rule is LIRA's to apply,
 and LIRA applies the payload's own rules to it (§8). A file whose manifest does not decode,
-or decodes to a document not conforming to the `lira` schema, is invalid (**L101**); a file
-that ends at or before the end of its manifest carries no payload and is invalid (**L116**).
+or decodes to a document not conforming to the `lira` schema, is invalid (**↯/a.1.1**); a file
+that ends at or before the end of its manifest carries no payload and is invalid (**↯/a.1.16**).
 
 ### 5.2 Schema Resolution
 
@@ -305,7 +317,7 @@ from the registry that served the file. A reader resolves the signature against 
 it holds; a signature it cannot resolve makes the file **unreadable to that reader**, who
 MUST fail, naming the signature, rather than guess. Unreadable is not invalid: the file may
 conform perfectly to a schema the reader has yet to obtain. A registry MUST NOT accept a
-release whose composed schema it does not hold (§16, **L140**), so the registry that serves
+release whose composed schema it does not hold (§16, **↯/a.1.40**), so the registry that serves
 a file can always serve, or name, the layers reading it needs.
 
 ### 5.3 Presentation and Media Type
@@ -383,7 +395,7 @@ never collide: `lira/1:leaf` and `lira/1:node` (the transparency log, distributi
 distribution records, tool.md §2.2 — distinct from `lira/1:manifest`, which hashes the
 canonical signing encoding and so identifies content rather than bytes). One companion
 deliberately reserves none: an increment ([`increment.md`](increment.md)) has no identity
-(**L156**) and is designated by the two payload hashes it connects.
+(**↯/a.1.56**) and is designated by the two payload hashes it connects.
 
 ## 8. Payload
 
@@ -399,15 +411,15 @@ recorded in the manifest (§14) — but no particular encoder's output is normat
 producers: cross-implementation bit-reproduction of a `.lira` file requires the same producer
 toolchain (§17). Readers MUST enforce `payload.length` (the declared decompressed size, §14)
 as a hard limit during decompression and MUST reject a payload whose decompressed length is
-not exactly the declared value (**L102**) — the upper bound is what bounds
+not exactly the declared value (**↯/a.1.2**) — the upper bound is what bounds
 decompression-bomb exposure. A payload whose compressed bytes do not decode as a Brotli stream
-is malformed (**L139**).
+is malformed (**↯/a.1.39**).
 
 A release MAY also be transferred as an **increment** relative to a release the receiver
 already holds ([`increment.md`](increment.md)): a file carrying this manifest verbatim and a
 command stream that reconstructs this blob stream from the other's, changed blobs compressed
 in the context of their predecessors. What it yields is the decompressed blob stream, verified
-under this section and §8.2–§8.4 as any payload is (**L155**); the receiver's own envelope
+under this section and §8.2–§8.4 as any payload is (**↯/a.1.55**); the receiver's own envelope
 over it is as good as the publisher's, which is exactly what this section's indifference to
 compressed bytes provides for.
 
@@ -421,12 +433,12 @@ record = uvarint(length) ++ bytes
 
 where `uvarint` is unsigned LEB128. Each record's bytes constitute one blob. The blob's identity
 is `hash("lira/1:blob", bytes)`. A record whose length prefix is not a well-formed uvarint, or
-which overruns the end of the stream, renders the payload malformed (**L139**). Records MUST be
+which overruns the end of the stream, renders the payload malformed (**↯/a.1.39**). Records MUST be
 sorted in ascending bytewise order of their blob hashes, and no two records may have equal
-hashes (**L103**). Blob hashes are not stored in
+hashes (**↯/a.1.3**). Blob hashes are not stored in
 the stream: a reader recomputes them while scanning, and this recomputation is the integrity
 check. A blob referenced anywhere in the manifest or in a metadata blob that is absent from the
-stream renders the file invalid (**L104**); unreferenced blobs are permitted but producers
+stream renders the file invalid (**↯/a.1.4**); unreferenced blobs are permitted but producers
 SHOULD NOT emit them.
 
 Content occurring in multiple sections is therefore stored exactly once, addressed by hash.
@@ -446,7 +458,7 @@ Metadata blobs are ordinary blobs: content-addressed, deduplicated, and hashed u
 `lira/1:blob`. External-schema mode is the format's only mode (§5.1), and for metadata blobs
 resolution is even simpler than §5.2's: the four schemas are normative constants of §14, so
 a reader compares a blob's schema signature against four known values; a blob whose
-signature matches none of them is malformed (**L139**). Pinning one mode is also what keeps
+signature matches none of them is malformed (**↯/a.1.39**). Pinning one mode is also what keeps
 blob identity canonical — the two modes differ in bytes, and one document with two hashes
 would defeat deduplication (§8.2) and the determinism of §17. Blobs remain inspectable on
 §5.3's terms: any conforming tool renders one as canonical TEL text.
@@ -454,7 +466,7 @@ would defeat deduplication (§8.2) and the determinism of §17. Blobs remain ins
 ### 8.4 Payload Hash
 
 `payload.hash` is `hash("lira/1:blob", decompressed-payload)` — the blob-domain hash of the
-entire decompressed blob stream. A reader MUST verify it after decompression (**L105**).
+entire decompressed blob stream. A reader MUST verify it after decompression (**↯/a.1.5**).
 
 ## 9. Sections
 
@@ -490,7 +502,7 @@ entry gossamer/Text.tasty       Cd34…
 Paths MUST be relative, `/`-separated, contain no empty, `.` or `..` segments, and be unique
 within a tree; no entry's path may extend another entry's path by a further `/`-separated
 segment — one name cannot be both a content item and a directory; and rows MUST be sorted in
-ascending bytewise UTF-8 order of path (**L106**). A tree lists content items only:
+ascending bytewise UTF-8 order of path (**↯/a.1.6**). A tree lists content items only:
 directories exist exactly insofar as paths pass through them, and have no entries of their
 own (compare Appendix C, whose archives likewise carry none). Readers
 MUST reject trees violating these rules — the path rules exclude directory-traversal attacks by
@@ -509,7 +521,7 @@ path. An overlay's tree therefore contains only content that is absent from, or 
 the root — platform-specific IR and divergent files. Content identical to the root is carried
 once, by the root. A `delete` path not present in the root; an overlay entry whose path and
 blob both equal a root entry; or a path appearing in both `delete` and the overlay's tree (a
-replacement spelled redundantly) — each is invalid (**L107**): overlays are minimal by
+replacement spelled redundantly) — each is invalid (**↯/a.1.7**): overlays are minimal by
 construction, which makes divergence between platforms _visible_ in the manifest rather than
 buried in the payload.
 
@@ -547,10 +559,10 @@ variant to the library-section universe select (§14, TEL §8.2).
 
 A `host` section holds a **host contract**'s content — the carrier of a runtime environment's
 capability interface — and a release carrying one is a host contract rather than a library.
-The shape is the schema's (**L135**, discharged by construction under §14): the `host` kind
+The shape is the schema's (**↯/a.1.35**, discharged by construction under §14): the `host` kind
 admits exactly one section and no integration, dependency or `requires` records, and no other
 kind admits a `host` section — a violating manifest is not a strange release but a
-non-conforming document (L101). Host sections
+non-conforming document (↯/a.1.1). Host sections
 are never materialized onto any artifact path (§13.5). The full treatment — what a host contract
 is, how libraries require one, and how requirements are satisfied — is the companion document
 [`hosts.md`](hosts.md).
@@ -561,7 +573,7 @@ artifact lives natively in another content-addressed store, as a container image
 OCI registry (the `artifact` field, §14). A pinned section's tree still carries the release's
 ancillary content — its interface descriptions (below) and probe metadata — never a copy of
 the artifact itself. A release carrying an `app` section is a deployable release, and its
-shape too is the schema's (**L143**, discharged by construction): the `app` kind admits only
+shape too is the schema's (**↯/a.1.43**, discharged by construction): the `app` kind admits only
 `app` sections and no `dependency` records. It MAY declare integrations — one `app`
 section per integration, naming the alternative build contexts of the egresses that produced the
 artifacts — one deliverable per operating system is the canonical case, the per-OS `app`
@@ -574,12 +586,12 @@ of scope (§18). Its `app`
 sections carry `requires` records freely — indeed those records are much of its point, since
 what a closed artifact asks of its environment is the whole of its remaining need. And,
 symmetrically, other modules' `requires` records may name a deployable module exactly as they
-name a host contract (§13.3, **L137**): host contracts and deployable releases are this
+name a host contract (§13.3, **↯/a.1.37**): host contracts and deployable releases are this
 specification's two kinds of **provider** — the capability an environment is _granted_, and the
 capability _deployed into_ it — recognizable by their `host` and `app` sections respectively.
 
 Content in an `app` or `env` section that no declared discipline claims is claimed
-**atomless** rather than falling to `opaque/1` (**L144**). The asymmetry with universe
+**atomless** rather than falling to `opaque/1` (**↯/a.1.44**). The asymmetry with universe
 sections is principled: a universe section's content is interface-bearing by default, because
 consumers compile against it; an `app` section's content is closed by default, because
 nothing consumes its bytes as interface, and those bytes are already covered by
@@ -604,7 +616,7 @@ companion document [`services.md`](services.md).
 
 An `env` section marks an **environment release**: the operator-signed statement of one
 environment's desired state (§13.7, [`environments.md`](environments.md)). Its shape is
-likewise the schema's (**L148**, discharged by construction): the `env` kind admits exactly
+likewise the schema's (**↯/a.1.48**, discharged by construction): the `env` kind admits exactly
 one section, no integration, dependency or `requires` records — a `grant` record (§14) states
 provision, not requirement, and is read by environment closure from the provision side — and
 alone admits the `grant`, `deploy`
@@ -615,8 +627,8 @@ where every judgment input in this specification lives. An `env` section's tree 
 ancillary content — probe metadata, operator notes — and MAY be empty. An environment
 release declares `environment/1` (§11.3), whose atoms are its bindings and grants; and an
 environment module is _neither kind of provider_ — it carries no `host` and no `app` section
-— so no `requires` record can name one (**L137**) and no environment is ever a dependency
-(**L147**): environments are judged and consulted, never composed against.
+— so no `requires` record can name one (**↯/a.1.37**) and no environment is ever a dependency
+(**↯/a.1.47**): environments are judged and consulted, never composed against.
 
 ### 9.5 Integrations
 
@@ -628,12 +640,12 @@ different `requires` (§9.4, hosts.md §6). Each such alternative is an **integr
 declared by an `integration` record (§14) with an identifier unique within the release.
 
 Sections are keyed by realm **and** integration: a section names the integration it realizes,
-and no two sections may share a (realm, integration) pair (**L131**). Where a release
-declares any integration, _every_ section MUST name one (also **L131**): an unlabelled section
+and no two sections may share a (realm, integration) pair (**↯/a.1.31**). Where a release
+declares any integration, _every_ section MUST name one (also **↯/a.1.31**): an unlabelled section
 beside declared integrations belongs to no cell of the matrix and is ambiguous, not implicit. A release therefore
 carries a matrix of sections, one per universe per integration, though it need not be full — a
 universe may be offered under only some integrations. Every declared integration MUST have at
-least one section (**L133**); an integration realized by nothing is a build context no
+least one section (**↯/a.1.33**); an integration realized by nothing is a build context no
 content was ever built in.
 
 Dependency records are scoped to integrations exactly as they are scoped to universes (§13.2), so
@@ -663,7 +675,7 @@ to a version difference.
 ### 9.6 Cross-Section API Invariant
 
 For each discipline, atomizing the **claimed** content (§11.2) of every section MUST yield an
-identical atom set (**L108**): a release presents one API on every universe it supports and under
+identical atom set (**↯/a.1.8**): a release presents one API on every universe it supports and under
 every integration it offers. Implementations may differ per universe and per integration;
 interfaces may not. Producers MUST verify this at assembly time by atomizing each section's
 materialized tree independently and comparing; the
@@ -697,21 +709,21 @@ whose contents are deliberately non-contractual — contributes nothing to any u
 atom set, which is what permits universes to diverge in implementation without violating the
 invariant. Content claimed by no discipline falls to `opaque/1` in universe
 sections — and must therefore be byte-identical across the universes that carry it — and is
-atomless in `app` sections (**L144**, §9.4), where it may diverge freely across integrations.
+atomless in `app` sections (**↯/a.1.44**, §9.4), where it may diverge freely across integrations.
 
 The invariant is also scoped to the discipline's **domain** (§11.2) — the universes it atomizes
 at all. A discipline may be **universal**, atomizing a representation carried in every universe
-the release supports (`tasty/2` is the motivating case, and enforcing L108 across its whole
+the release supports (`tasty/2` is the motivating case, and enforcing ↯/a.1.8 across its whole
 domain is the point of it), or **universe-specific**, atomizing a representation that exists in
 one universe only. A bytecode-level discipline over classfiles has no counterpart in `sjsir` or
 `nir`; for it the invariant is vacuous, not violated. Claiming nothing and claiming atomless are
 distinct: the latter is a discipline's decision about content it covers, the former means the
 universe is outside its domain entirely. Without this scoping a universe-specific discipline
 could never be declared at all, since it would atomize to the empty set everywhere outside its
-domain and no release could satisfy an unqualified L108.
+domain and no release could satisfy an unqualified ↯/a.1.8.
 
 A release MUST NOT declare an `api` record whose discipline's domain is disjoint from the
-realms it carries sections for (**L127**): an atomization of nothing is not a claim about
+realms it carries sections for (**↯/a.1.27**): an atomization of nothing is not a claim about
 anything, and admitting one would let a release appear to be checked under a discipline that
 never examined it.
 
@@ -864,8 +876,8 @@ A discipline defines, deterministically:
    interface), or content deliberately outside the API surface (scanned resource directories,
    §11.4). Claiming partitions each section's materialized tree: every content item has exactly
    one claimant, determined by **first match** over the release's `api` records in manifest
-   order, then `resource/1`, then the `opaque/1` fallback (**L134**) — except in an `app`
-   section, where the final fallback is atomless rather than `opaque/1` (**L144**, §9.4). The
+   order, then `resource/1`, then the `opaque/1` fallback (**↯/a.1.34**) — except in an `app`
+   section, where the final fallback is atomless rather than `opaque/1` (**↯/a.1.44**, §9.4). The
    order of `api` records
    is therefore semantic, and producers MUST order them so that each item is claimed by the
    discipline that carries its contract — [`classfile.md`](classfile.md) §4 is the case that
@@ -990,7 +1002,7 @@ This specification and its companion documents register the following discipline
   deliberately **not** the selection (the `probe`-field precedent, hosts.md §5), and one per
   grant, covering the module name only — so an environment's lineage is the history of its
   _topology_: additions are minors, and removing an address, retargeting it to a different
-  module, or withdrawing a grant is a major, behind **L110**'s explicit-major gate. Deploys,
+  module, or withdrawing a grant is a major, behind **↯/a.1.10**'s explicit-major gate. Deploys,
   selections and routes enter no atom and change at patch grade.
 - **`tels/2`** (informative here; normative specification in [`tels.md`](tels.md)): the TEL
   schema discipline, for releases whose content is a TEL schema document — including the
@@ -1033,15 +1045,15 @@ Each `resource` record declares one path in one of three modes:
   adding an export is a minor event and removing one is major (§12.3); editing the content is
   invisible to the algebra — a patch — because resource content is behavior, and no discipline
   certifies behavior (§18). Because the atom is content-independent, the cross-section
-  invariant (**L108**) permits an exported resource's bytes to differ per universe while
+  invariant (**↯/a.1.8**) permits an exported resource's bytes to differ per universe while
   automatically requiring the _path_ to be present in every universe: a universe lacking it
-  atomizes to a smaller set and fails L108.
+  atomizes to a smaller set and fails ↯/a.1.8.
 - **`track`** — as `export`, but the item yields one **replaceable** atom whose canonical
   encoding is the item's bytes, with an empty reference list (resources create no linkage, so
   replaceability soundness is trivial). Tracking is for resources consumers read at _their_
   compile time — a schema a macro bakes into generated code, say — where a content change is
   exactly replaceable churn: a minor event that marks consumers whose used-sets contain the
-  atom as stale (§13.4). L108 consequently requires tracked content to be byte-identical
+  atom as stale (§13.4). ↯/a.1.8 consequently requires tracked content to be byte-identical
   across universes.
 - **`scan`** — every tree item whose path has the declared path plus `/` as a prefix is claimed
   **atomless**. Scanned directories hold content that consumers _enumerate_ rather than name —
@@ -1049,13 +1061,13 @@ Each `resource` record declares one path in one of three modes:
   removals and edits under a scanned directory are patch-grade, and content may diverge freely
   per universe (§9.6). A scanned directory may be empty, in any or all universes.
 
-Declarations MUST be well-formed (**L124**): no path may be declared twice, and an `export` or
+Declarations MUST be well-formed (**↯/a.1.24**): no path may be declared twice, and an `export` or
 `track` path MUST NOT lie under a declared `scan` directory, so the partition of §11.2 has a
-single claimant by construction. In the claiming order (**L134**, §11.2), `resource/1` follows
+single claimant by construction. In the claiming order (**↯/a.1.34**, §11.2), `resource/1` follows
 every `api`-record discipline and precedes the `opaque/1` fallback: an item under a `scan`
 directory that a language discipline claims goes to that discipline, and the remainder are
 atomless. An
-`export` or `track` declaration, by contrast, MUST be effective (**L125**): a declared path
+`export` or `track` declaration, by contrast, MUST be effective (**↯/a.1.25**): a declared path
 that another discipline claims, or that resolves to no item in any universe's materialized
 tree, is an assembly-time error — a presence guarantee over nothing, or over content whose
 contract another discipline already carries, is never what the author meant.
@@ -1111,13 +1123,13 @@ version on any change to a predicate. A profile may:
    ecosystem needs are the motivating case;
 3. certify a guarantee level (§11.5) that the release's disciplines do not.
 
-Profiles MUST NOT weaken any requirement of this specification (**L129**). They add predicates
+Profiles MUST NOT weaken any requirement of this specification (**↯/a.1.29**). They add predicates
 and they add guarantees; they never subtract. A file rejected by the core is rejected under every
 profile, and a grade forbidden by §12.3 is forbidden under every profile.
 
 A release declares the profiles it claims to satisfy in its `profile` records (§14). The claim is
 verifiable, not decorative: a release that declares a profile whose predicates it violates is
-invalid (**L128**), and a registry MUST check declared profiles before accepting a release
+invalid (**↯/a.1.28**), and a registry MUST check declared profiles before accepting a release
 (§16), exactly as it checks disciplines. A release declaring no profile makes no
 ecosystem-specific claim and is graded by the core algebra alone.
 
@@ -1153,7 +1165,7 @@ content at two paths) contribute one 32-byte term.
 ### 12.2 Lineage
 
 The manifest's `lineage` field lists the **distinct** snapshots of the module's releases in one
-major series, oldest first; the final entry MUST equal the release's own snapshot (**L109**). A
+major series, oldest first; the final entry MUST equal the release's own snapshot (**↯/a.1.9**). A
 patch release (below) shares its predecessor's snapshot and therefore appends nothing: the
 lineage is the sequence of the series' _API states_, not of its releases. The lineage is the
 module's verifiable version history: every compatibility question in this specification reduces
@@ -1172,7 +1184,7 @@ Between a release `A` and its immediate successor `B` in a lineage:
 - Anything else — any rigid removal or change, any replaceable removal whose introducing
   declaration survives — MUST NOT be published into the same lineage; it is a **major** event
   beginning a new lineage. Publishing tools MUST refuse to extend a lineage with a non-conforming successor
-  (**L110**) unless the operator explicitly requests a major.
+  (**↯/a.1.10**) unless the operator explicitly requests a major.
 
 Each lineage step SHOULD be accompanied by a **Delta metadata blob** recording the added atoms
 and the replaced replaceable atoms of that step. Deltas make staleness computable (§13.4) and
@@ -1189,7 +1201,7 @@ intact.
 
 Instead the release records the shortfall. A release whose lineage step satisfies §12.3 but whose
 predecessor's guarantees are not preserved at some level a declared profile certifies MUST list
-that level in the profile record's `breaks` field (**L130**). The reading of
+that level in the profile record's `breaks` field (**↯/a.1.30**). The reading of
 
 ```text
 profile
@@ -1226,7 +1238,7 @@ identified purely by its hashes: the snapshot is its API identity and `payload.h
 implementation identity. Development releases are complete, verifiable `.lira` files; what they
 lack is only the assignment below. Other modules may depend on them during development,
 optionally pinning the exact build (§13.2); such dependents are themselves unpublishable until
-the pin is lifted (**L118**).
+the pin is lifted (**↯/a.1.18**).
 
 **Version assignment.** Publishing a release is the act of assigning it the next version
 number the algebra dictates, and signing the result:
@@ -1235,7 +1247,7 @@ number the algebra dictates, and signing the result:
    (a first release is assigned `1.0.0` with a fresh single-entry lineage);
 2. derive the version — patch increments `z`, minor increments `y` and zeroes `z`, and an
    explicitly-requested major increments `x` and zeroes both;
-3. extend the lineage per §12.2 and §12.3 (**L110**);
+3. extend the lineage per §12.2 and §12.3 (**↯/a.1.10**);
 4. re-sign the manifest (§15).
 
 The payload is untouched, so assignment never rebuilds and the implementation identity is
@@ -1245,15 +1257,15 @@ projection of it.
 
 **Publication rules.** A publishing tool MUST refuse to publish a manifest that:
 
-- carries no version, a non-numeric one, or one with major `0` (**L117**): versions begin at
+- carries no version, a non-numeric one, or one with major `0` (**↯/a.1.17**): versions begin at
   `1.0.0`, so every published version carries semantic versioning's stable-series guarantees —
   the 0-series convention, in which the minor also carries breaking steps, is a semver
   exception this specification does not admit, development state being already expressed by
   the version's absence;
-- pins any dependency to a `build` (**L118**);
+- pins any dependency to a `build` (**↯/a.1.18**);
 - requires a snapshot that appears in no _published_ release's lineage for that module
-  (**L119**);
-- carries a minor number that is not the count of minor steps in its lineage (**L120**).
+  (**↯/a.1.19**);
+- carries a minor number that is not the count of minor steps in its lineage (**↯/a.1.20**).
 
 Consumers still make every decision on hashes: to a consumer the version remains a
 human-readable projection, and any disagreement it observes (for example, a dependency's
@@ -1278,9 +1290,9 @@ Each `tag` field names one tag (§14; the `tag-name` scalar). Tags are:
   other. There is no separate tag object to distribute or verify.
 - **unique and immutable**: within one module, a tag names exactly one release, forever. A
   publishing tool MUST refuse to publish a release carrying a tag that any already-published
-  release of the module carries (**L142**), and re-signing a release's manifest (as assignment
+  release of the module carries (**↯/a.1.42**), and re-signing a release's manifest (as assignment
   does, §12.5) MAY add tags but MUST NOT remove or alter one a published manifest for the same
-  release carries (also **L142**).
+  release carries (also **↯/a.1.42**).
 - **without algebraic authority**: nothing in §12 or §13 reads a tag. A consumer or authoring
   tool MAY resolve a tag to the tagged release's snapshot — for writing a `dependency` or
   `requires` record by name — but what the record carries, and what satisfaction is decided
@@ -1333,15 +1345,15 @@ A dependency record MAY additionally carry:
   integration.
 - **`build`**, a development-time pin to an exact implementation identity (§6): the candidate
   must additionally have exactly that `payload.hash`. Build pins express "this exact unpublished
-  build" during development; a manifest carrying one is itself unpublishable (**L118**, §12.5).
+  build" during development; a manifest carrying one is itself unpublishable (**↯/a.1.18**, §12.5).
 
 A `dependency` record naming a module whose releases are not library releases — host
-contracts, deployable releases, or environments (§9.4) — is invalid (**L147**): nothing of a
+contracts, deployable releases, or environments (§9.4) — is invalid (**↯/a.1.47**): nothing of a
 provider composes onto a buildpath, the correct edge for a provider is `requires`, and no
 edge at all names an environment.
 
 The `build` pin's prohibition is scoped to this axis, and the boundary is worth stating:
-**L118** governs _dependencies_, where a pin is development coupling and satisfaction must
+**↯/a.1.18** governs _dependencies_, where a pin is development coupling and satisfaction must
 remain lineage-decidable for future composition. A `deploy` or `binding` record's pin
 (§13.7, [`environments.md`](environments.md)) is a different kind of claim — desired-state
 exactness about a closed artifact that composes into nothing, on the `artifact`-pin
@@ -1366,23 +1378,23 @@ the target's primary universe, unless the dependency records that name the relea
 following hold, and each is decidable from manifests alone. Closure and compatibility quantify
 over the dependency records _applicable to the universe a release serves and to its assigned
 integration_ (§13.2); uniqueness, namespace disjointness and resource disjointness are global. A
-buildpath is **valid for a target** iff some assignment makes it so (**L132**).
+buildpath is **valid for a target** iff some assignment makes it so (**↯/a.1.32**).
 
-1. **Uniqueness**: at most one release per module name (**L111**).
+1. **Uniqueness**: at most one release per module name (**↯/a.1.11**).
 2. **Namespace disjointness**: the `owns` claims (namespaces such as packages, per-ecosystem
    interpretation) of distinct modules are pairwise disjoint — a namespace and any dotted
-   extension of it clash (**L112**).
+   extension of it clash (**↯/a.1.12**).
 3. **Resource disjointness**: the `export` and `track` resource paths (§11.4) of distinct
-   modules are pairwise disjoint (**L126**), so a classpath-style resource reference resolves
+   modules are pairwise disjoint (**↯/a.1.26**), so a classpath-style resource reference resolves
    to exactly one module. `scan` directories are exempt — cross-module aggregation under a
    shared directory is their purpose.
-4. **Closure**: every module named by an applicable `dependency` record is present (**L113**).
+4. **Closure**: every module named by an applicable `dependency` record is present (**↯/a.1.13**).
    A dependency carrying `serves` additionally requires the named universe to be in the target
    and the candidate to carry a section in it: a join edge to a universe the target does not
    include, or to content the candidate does not offer, fails closure exactly as an absent
    module does.
 5. **Compatibility**: every applicable dependency requirement is satisfied per §13.2,
-   including any build pin (**L114**). Diamond dependencies resolve by construction:
+   including any build pin (**↯/a.1.14**). Diamond dependencies resolve by construction:
    requirements on two snapshots of one module are jointly satisfiable iff some published
    lineage contains both — the incompatible-major case is exactly the case where none does.
 6. **Profile coherence**: every ecosystem profile (§11.6) declared by any release on the
@@ -1395,7 +1407,7 @@ buildpath is **valid for a target** iff some assignment makes it so (**L132**).
 7. **Host requirements**: when the target names host contracts, every `requires` record of
    every selected section — the section chosen by each release's served universe and assigned
    integration (§13.5) — that names a host-contract module is satisfied per
-   [`hosts.md`](hosts.md) §7 (**L136**): the required snapshot appears in the lineage of the
+   [`hosts.md`](hosts.md) §7 (**↯/a.1.36**): the required snapshot appears in the lineage of the
    target's contract for that module, or the requirement's used-set is contained in a target
    contract's atom set (spanning, §13.4, including across modules per hosts.md §7);
    requirements on one module from several releases are jointly judged per hosts.md §10.
@@ -1411,7 +1423,7 @@ buildpath is **valid for a target** iff some assignment makes it so (**L132**).
    preference, not a need: it is excluded from this rule and from aggregation, and resolves
    to nothing, which provisioning and probing report rather than fail. A
    `requires` record naming a module whose releases are neither host contracts nor deployable
-   releases (§9.4) is invalid (**L137**) — an environment release, carrying neither a `host`
+   releases (§9.4) is invalid (**↯/a.1.37**) — an environment release, carrying neither a `host`
    nor an `app` section, is neither kind, so no requirement ever names an environment. A requirement naming a _deployable_ module is not a
    buildpath fact at all: it is left **pending** here and judged at environment validity
    (§13.7, [`services.md`](services.md) §6), since which release of a service is present is a
@@ -1458,7 +1470,7 @@ integrations in (`rank`, `id`) order whose own dependencies hold. That is linear
 number of integrations declared across the buildpath, requires no backtracking, and yields the
 canonical assignment by construction rather than by minimizing over candidates.
 
-A buildpath admits no valid assignment (**L132**) exactly when some single release has no viable
+A buildpath admits no valid assignment (**↯/a.1.32**) exactly when some single release has no viable
 integration — never through some irreducible interaction between releases. A specific diagnosis
 is therefore always available, and tools SHOULD name that release and, for each of its
 integrations, the rule that rejected it. "No valid assignment" as a bare verdict is never the
@@ -1521,7 +1533,7 @@ derivative = hash("lira/1:derivative", artifact bytes)
 
 is a stable fact about the section, which the section's OPTIONAL `derivative` field declares
 (§14) and verifiers recompute (§16, step 3); a declared derivative hash that does not recompute
-from the materialized tree is invalid (**L138**).
+from the materialized tree is invalid (**↯/a.1.38**).
 
 The declared derivative hashes make releases **findable from conventional artifacts alone**: a
 tool holding only a classpath of ordinary JARs hashes each under the derivative domain and
@@ -1547,7 +1559,7 @@ the provider's contract is read for atoms and never materialized, and whether th
 actually present is decided by probing at the third verification moment (hosts.md §9).
 Satisfaction is lineage membership and spanning, unchanged.
 
-An environment is stated by an **environment release** (§9.4, **L148**): an operator-signed
+An environment is stated by an **environment release** (§9.4, **↯/a.1.48**): an operator-signed
 release of the `env` realm whose manifest carries `grant` records — the platform contracts
 the environment supplies — `deploy` records — the releases intended to run, each pinned by
 implementation identity and naming the `app` section deployed (its realm and integration,
@@ -1560,17 +1572,17 @@ exactly one, and an environment running two integrations of one module is simply
 records — the concurrency of a rolling deployment, quantified over like any other (below).
 Binding addresses MUST be pairwise disjoint —
 neither equal to nor a path-prefix of one another, compared as authored strings on the `owns`
-precedent (**L149**): the address disambiguates at run time what uniqueness (rule 1, L111)
+precedent (**↯/a.1.49**): the address disambiguates at run time what uniqueness (rule 1, ↯/a.1.11)
 disambiguates at build time, which is why the environment has no uniqueness rule of its own —
 two releases of one module serving concurrently is the normal state of a rolling deployment,
 not an error.
 
-Environment validity (**L145**) transposes §13.3. Closure requires every module named by any
+Environment validity (**↯/a.1.45**) transposes §13.3. Closure requires every module named by any
 deployed release's applicable `requires` records to be **provided** — by a granted platform
 contract, by a deployed release of that module, or, where the requirement carries a used-set,
 by any provider whose atoms cover it (cross-module spanning, hosts.md §7). Satisfaction must
 hold against _every_ concurrently-serving release of a provider — refined per binding
-(**L150**): where a requirement resolves to a binding, the quantifier ranges over the
+(**↯/a.1.50**): where a requirement resolves to a binding, the quantifier ranges over the
 concurrently-serving releases _within that binding's selection_, releases behind other
 bindings being other providers; a provider deployed but unbound keeps the unrefined
 quantifier. Requirements aggregate across the environment by the rule of hosts.md §10.
@@ -1615,7 +1627,7 @@ choice of binding under both readings. A `route` pin on the consumer's deploy re
 candidate binding of a group, which binding is then chosen — a negotiated group's members
 still resolve per release; a route never pins a member, since the manifest cannot assert a
 choice the code does not make — and a `route` naming an address that is not a candidate of
-its group is invalid (also **L148**), else a pin could silently defeat satisfaction. The
+its group is invalid (also **↯/a.1.48**), else a pin could silently defeat satisfaction. The
 route's group is the one group of the section with a member naming the route's `module`; a
 section with two such groups leaves the route ambiguous, and it is invalid on the same
 terms, while its `address` may name a binding of another module, a candidate by spanning
@@ -1636,7 +1648,7 @@ orchestrator's business, exactly as invoking egress tools is the build's (§13.5
 A **deploy** is a transition of an environment — any change to its release's `grant`,
 `deploy` or `binding` records, a rebinding included — and a release is **deployable** into an
 environment iff the state after the transition — and, for a rolling deploy, the intermediate
-state in which old and new releases serve together — is valid (**L146**). Deployability is
+state in which old and new releases serve together — is valid (**↯/a.1.46**). Deployability is
 thus the same judgement as buildpath validity, made at the second moment, from the same
 manifests: closure and satisfaction over a set, with the guarantee levels (§11.5) saying
 which consumers may keep running and which must move (§12.4). Environment validity and
@@ -1780,7 +1792,7 @@ record Integration
 record Requires
   description  One requirement of this section, on either kind of provider (hosts.md, services.md); grouped by alternative, a preference where a member is marked optional, chosen per use where a member is marked negotiated (§13.7).
 
-  field module ModuleName               # the provider's module name (host contract or deployable, L137)
+  field module ModuleName               # the provider's module name (host contract or deployable, ↯/a.1.37)
   field api Hash                        # required contract snapshot (satisfied by lineage membership)
   field version Semver optional         # human-readable hint; no authority
   field uses Hash optional              # Uses metadata blob against the contract (hosts.md §7)
@@ -1793,7 +1805,7 @@ scalar Address
   validate     address
 
 record Grant
-  description  One platform contract this environment supplies (L148, environments.md §4).
+  description  One platform contract this environment supplies (↯/a.1.48, environments.md §4).
 
   field module ModuleName               # a host-contract module
   field api Hash                        # its snapshot
@@ -1806,7 +1818,7 @@ record Route
   field address Address                 # the candidate binding the group resolves to; may be another module's, by spanning
 
 record Deploy
-  description  One release this environment intends to run (L148, environments.md §4).
+  description  One release this environment intends to run (↯/a.1.48, environments.md §4).
 
   field module ModuleName
   field build Hash                      # implementation identity: desired state names artifacts
@@ -1815,10 +1827,10 @@ record Deploy
   field route Route optional repeatable # routing pins (§13.7)
 
 record Binding
-  description  One address bound to a provider (L148, L149, environments.md §4).
+  description  One address bound to a provider (↯/a.1.48, ↯/a.1.49, environments.md §4).
 
   field address Address
-  field module ModuleName               # provider module: either L137 kind
+  field module ModuleName               # provider module: either ↯/a.1.37 kind
   field api Hash optional repeatable    # selection by lineage constraint, any listed snapshot admitting (the default form)
   field build Hash optional             # selection by exact implementation identity
   field rank Natural optional           # canonical-resolution preference, lower first (§13.7)
@@ -1839,7 +1851,7 @@ record LibrarySection
   field requires Requires optional repeatable  # requirements on providers (§9.4)
 
 record HostSection
-  field tree Hash  # Tree metadata blob; no requires field — a contract states, it never asks (L135)
+  field tree Hash  # Tree metadata blob; no requires field — a contract states, it never asks (↯/a.1.35)
 
 record AppSection
   field integration Identifier optional  # the integration realized (§9.4, §9.5)
@@ -1863,7 +1875,7 @@ record Library
 record HostContract
   description  A host contract: a runtime environment's capability interface (§9.4, hosts.md).
 
-  field section HostSection  # exactly one: L135 by construction
+  field section HostSection  # exactly one: ↯/a.1.35 by construction
 
 record Deployable
   description  A deployable release: a closed artifact, what it serves, what it requires (§9.4, services.md).
@@ -1874,10 +1886,10 @@ record Deployable
 record Environment
   description  An environment release: one environment's desired state (§9.4, §13.7, environments.md).
 
-  field grant Grant optional repeatable      # platform contracts supplied (L148, §13.7)
-  field deploy Deploy optional repeatable    # releases intended to run (L148, §13.7)
-  field binding Binding optional repeatable  # addresses bound (L148, L149, §13.7)
-  field section EnvSection  # exactly one: ancillary content, MAY be empty (L148)
+  field grant Grant optional repeatable      # platform contracts supplied (↯/a.1.48, §13.7)
+  field deploy Deploy optional repeatable    # releases intended to run (↯/a.1.48, §13.7)
+  field binding Binding optional repeatable  # addresses bound (↯/a.1.48, ↯/a.1.49, §13.7)
+  field section EnvSection  # exactly one: ancillary content, MAY be empty (↯/a.1.48)
 
 record Payload
   field  compression  Identifier          # brotli
@@ -1909,7 +1921,7 @@ select ResourceMode
 document
   field module ModuleName
   field version Semver optional         # absent on development releases (§12.5)
-  field tag TagName optional repeatable # immutable user-facing names (§12.6, L142)
+  field tag TagName optional repeatable # immutable user-facing names (§12.6, ↯/a.1.42)
   field lineage Hash repeatable         # distinct snapshots, oldest first; last = this release
   field toolchain Tool repeatable
   field source Source optional repeatable  # source identity claims (§17)
@@ -2013,7 +2025,7 @@ cycle: schema references are content hashes (the signature, BinTEL §8), and no 
 include itself. Acquisition cannot cycle either, though for a different reason — two
 releases could each package the layer the other's manifest needs, no hash containing
 itself — but a reader decodes only under schemas already in hand (§5.2) and a registry
-accepts only releases it can read (§16, **L140**), so every schema a registry holds traces
+accepts only releases it can read (§16, **↯/a.1.40**), so every schema a registry holds traces
 back, through releases accepted earlier, to the built-in base. A release whose manifest
 used the very layer it publishes is no paradox but a brick: unreadable to every consumer,
 therefore unpublishable to every registry. The argument leans on one premise worth naming:
@@ -2053,7 +2065,7 @@ BinTEL magic, with the root's trailing signature subtrees dropped and the root c
 adjusted. The message is mode-independent (BinTEL §6), so no future change of stored mode
 could perturb a signature. The payload is covered transitively through
 `payload.hash`; every metadata blob and section is covered through the hash tower; the magic
-numbers, fixed by **L115**, need no coverage.
+numbers, fixed by **↯/a.1.15**, need no coverage.
 
 ### 15.3 Keys
 
@@ -2067,46 +2079,46 @@ for trust-on-first-use deployments.
 Verification is re-execution of the construction, bottom-up. A full verifier, given a `.lira`
 file (and, where noted, additional artifacts):
 
-0. checks that the file begins with the fixed eight-byte header (§5.1, **L115**), resolves
+0. checks that the file begins with the fixed eight-byte header (§5.1, **↯/a.1.15**), resolves
    the manifest's schema signature against the schemas it holds (§5.2 — an unresolvable
    signature ends verification: the file is unreadable, not judged), decodes the manifest as
-   one embedded BinTEL document conforming to the `lira` schema (**L101**), and checks that
-   payload bytes follow (§5.1, **L116**);
+   one embedded BinTEL document conforming to the `lira` schema (**↯/a.1.1**), and checks that
+   payload bytes follow (§5.1, **↯/a.1.16**);
 1. decompresses the payload within `payload.length` and checks `payload.hash` (§8.4) — a
    receiver applying an increment reaches this step's result by reconstruction instead
-   ([`increment.md`](increment.md) §7, **L152**, **L155**), having verified the embedded
+   ([`increment.md`](increment.md) §7, **↯/a.1.52**, **↯/a.1.55**), having verified the embedded
    manifest (steps 0 and 8) first, and continues identically;
 2. recomputes every blob hash while scanning the stream and checks sortedness and uniqueness
    (§8.2), and resolves every referenced blob (§8.3);
 3. checks every tree's path rules and every overlay's minimality (§9.2–§9.3), and recomputes
-   every declared derivative hash from the materialized section (§13.6, **L138**);
+   every declared derivative hash from the materialized section (§13.6, **↯/a.1.38**);
 4. re-atomizes content under each declared discipline and compares against the Atoms blobs —
-   a listing that does not recompute is invalid (**L141**) —
+   a listing that does not recompute is invalid (**↯/a.1.41**) —
    checks the cross-section invariant over each discipline's domain for every section of the
    (realm × integration) matrix (§9.6), that integration declarations are well-formed
-   (**L131**) and each is realized (**L133**), that no declared discipline is inapplicable
-   (**L127**), that content claiming follows the claiming order (**L134**, **L144**, §11.2),
-   that resource declarations are well-formed and effective (**L124**, **L125**, §11.4), and,
-   for an `env` release, binding disjointness and route validity (**L148**, **L149**, §9.4,
-   §13.7) — the rest of the kind shapes of §9.4 (**L135**, **L143**, L148's record
+   (**↯/a.1.31**) and each is realized (**↯/a.1.33**), that no declared discipline is inapplicable
+   (**↯/a.1.27**), that content claiming follows the claiming order (**↯/a.1.34**, **↯/a.1.44**, §11.2),
+   that resource declarations are well-formed and effective (**↯/a.1.24**, **↯/a.1.25**, §11.4), and,
+   for an `env` release, binding disjointness and route validity (**↯/a.1.48**, **↯/a.1.49**, §9.4,
+   §13.7) — the rest of the kind shapes of §9.4 (**↯/a.1.35**, **↯/a.1.43**, ↯/a.1.48's record
    exclusions) have held since step 0, discharged by the schema (§14)
    — requires an implementation of each discipline (though `opaque/1`, `resource/1`,
    `capability/1` and `environment/1` are language-blind and implementable by every verifier;
    the last two atomize manifest records rather than tree content, §11.3);
-5. recomputes the snapshot and checks it equals the last lineage entry (§12.1, **L109**);
+5. recomputes the snapshot and checks it equals the last lineage entry (§12.1, **↯/a.1.9**);
 6. given the predecessor release, checks the lineage step's grade and delta (§12.3);
 7. checks the predicates of each declared profile, and — given the predecessor release — that
    every guarantee level the step fails to preserve is listed in that profile's `breaks` field
-   (§11.6, §12.4, **L128**, **L130**) — requires an implementation of each profile;
+   (§11.6, §12.4, **↯/a.1.28**, **↯/a.1.30**) — requires an implementation of each profile;
 8. recomputes the signing domain and verifies each signature (§15): a signature that does not
-   verify (**L121**), whose algorithm the verifier does not implement (**L122**), or whose key
-   fingerprint matches no trusted key (**L123**) fails the file.
+   verify (**↯/a.1.21**), whose algorithm the verifier does not implement (**↯/a.1.22**), or whose key
+   fingerprint matches no trusted key (**↯/a.1.23**) fails the file.
 
 Steps 0–3, 5 (given the Atoms blobs) and 8 require no language knowledge and SHOULD be performed
 at installation. Steps 4, 6 and 7 are publish-time checks: a registry MUST perform them before
 accepting a release, since they are what make manifests trustworthy at use-time. A registry that
 cannot implement a declared discipline or profile — or that does not hold a release's
-composed schema (§5.2) — MUST reject the release (**L140**) rather than
+composed schema (§5.2) — MUST reject the release (**↯/a.1.40**) rather than
 accept it unchecked — an unverifiable claim is worse than an absent one, because consumers cannot tell the
 two apart from the manifest. Every claim in a manifest is thus either recomputable locally or
 attested by signature over recomputable claims; nothing is trusted testimony — with two
@@ -2148,7 +2160,7 @@ signing mode is hedged (randomized), so re-signing yields different signature va
 same signed message; determinism claims apply to the file with its `signature` fields removed,
 which is also precisely the signing domain (§15.2). Increment files are excluded altogether:
 they are transport, self-deterministic per toolchain but reproducible across none, and carry
-no identity ([`increment.md`](increment.md) §8, **L156**).
+no identity ([`increment.md`](increment.md) §8, **↯/a.1.56**).
 
 Reproduction needs the inputs named. A release's `source` records (§14) state, per producer
 claim, which sources its toolchain consumed: a scheme (`git-commit`, a tree-hash scheme), the
@@ -2168,10 +2180,10 @@ to reproduce and attest a release.
 
 - **Decompression bombs**: bounded by mandatory enforcement of `payload.length` (§8.1); for
   an increment, by bounds derived from the same signed value before any body is decoded
-  ([`increment.md`](increment.md) §7, **L152**).
+  ([`increment.md`](increment.md) §7, **↯/a.1.52**).
 - **Increment tampering**: an increment's header is unsigned, but its manifest is verbatim
   and signed and its result is verified as a payload, so no alteration can yield a release
-  other than the one signed; a tampered increment fails (**L155**) rather than misleads.
+  other than the one signed; a tampered increment fails (**↯/a.1.55**) rather than misleads.
 - **Path traversal**: excluded by tree path rules (§9.2).
 - **Hash agility**: deliberately absent within an epoch; BLAKE3-256 is the only hash, and any
   future change is an epoch change (§7.1). Signature agility is present but explicit (§15.1).

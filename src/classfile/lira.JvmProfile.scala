@@ -59,7 +59,7 @@ object JvmProfile extends EcosystemProfile:
   def id: Text = t"jvm/1"
 
   // Linkage alone. `tasty/2` certifies recompilation over the same release, and this profile
-  // adds no predicate about it: a profile adds guarantees, never subtracts them (L129).
+  // adds no predicate about it: a profile adds guarantees, never subtracts them (↯/a.1.29).
   def certifies: Set[Discipline.Guarantee] = Set(Discipline.Guarantee.Linkage)
 
   private val universe: Text = t"jvm"

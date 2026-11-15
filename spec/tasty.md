@@ -100,7 +100,7 @@ Included:
 - `protected` members (consumers extend open classes);
 - qualified-private (`private[scope]`) members, conservatively. (A refinement is anticipated:
   where `scope` lies within the module's own `owns` namespaces, namespace disjointness — LIRA
-  L112 — guarantees no consumer can ever be inside the scope, so such members could be
+  ↯/a.1.12 — guarantees no consumer can ever be inside the scope, so such members could be
   excluded. `tasty/2` includes them; a future discipline version may tighten this.)
 - synthetic members that are real API: case-class and enum companions' generated members
   (`apply`, `copy`, `unapply`, `fromProduct`, ordinals and friends) are atomized as ordinary
@@ -242,7 +242,7 @@ erased-signature disambiguators.
 ## 13. Cross-Section Policy
 
 The atomization of each section's materialized `.tasty` set (with that section's classpath) MUST
-be identical as (key, class, value hash) — LIRA's L108. Sections MAY differ in:
+be identical as (key, class, value hash) — LIRA's ↯/a.1.8. Sections MAY differ in:
 
 - implementation, including byte-divergent `.tasty` files (a fresh compiler run pickles fresh
   UUIDs and tool strings, none of which enter the model);
@@ -255,7 +255,7 @@ Sections differ along two axes (LIRA §9.5): universe, and **integration** — t
 vector the section was built against. The rule is the same for both, but integrations make one
 consequence sharp. A section built against a different release of a dependency compiles with a
 different classpath, so any replaceable atom whose body splices content from that dependency
-will differ in value hash between integrations and fail L108. Rigid atoms are typically
+will differ in value hash between integrations and fail ↯/a.1.8. Rigid atoms are typically
 unaffected, since a signature naming a dependency's type names it identically whichever release
 supplied it (§6, §7). A module whose public `inline` or macro bodies reach into a swappable
 dependency therefore cannot offer integrations, and must be published as separate modules.

@@ -141,7 +141,7 @@ release serves its blobs and its manifest, and fetches the published envelope be
   decompress and check payloads, quarantine mismatches.
 - **Verification stamps**: install-grade verification (spec §16, steps 0–3, 5, 8) is a
   property of an immutable object, so its outcome is recorded once, as a stamp keyed by
-  manifest hash, never invalidated. Signature trust (L123) is *not* stamped — trust
+  manifest hash, never invalidated. Signature trust (↯/a.1.23) is *not* stamped — trust
   configuration can change — and is re-evaluated from cached log records, which is cheap.
 
 ### 2.5 Derivatives Are the Materialization Cache
@@ -271,7 +271,7 @@ as replaced.
 a verifier checking a lineage step holds both releases and needs no keys. `--blob` writes that
 record for the machine-checkable case; the listing is computed from the two atomizations.
 
-Sections are summarized, not listed per atom: L108 requires every section of a release to present
+Sections are summarized, not listed per atom: ↯/a.1.8 requires every section of a release to present
 identical atoms, so a per-section breakdown would repeat itself. What a reader wants is which
 (realm, integration) cells the release still carries, and which it gained or lost.
 
@@ -320,7 +320,7 @@ everything else in the format enjoys.
 and not the upstream source. Atoms recompute from the shipped carrier, so a published
 contract's content claims are checkable by anyone holding the release; what is genuinely
 authorial, and therefore what stewardship *is*, is the naming residue hosts.md §3 identifies:
-module granularity, the tag scheme, and sanctioning majors (`+<tag>`, L110). The descriptor is
+module granularity, the tag scheme, and sanctioning majors (`+<tag>`, ↯/a.1.10). The descriptor is
 the middle layer — provenance — and publishing it beside the contract modules records how the
 carrier was obtained: with a pinned acquisition it is the seed of the attestation layer
 services.md defers. Governance stays deliberately open (universes.md §5.6); bootstrap
@@ -453,7 +453,7 @@ carries a signature.
   (payloads by decompress-then-hash, §2.2).
 - **`WANT/HAVE`** — the caller names a target payload hash and the blob hashes it already
   holds; the responder streams the missing blobs. This falls out of the format rather than
-  being engineered: a payload is a sorted, duplicate-free sequence of blobs (L103), so the
+  being engineered: a payload is a sorted, duplicate-free sequence of blobs (↯/a.1.3), so the
   have-set intersects in one merge pass, and cross-version delta fetch is free because
   successive releases share most blobs. Belongs on streaming transports only; the 1232-byte
   UDP ceiling (distribution.md §6) excludes it from the datagram path.
@@ -463,8 +463,8 @@ carries a signature.
   releases share, an increment additionally compresses each changed blob against its
   predecessor, which for compiled code is most of the remaining bytes. The responder may
   serve a stored increment the publisher produced or compute one on demand from its loose
-  blobs — an increment has no identity (L156), so the two are indistinguishable and equally
-  good — and the caller verifies the result as a payload (L155), so a responder is trusted
+  blobs — an increment has no identity (↯/a.1.56), so the two are indistinguishable and equally
+  good — and the caller verifies the result as a payload (↯/a.1.55), so a responder is trusted
   for nothing. Streaming transports only, as want/have.
 - **`SET-ROOT`** — a node commits its published set as a Merkle tree over the sorted object
   hashes it serves, and answers difference queries against the root. Mirrors sync by root

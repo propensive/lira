@@ -13,7 +13,7 @@ worth elevating.
 1. **Domain** — the fixed set of realms atomized; multi-universe domains are bound by
    the cross-section invariant (§9.6).
 2. **Claiming** — which tree items are atomized, which claimed atomless; first-match
-   over `api` records makes claiming order semantic (L134, L144).
+   over `api` records makes claiming order semantic (↯/a.1.34, ↯/a.1.44).
 3. **Atomization** — a pure function of the semantic model: no file ordering,
    timestamps, tool version strings, or fresh names (§17).
 4. **Keying** — declaration or membership, stated, and sound for the guarantee
@@ -42,7 +42,7 @@ change is a new discipline; migration between versions is the dual-declaration b
    can be produced by several tool versions (TASTy across compiler minors), atomization
    MUST hash the semantic signature, normalizing encoding differences — otherwise
    byte-level drift between compilers makes cross-built cells of one release disagree
-   on API identity and fail L108 spuriously. *A sharpening of §11.2 requirement 3: not
+   on API identity and fail ↯/a.1.8 spuriously. *A sharpening of §11.2 requirement 3: not
    just independence of a compilation run's artifacts, but of the producing tool's
    encoding generation.*
 

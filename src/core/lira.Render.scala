@@ -54,13 +54,13 @@ private def tableWidth(using stdio: Stdio): Int =
 // A rule that is `Blank` is *drawn* blank, not omitted, so a facts table styled from the
 // stock givens would carry an empty band where its header would be. `Unset` omits, and these
 // facts want no rules at all: two columns of label and value, aligned, and nothing else.
-private val plainStyle: TableStyle =
-  TableStyle(1, Unset, Unset, Unset, BoxLine.Blank, BoxLine.Blank, LineCharset.Default)
+private val plainStyle: Table.Style =
+  Table.Style(1, Unset, Unset, Unset, BoxLine.Blank, BoxLine.Blank, LineCharset.Default)
 
 private def facts(rows: scala.List[(Text, Text)])(using Stdio): Unit =
   // `Tabulation`'s titles are a list of rows, so an empty one is headless; `Scaffold.tabulate`
   // always supplies exactly one, hence the re-wrap.
-  given TableStyle = plainStyle
+  given Table.Style = plainStyle
 
   if !rows.isEmpty then
     val scaffold = Scaffold[(Text, Text), Text](Column(t"")(_(0)), Column(t"")(_(1)))

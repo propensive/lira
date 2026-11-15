@@ -43,23 +43,23 @@ Each element of the vision, against the mechanism that already carries it:
 | ------------------------------------------- | ----------------------------------------------------- |
 | module definition                           | module; one release per built state (spec §4.2)       |
 | dependency on a prebuilt bundle             | `dependency` record, resolved by snapshot via the index ([`distribution.md`](distribution.md)) |
-| dependency built from source                | development release (spec §12.5) + `build` pin (§13.2, L118) |
+| dependency built from source                | development release (spec §12.5) + `build` pin (§13.2, ↯/a.1.18) |
 | promotion of a from-source build            | version assignment (§12.5): payload untouched, manifest signed |
 | variant: alternative dependency versions    | integrations (§9.5)                                   |
 | variant: platforms                          | realms — universe sections (§9.4)                     |
-| multi-variant `.lira` file                  | the section matrix, (realm × integration), L131; one API everywhere, L108 |
+| multi-variant `.lira` file                  | the section matrix, (realm × integration), ↯/a.1.31; one API everywhere, ↯/a.1.8 |
 | downstream pins one variant                 | integration pinning; canonical assignment (§13.3)     |
 | build outputs `.lira` files                 | library releases; conventional artifacts recoverable per §13.6 |
 | build outputs other targets                 | egresses to deliverables (§4.1); deployable releases (§9.4) |
 | "snapshot of the build state for a module"  | the manifest: toolchain records, dependency snapshots, atoms, payload identity |
 | build feeds deployment                      | aggregated requirements seed the deployable's `requires` (hosts.md §10, services.md §4.1) |
 | running modules are "services"              | services.md, by that name                             |
-| coherent deployment over services           | environment validity (spec §13.7, L145)               |
+| coherent deployment over services           | environment validity (spec §13.7, ↯/a.1.45)               |
 
 Two rows deserve their footnotes. The from-source row is *gated correctly by publication
 rules the spec already has*: a module depending on an unpublished from-source build carries
-a `build` pin and is itself unpublishable (L118), and publishing demands every required
-snapshot appear in a published lineage (L119) — so the build tool's inner development loop
+a `build` pin and is itself unpublishable (↯/a.1.18), and publishing demands every required
+snapshot appear in a published lineage (↯/a.1.19) — so the build tool's inner development loop
 and its publication step are separated by exactly the fence the format already erected. And
 the "snapshot of build state" row should be read precisely: the manifest is the complete
 record of what a build *produced* and *consumed at the interface level* — it is not, and
@@ -173,7 +173,7 @@ the surface:
   *closing over* is what an egress does to a buildpath — and nothing ever does it to an
   environment (execution.md §1). The coherence the deployment definition needs is
   **closure** in the §13.3/§13.7 sense: every requirement provided, every provider
-  satisfying, checked over the whole set (L145) and re-checked at every transition (L146).
+  satisfying, checked over the whole set (↯/a.1.45) and re-checked at every transition (↯/a.1.46).
   The build tool gets its guarantee — no service deployed into a set that cannot support
   it — from validity, not from closure-into-an-artifact, and the two words should not be
   allowed to blur, since one produces a thing and the other sustains a state.
@@ -254,7 +254,7 @@ one LIRA compilation:
    deltas). A separate release in **patch relation** (§3.2 of this document): same atoms,
    same snapshot, different payload, selected by implementation identity — never a
    section. In the build file, an `option`.
-3. **Changes the API.** Forbidden within a release (L108): a different lineage or module,
+3. **Changes the API.** Forbidden within a release (↯/a.1.8): a different lineage or module,
    rejected when atoms differ post-build.
 
 The surface consequence is two axis kinds with one shape (`integration`/`option`, each
@@ -272,7 +272,7 @@ from one direction only, and delta conflicts an error, never a merge.
 Axes multiply combinations; distribution need not carry them all. An undistributed
 combination is a cache miss under §1's reading — rebuildable, and checkable against the
 `source` record (§17). Patch-sibling combinations (class 2) were separate releases anyway;
-for integrations, a published release declares only its shipped vectors (L133), and a
+for integrations, a published release declares only its shipped vectors (↯/a.1.33), and a
 from-source build of an unshipped vector is itself a patch-relation sibling release
 carrying that integration, since integrations enter no atom. The build file's surface is
 an `ephemeral` flag: everything declared is distributed unless marked, the marker sits on
@@ -293,7 +293,7 @@ apply in strictly escalating order, and the cheap ones usually suffice:
    `used ⊆ atoms` licenses the same single build across the break (§13.4).
 3. **An integration axis**: only when the built-against state genuinely differs per
    target — a backport dependency present on one JDK, a different compiler line — and
-   with L108 binding throughout: per-target API differences are a different lineage, not
+   with ↯/a.1.8 binding throughout: per-target API differences are a different lineage, not
    an integration.
 
 ### 7.3 Scala compiler versions: the axis is an integration, the semantics are a profile
@@ -312,7 +312,7 @@ first readable case. The axis multiplexes; the profile decides.
 Two format pressures follow, recorded in §6: **section-scoped toolchain records** (the
 manifest must be able to say which cell is 3.9-TASTy), and a discipline requirement that
 **`tasty/1` atomize semantically**, normalizing compiler-encoding differences so that
-cross-built cells share one API identity, or L108 fails spuriously. And one classification
+cross-built cells share one API identity, or ↯/a.1.8 fails spuriously. And one classification
 refinement: the compiler version is the one tool setting that belongs on an integration
 case rather than an option case, because it changes the emitted interface encoding — the
 lint is "interface-invisible settings in an integration case", not "any setting".
@@ -398,7 +398,7 @@ one rule applied four times:
   it. The normative invariant: *same commit + same lockfile ⇒ same release identity, on
   any machine, for any developer, under any local file.* Divergence is not forbidden but
   quarantined: local overrides that change outcomes produce development releases with
-  build pins, and L118 blocks publication until reconciled. CI is just another machine
+  build pins, and ↯/a.1.18 blocks publication until reconciled. CI is just another machine
   with a generated local file.
 - **R3 (occasion):** every selection reachable from the command line without editing any
   file, under a total, stated precedence order; nothing persists unless written.
@@ -423,7 +423,7 @@ one rule applied four times:
    names, or selection by deliverable pattern.
 4. **Local pins** — `local.tel` can redirect a repository's transport but cannot resolve
    a coordinate to a specific commit, binary or path regardless of selector (the
-   npm-link workflow). A `pin` record in `local.tel` compiles to a build pin; the L118
+   npm-link workflow). A `pin` record in `local.tel` compiles to a build pin; the ↯/a.1.18
    fence applies with no new rule.
 5. **Precedence is implied, nowhere defined.** The layers: tool built-ins → user-global
    local file (`~/.config/lira/local.tel`, currently missing as a concept) → `build.tel`
@@ -435,7 +435,7 @@ one rule applied four times:
    test" is an occasion rather than an edit.
 
 None requires format machinery: every gap is surface syntax plus one stated rule, with
-enforcement (L118, the lockfile, the §7 classification) already in place.
+enforcement (↯/a.1.18, the lockfile, the §7 classification) already in place.
 
 ### 9.2 The lockfile is a memoization, not a cache
 
@@ -464,7 +464,7 @@ CLI, never `build.tel`.
 
 ### 10.1 One validity algebra, two world documents
 
-Buildpath validity (§13.3) and environment validity (§13.7, L145) are the same judgment —
+Buildpath validity (§13.3) and environment validity (§13.7, ↯/a.1.45) are the same judgment —
 closure, satisfaction, aggregation, coherence, quantified over an assignment of one
 integration per release — differing only in **which document supplies the providers**. At
 build time the providers are the target's host contracts, and requirements naming
@@ -472,7 +472,7 @@ deployables are left explicitly pending (rule 7); at run time the providers are 
 environment's grants and bindings, and the pending judgments close. The environment
 release is the run's world document exactly as the lockfile is the build's (§9.2): the
 same genus of verifiable memoization, with one honest difference in polarity — the
-lockfile is *sampled* state, the environment is *desired* state, and L146's re-check at
+lockfile is *sampled* state, the environment is *desired* state, and ↯/a.1.46's re-check at
 every transition holds the two together. Extending §9's bijection to the running half:
 the environment manifest is its `build.lock`.
 
@@ -606,7 +606,7 @@ build of a module it references, the self-hosting case resolving via stage0.
 and settings (§6 item 3), a LIRA-distributed tool needs a **LIRA identity** in the
 record — coordinate plus implementation identity, not name-plus-version — and a
 development-release tool's pin should make the consuming release unpublishable until
-reconciled: the toolchain analogue of L118. §17 reproducibility then means "same tool
+reconciled: the toolchain analogue of ↯/a.1.18. §17 reproducibility then means "same tool
 *bytes*, recursively." Second, **three tool-trust tiers**, made explicit: built-in
 (registry-defined), LIRA-distributed (fully verifiable), and raw local binaries — which
 are machine facts, belonging in `local.tel` by §9's bijection, digest-pinned at best,
@@ -661,7 +661,7 @@ presumes is superfluous, so supply cannot silently outgrow demand.
    authored", with the computing tool being the compiler itself: the strongest
    provenance a used-set can have;
 4. requires + uses aggregate to the app section; environment validity enforces them;
-   probes verify at startup; L146 re-checks at every transition.
+   probes verify at startup; ↯/a.1.46 re-checks at every transition.
 
 Soundness is §10.2's verifiability doing new work: the compiler may assume totality
 *because the egress cannot land where the guarantee fails*. This is the first place
@@ -818,7 +818,7 @@ What the exercise surfaced:
    service/guarantee rows) — an honest measure of how much of the deployment round
    remains; the record will grow deploy deltas, grant deltas and mocks.
 5. Semantic rules that stay lints, deliberately outside the schema: subtractive
-   keywords in root bodies, L107 minimality, one-tool-per-edge, option cases touching
+   keywords in root bodies, ↯/a.1.7 minimality, one-tool-per-edge, option cases touching
    `include`, one-cell-refined-once, toolchain self-application.
 
 The schema also positions `build.tel` to carry a schema signature in its header
@@ -986,7 +986,7 @@ source src/generated/*.scala.txt
   form scala                       # declared where inference fails
 ```
 
-A declaration that merely restates a correct inference is an L107-style minimality lint.
+A declaration that merely restates a correct inference is an ↯/a.1.7-style minimality lint.
 
 ### 14.5 Spaces: the project root, the store, and the workspace
 
@@ -1121,7 +1121,7 @@ one image.
 The frozen-environment reading extends without new machinery: each parent is a
 grant-provider, the closure judgment runs against the **union** of their declared
 provisions, and overlapping content between parents is the resource-disjointness rule
-(L126) transposed to layers — two parents supplying the same path is an error, not a
+(↯/a.1.26) transposed to layers — two parents supplying the same path is an error, not a
 merge. Surface-wise this makes `assemble` repeatable on a packaging module (each
 assembled parent contributing content and provisions), with the disjointness lint across
 them; the schema currently holds `assemble` singular, and widening it is deliberately

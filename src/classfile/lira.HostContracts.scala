@@ -53,7 +53,7 @@ case class HostRelease(tag: Text, content: List[(TreePath, Data)])
 // — a major beginning a fresh one — and assembled as a complete, tagged `.lira` host contract.
 //
 // A major is a removal in the host's history (the JDK 9 and 11 removals are the canonical
-// cases), and L110 requires the operator to sanction it: `allowMajor` is that sanction, per
+// cases), and ↯/a.1.10 requires the operator to sanction it: `allowMajor` is that sanction, per
 // tag, so an unexpected removal fails loudly rather than silently fracturing the lineage.
 object HostContracts:
 

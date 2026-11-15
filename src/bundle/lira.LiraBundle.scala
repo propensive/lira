@@ -41,13 +41,15 @@ import murmuration.exists
 import contingency.*
 import gossamer.*
 import anthology.*
+import anthology.Toolchain.Universe
+import anthology.Toolchain.Universe
 
 // Reads compilation outputs into `LiraAssembler` section inputs. Each universe's section
 // carries its IR alongside the TASTy interface files: the shared interface is stored once by
 // the root section's tree, and files that differ between universes' compilations (the TASTy
 // attributes a universe's flags pickle; never the run itself, since the compiler derives the
 // TASTy UUID from the file's own content) surface as minimal overlays — while the atoms, which
-// are semantic, stay identical (L108).
+// are semantic, stay identical (↯/a.1.8).
 object LiraBundle:
   // Each universe knows its own LIRA section label and the filename suffixes of its stored
   // representations, so one method serves all three.

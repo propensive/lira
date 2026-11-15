@@ -119,7 +119,7 @@ private def gradeText(grade: Grade): Text = grade match
   case Grade.Major => t"major (a rigid removal or change; a fresh lineage)"
 
 // Sections are keyed by (realm, integration) and every section of a release presents the same
-// atoms (L108), so a per-section atom listing would repeat itself; what a section *can* differ
+// atoms (↯/a.1.8), so a per-section atom listing would repeat itself; what a section *can* differ
 // in, and what a reader wants to know, is whether the release still carries the cell at all.
 private def sectionFacts(before: Lira, after: Lira): scala.List[(Text, Text)] =
   def cells(release: Lira): scala.List[Text] =

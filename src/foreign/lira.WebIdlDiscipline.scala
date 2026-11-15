@@ -44,7 +44,7 @@ import errorDiagnostics.emptyDiagnostics
 // The `webidl/1` discipline, adapted to the discipline SPI: the Web IDL of a browser host
 // contract, atomized per `webidl.md`. Its domain is the single realm `{host}` — a browser is a
 // host, not a universe, and a `js`-universe library's carrier is `.d.ts` — so a release
-// carrying it is a host contract (L135) and L127 rejects a library that declares it.
+// carrying it is a host contract (↯/a.1.35) and ↯/a.1.27 rejects a library that declares it.
 object WebIdlDiscipline extends Discipline:
   def id: Text = t"webidl/1"
 

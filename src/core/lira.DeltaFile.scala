@@ -39,9 +39,10 @@ import codepages.utf8Codepage
 
 // A delta file did not parse, named a base the store does not hold, or did not reconstruct the
 // release its manifest describes. Nothing a delta yields is the release until the whole stream
-// has verified (increment.md §7, L155), so every failure here rejects the file entire.
+// has verified (increment.md §7, ↯/a.1.55), so every failure here rejects the file entire.
 case class DeltaError(detail: Text)(using Diagnostics)
-extends Error(m"delta: $detail")
+extends Error(m"delta: $detail"):
+  override def bolt: fulminate.Bolt = fulminate.Bolt(Lira.letter, 8, 1)
 
 // The delta file (spec/increment.md, which calls it an increment): a release carried relative to
 // a base the receiver holds. In the byte layout `src/format` implements today — directive, TEL

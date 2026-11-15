@@ -45,7 +45,7 @@ import Lira.Error.Reason
 // question reduces to membership in, or relations between, lineages.
 object Lineage:
 
-  // L109: the final entry must equal the release's own snapshot.
+  // ↯/a.1.9: the final entry must equal the release's own snapshot.
   def check(lineage: List[Lira.Hash], snapshot: Lira.Hash): Unit raises Lira.Error =
     // `last` on a linked list is linear (hence the `linearSize` import above); a lineage is a
     // module's release history, walked once per verification.

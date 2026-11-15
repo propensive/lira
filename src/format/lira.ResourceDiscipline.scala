@@ -88,7 +88,7 @@ case class ResourceDiscipline(resources: List[Resource]) extends Discipline:
     val atoms: List[Atom] = content.flatMap: (path, data) =>
       if exports.exists(_.text == path.text) then
         // The value hashes the path alone, so the atom asserts presence and not content: bytes
-        // may differ per universe while L108 still requires the name in every one of them.
+        // may differ per universe while ↯/a.1.8 still requires the name in every one of them.
         List(Atom(path.text, Atom.Class.Rigid, Lira.Hash(Lira.Hash.Domain.Atom(id), path.bytes).bytes))
       else if tracked.exists(_.text == path.text) then
         // Content-hashed and replaceable: an edit is replaceable churn, a minor event that marks
@@ -100,7 +100,7 @@ case class ResourceDiscipline(resources: List[Resource]) extends Discipline:
     Atomization.of(id, atoms)
 
 object ResourceDiscipline:
-  // L124: declarations must be well-formed — no path declared twice, and no `export` or `track`
+  // ↯/a.1.24: declarations must be well-formed — no path declared twice, and no `export` or `track`
   // path lying under a declared `scan` directory — so §11.2's partition has a single claimant by
   // construction.
   def check(resources: List[Resource]): Unit raises Lira.Error =

@@ -51,6 +51,6 @@ case class Section
 
   def known: Optional[Lira.Realm] = Lira.Realm.parse(realm)
 
-  // The key that must be unique within a release (L131), and by which a consumer selects a
+  // The key that must be unique within a release (↯/a.1.31), and by which a consumer selects a
   // section once an assignment has chosen an integration (§13.5).
   def key: (Text, Optional[Text]) = (realm, integration)

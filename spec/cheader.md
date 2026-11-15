@@ -34,7 +34,7 @@ concerns are outside the carrier. The runtime check is the third verification mo
 ## 3. Domain and Content Claiming
 
 The domain is the single realm `{host}`. A release carrying `cheader/1` is a host contract
-(LIRA L135), and the cross-section invariant (LIRA §9.6) is vacuous.
+(LIRA ↯/a.1.35), and the cross-section invariant (LIRA §9.6) is vacuous.
 
 The discipline claims `**/*.h`, atomized. It claims nothing else.
 

@@ -36,7 +36,7 @@
 > deliberately open** (WIT / .d.ts / TASTy beside the ABI, atomized under that carrier's
 > discipline) — Jon's call; don't fix a single TEL descriptor schema. Source forms:
 > inferred from extension via the registry; declared via a `form` child field on `source`
-> (never positional — TEL fields shouldn't vary type by position), L107 lint on redundant
+> (never positional — TEL fields shouldn't vary type by position), ↯/a.1.7 lint on redundant
 > declarations. Resolution: covering-edge rule (strictly-containing input set wins:
 > scala+java → scalac; incomparable overlaps error, pinned per-module). build.tel:
 > toolchain comment rewritten, `source … / form scala-source` example; build.schema.tel:
@@ -79,7 +79,7 @@
 > R(image) = (R(app) − G(verified)) ∪ C(app-type), the app type swapping the contract
 > half by construction; secrets deliberately propagate. §15.1: multi-stage builder
 > stages are subsumed by the LIRA build; legitimate multi-parent = runtime composition
-> (union closure over parents' provisions; L126-style layer disjointness; `assemble`
+> (union closure over parents' provisions; ↯/a.1.26-style layer disjointness; `assemble`
 > would become repeatable — deferred). §15.2: oci-image/<platform> is a parameterized
 > family, oci-index the composite; platforms declared once at the outermost artifact and
 > the parameter FLOWS BACKWARD through hyperpath resolution to bind earlier egresses
@@ -222,7 +222,7 @@
 > deployability, bootstrap = §1's cache decision (stage0 from prebuilt), recursively
 > verifiable toolchains. Toolchains nest as delta children (one tool per edge;
 > `tools/forked`; per-module `apply`); the Tool record gains its third sharpening (LIRA
-> identity + toolchain-L118) and the three tool-trust tiers are named. build.tel has
+> identity + toolchain-↯/a.1.18) and the three tool-trust tiers are named. build.tel has
 > `toolchain forked`, `module scalac-fork` (artifact lira-tool) and `module fork-test`.
 > builds.md §12: presumption disciplines (capability/1 existing and keeping its general
 > name — the kind→discipline mapping is many-to-one; envvar/1, file/1 as siblings —
@@ -240,7 +240,7 @@
 > The §12 inference asymmetry is named: demand inferred, supply never (guarantee lines
 > are load-bearing). Spec gap 1 now has a worked proposal (scope Tool records like
 > Dependency records — universe/integration fields, Setting record, LIRA identity
-> fields, two L118/L119-analogue L-numbers; awaiting Jon applying it spec-side).
+> fields, two analogues of ↯/a.1.18 and ↯/a.1.19; awaiting Jon applying it spec-side).
 > `build.schema.tel` (new, repo root) is the draft build-file schema, written as a
 > consistency audit — findings in builds.md §13 (Universe≡Case; TEL lacks record
 > composition; the two `require` operand scalars; thin environment deltas). build.tel
@@ -289,14 +289,14 @@ mature and internally consistent; it has been through a full four-agent consiste
   lineage, many releases.
 - **Section**: one compiled view, keyed by **(realm, integration)**. The root section is the
   first; every other section is an **overlay** on it — deletes plus replace/add, minimal by
-  construction (§9.3, **L107**).
+  construction (§9.3, **↯/a.1.7**).
 - **Realm**: the section-key axis. Universes (`jvm`, `sjsir`, `nir`; `js`, `klib`,
   `component`, `native/<triple>` reserved) plus the three non-universe realms `host`, `app`,
   `env`.
 - **Universe**: a realm where *independently-published libraries compose*. That litmus test
   is the whole definition.
 - **Integration**: one alternative dependency vector a release was built against (§9.5).
-  Sections form a (realm × integration) matrix; every cell presents the same API (**L108**).
+  Sections form a (realm × integration) matrix; every cell presents the same API (**↯/a.1.8**).
 - **Atom**: the hash of one indivisible fragment of public API. *Rigid* (monotonic within a
   lineage) or *replaceable* (inline/macro bodies). The **folding principle**: additions that
   are safe become standalone atoms; additions that break fold into the parent's value, so
@@ -304,7 +304,7 @@ mature and internally consistent; it has been through a full four-agent consiste
 - **Snapshot** = hash of the sorted atom set = **API identity**. **Lineage** = the ordered
   snapshots of one major series. **`payload.hash`** = **implementation identity**.
 - **Grades**: patch (same atoms), minor (rigid ⊆, replaceables replaced), major (anything
-  else — a new lineage). **L110** forbids extending a lineage with a non-conforming
+  else — a new lineage). **↯/a.1.10** forbids extending a lineage with a non-conforming
   successor unless a major is explicitly requested.
 - **Versions** are *derived*, optional, strictly `x.y.z` (§12.5). No version = a
   **development release**, identified purely by hashes — the natural currency of an inner
@@ -348,17 +348,17 @@ Structure: `command` blocks (build/dev/test) → `toolchain tools` (scalac, java
 | --- | --- |
 | module definition | module; one release per built state |
 | dependency on a prebuilt bundle | `dependency` record, resolved by snapshot via the index |
-| dependency built from source | development release + `build` pin (§13.2, **L118**) |
+| dependency built from source | development release + `build` pin (§13.2, **↯/a.1.18**) |
 | promotion of a from-source build | version assignment (§12.5) — payload untouched, re-signed |
 | variant: alternative dependency versions | **integrations** (§9.5) |
 | variant: platforms | **universes** — realm sections (§9.4) |
-| multi-variant `.lira` | the (realm × integration) section matrix (**L131**, **L108**) |
+| multi-variant `.lira` | the (realm × integration) section matrix (**↯/a.1.31**, **↯/a.1.8**) |
 | downstream pins one variant | integration pinning; canonical assignment (§13.3) |
 | build outputs `.lira` | library releases |
 | build outputs other targets | egresses to application types; deployable releases (`app`) |
 | deployment stanza | an environment release (`env` realm) — the build tool acts as *operator* |
 | "connect to service X" | `requires` naming a deployable module |
-| coherent deployment | environment validity (§13.7, **L145**) |
+| coherent deployment | environment validity (§13.7, **↯/a.1.45**) |
 
 **The guardrail** (`builds.md` §4): one surface syntax may present both edge kinds, but they
 must **compile to distinct records** — `dependency` (buildpath supplies, materializes,
@@ -375,10 +375,10 @@ what an egress does; an environment merely **coheres**. Don't let the two words 
    `profile` is taken twice, `facet` breaks on host contracts.
 2. **A universe block opts in *and* configures.** Which universes are reachable is the
    toolchain's knowledge; which sections a release *carries* is a per-release commitment,
-   because opting in binds you to **L108** (one API in every section).
+   because opting in binds you to **↯/a.1.8** (one API in every section).
 3. **Module body = root section; universe blocks = overlays on it.** This is §9.3's own
    calculus surfacing at definition level. Minimality (a delta restating an unchanged
-   setting) should be a lint, per **L107**.
+   setting) should be a lint, per **↯/a.1.7**.
 4. **js / wasm are not universes for Scala.** `sjsir` is the universe; js-app,
    wasm-browser and wasi-component are *egress products* from that one section. Likewise
    `nir` is the universe and elf/pe/macho per architecture are application types.
@@ -404,11 +404,11 @@ what an egress does; an environment merely **coheres**. Don't let the two words 
    different things share the word "jar", and the build file should distinguish them.
    `produce js/dom` similarly conflates an application type with a host contract.
 3. **`module image`** uses `include core`, but a deployable declares no dependencies
-   (**L143**). It wants a distinct word — `from core` was suggested — meaning *egress input*.
+   (**↯/a.1.43**). It wants a distinct word — `from core` was suggested — meaning *egress input*.
 4. **`include` is overloaded three ways**: compose (dependency), close over (egress input),
    and run (deploy). Only the first is a `dependency`.
 5. **Addresses.** Nothing says where `main` answers. Suggestion: `service main example/image
-   at api.example.com`, compiling to a `binding` row; address prefix-disjointness (**L149**)
+   at api.example.com`, compiling to a `binding` row; address prefix-disjointness (**↯/a.1.49**)
    then becomes a build-file lint.
 6. **Served surfaces.** For `require database` (or anything requiring `main`) to be
    satisfiable, the provider needs a self-description — e.g. `serve openapi.json` compiling to
@@ -434,7 +434,7 @@ what an egress does; an environment merely **coheres**. Don't let the two words 
 
 - Jon writes the TEL by hand and embeds questions as `#` comments — read the comments as the
   agenda for each round.
-- Feedback is most useful when keyed to specific spec sections and L-numbers, and when it
+- Feedback is most useful when keyed to specific spec sections and bolt codes, and when it
   distinguishes *"the build file is wrong"* from *"the spec has a gap"*.
 - The spec's own worked examples (`lira.md` Appendix B, `services.md` §12,
   `environments.md`) are good models for what a manifest produced from this build file should

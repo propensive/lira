@@ -217,7 +217,7 @@ Two compilations of identical sources by identical toolchains MUST yield identic
 
 The domain is a single universe, so the cross-section invariant (LIRA §9.6) is vacuous for this
 discipline: `.sjsir` and `.nir` sections carry no classfiles to compare against, and a release
-carrying only those universes must not declare it (L127).
+carrying only those universes must not declare it (↯/a.1.27).
 
 The larger question is whether to register it at all. LIRA §11.6 sets out the trade-off, and it
 is genuine:

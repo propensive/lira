@@ -128,7 +128,7 @@ For successive releases of a schema module:
 | ----------------------------------------------------- | ------------------------- | ------------------ |
 | equal retained expansions                             | identical atom set        | patch              |
 | predecessor's retained expansion a proper prefix      | proper rigid subset       | minor              |
-| anything else (removal, reorder, insertion, edit)     | atoms removed or replaced | major (L110)       |
+| anything else (removal, reorder, insertion, edit)     | atoms removed or replaced | major (↯/a.1.10)       |
 
 **Soundness.** A minor step is a prefix extension, so the successor's composition is the
 predecessor's with further atoms applied — a subtype, by tel.md §24.4. The dropped

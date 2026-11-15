@@ -182,7 +182,7 @@ Tools reach Fury by one path, whether built in, LIRA-distributed, or Fever itsel
    a capability that member advertises by tool release identity.
 6. **Identity** — the tool's coordinate and implementation identity enter every step's
    `inputs/1` digest and the cell's section-scoped Tool record; a development-release tool
-   makes consuming releases unpublishable (the toolchain analogue of L118, builds.md §11).
+   makes consuming releases unpublishable (the toolchain analogue of ↯/a.1.18, builds.md §11).
 7. **Bootstrap** — a tool built in the same build adds tool-provider steps to the DAG; the
    self-hosting case resolves by stage0 from the prebuilt release (builds.md §11).
 
@@ -219,7 +219,7 @@ Fury reads it from resources and decodes its whole tool registry from it; `lira`
 same file for its extension and kind tables. It is publishable as a `tels/2` module plus a
 data release, the shipped copy being stage0. **Extension is by published registry layers
 only**: a build names one by coordinate (`registry acme.dev/forms 1`), it is locked like a
-dependency and merged additively, redefinition being a lint on L107's precedent. No
+dependency and merged additively, redefinition being a lint on ↯/a.1.7's precedent. No
 registry entry may appear directly in `build.tel`.
 
 The milestone below hardcodes the registry's content from `catalog.md`; `registry.tel`
@@ -390,7 +390,7 @@ an override. Fury's `config.tel` sits outside this order, since nothing in it af
 build's outcome.
 
 `local.tel` gains a `pin <coordinate> <origin>` record (path, commit or `.lira` file;
-compiles to a build pin, so L118 fences publication with no new rule), the `store` and
+compiles to a build pin, so ↯/a.1.18 fences publication with no new rule), the `store` and
 `budget` records above, and its own `local.schema.tel`. The committed `local.tel` is a
 specimen: at the self-hosting step it moves beside the specimen `build.tel` under
 `design/`, and `local.tel` at the root is gitignored.
@@ -601,12 +601,12 @@ pickles a fresh UUID into TASTy, so the honest wording may be *atom-deterministi
 surfaces anthology gaps: no compiler-version accessor.
 
 **6. `fury build` (~200).** Assemble step 5's output into a development release with
-dependency records (L118 build pins for development-release dependencies), ingest it, print
+dependency records (↯/a.1.18 build pins for development-release dependencies), ingest it, print
 its identities; `lira verify` passes. Needs: **section-scoped `Tool` records, the `Setting`
 record and LIRA tool identity** applied to the spec (builds.md §6 item 3; `gaps.md` §1) and
 to the format module's manifest type, which today also lacks the spec's `source` record. This is
-where `gaps.md` §5's hand-derivation happens against real output. Tests L108, L127 and
-L141 on a real module, and the Tool-record design itself.
+where `gaps.md` §5's hand-derivation happens against real output. Tests ↯/a.1.8, ↯/a.1.27 and
+↯/a.1.41 on a real module, and the Tool-record design itself.
 
 **7. Memoization (~200).** The canonical input-identity document of builds.md §3.1 hashed
 under a Fury domain; a `memo/` reference tier in the store, treated as a non-root by `gc`.
@@ -718,7 +718,7 @@ newer than the installed release). For the milestone as a whole:
 2. `fury lock` writes `build.lock`; `fury build` ingests a development release of `lira`;
    `lira verify` on the extracted file reports install grade;
 3. `lira atoms` on the release (declared) equals `lira atoms --realm jvm --classpath …` on
-   the extracted jar (computed) — the L141 re-atomization check, by hand until `lira
+   the extracted jar (computed) — the ↯/a.1.41 re-atomization check, by hand until `lira
    verify` has a publish grade;
 4. a second `fury build` is a memo hit; a touched source misses; a revert hits again;
 5. the extracted jar runs `lira.main help`, and `lira id` resolves it back to the release;

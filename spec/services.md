@@ -22,8 +22,8 @@ contract tests and runbooks — here derived from one algebra, and decidable fro
 ## 1. Status
 
 This document is a working draft. It is normative for the `app` realm (LIRA §9.4), for
-requirements naming deployable modules (LIRA §13.3, **L137**), and for environment validity
-and deployment (LIRA §13.7); the labels **L143** through **L146** are defined in
+requirements naming deployable modules (LIRA §13.3, **↯/a.1.37**), and for environment validity
+and deployment (LIRA §13.7); the labels **↯/a.1.43** through **↯/a.1.46** are defined in
 the base specification and elaborated here. The environment _release_ — the `env` realm, its
 records, the `environment/1` discipline, and provisioning — is the companion
 [`environments.md`](environments.md).
@@ -122,10 +122,10 @@ with like.
 ### 4.1 Shape
 
 A **deployable release** is a release carrying `app` sections and only `app` sections
-(**L143**, LIRA §9.4) — one per integration where integrations are declared, exactly as the
+(**↯/a.1.43**, LIRA §9.4) — one per integration where integrations are declared, exactly as the
 section matrix requires (LIRA §9.5) — per-operating-system deliverables are the canonical case:
 Windows, macOS and Linux builds of one application as three `app` sections sharing a root,
-common content stored once. It MUST NOT declare `dependency` records (also **L143**):
+common content stored once. It MUST NOT declare `dependency` records (also **↯/a.1.43**):
 its composition already happened at the egress that produced it, and the record of _what_ it
 was built from is provenance — real, valuable, and deliberately deferred to a future
 attestation layer rather than half-expressed through a mechanism whose satisfaction semantics
@@ -162,12 +162,12 @@ disagreement between them is the publisher's error, not the reader's problem.
 
 ### 4.3 Self-Description
 
-Content in an `app` section that no discipline claims is atomless (**L144**, LIRA §9.4): a
+Content in an `app` section that no discipline claims is atomless (**↯/a.1.44**, LIRA §9.4): a
 closed artifact's bytes are implementation, covered by implementation identity, and making
 them `opaque/1` atoms would turn every rebuild into a major. What stands as interface is the
 **description**: the release declares `api` records over the interface descriptions its tree
 carries, under a discipline whose domain includes `app` (§3), and the atoms those records list
-are recomputed by every verifier (LIRA §16, **L141**) — a deployable's served surface is
+are recomputed by every verifier (LIRA §16, **↯/a.1.41**) — a deployable's served surface is
 checked content, not a label.
 
 A deployable declaring no `api` records has an empty atom set: every such release shares the
@@ -187,7 +187,7 @@ consumers here exactly as on the buildpath.
 
 ## 5. Requiring a Service
 
-A `requires` record may name either kind of **provider** (LIRA §9.4, **L137**): a host
+A `requires` record may name either kind of **provider** (LIRA §9.4, **↯/a.1.37**): a host
 contract — capability the environment is _granted_ — or a deployable module — capability
 _deployed into_ it. The two are recognizable by their `host` and `app` sections, and the
 satisfaction rules are LIRA §13.2's, verbatim:
@@ -237,7 +237,7 @@ the binding must satisfy _some_ member, each resolving to the first it satisfies
 
 The reading to hold onto is that a negotiated group is the deploy-time image of whatever
 preference list the consumer presents at use time: the members are its alternatives, in its
-order; per-release first-match is the provider's choice; and L145, judged from manifests
+order; per-release first-match is the provider's choice; and ↯/a.1.45, judged from manifests
 before anything moves, is the guarantee that the use-time negotiation can never fail against
 the published desired state — no release the selection admits is one the consumer cannot
 talk to. The flag is a claim about the consumer's behavior, on hosts.md §9's terms: signed,
@@ -262,10 +262,10 @@ services (a database, an object store) that are _granted_ rather than deployed. 
 runtime counterpart of the buildpath — a statement of **desired** state, since every rule
 below reads manifests and none inspects a process (LIRA §13.7) — and it is published: an
 operator-signed **environment release** whose manifest carries the grants, deploys and
-bindings this section judges ([`environments.md`](environments.md), **L148**). A cluster's
+bindings this section judges ([`environments.md`](environments.md), **↯/a.1.48**). A cluster's
 controller knows what is _running_; this document says what to check it against.
 
-Environment validity (**L145**) holds, for an assignment of one integration per deployed
+Environment validity (**↯/a.1.45**) holds, for an assignment of one integration per deployed
 release (LIRA §13.3, unchanged), iff:
 
 1. **Closure**: every module named by any deployed release's applicable `requires` records is
@@ -279,7 +279,7 @@ release (LIRA §13.3, unchanged), iff:
    group through its one resolved member, a negotiated group through the member each release
    resolves to (§5.1, LIRA §13.7). Where the
    requirement resolves to a binding, the quantifier ranges within that binding's selection
-   (**L150**, LIRA §13.7): releases behind other addresses are other providers.
+   (**↯/a.1.50**, LIRA §13.7): releases behind other addresses are other providers.
 3. **Aggregation**: requirements on one provider from several releases are jointly judged by
    the rule of hosts.md §10, over the whole environment, under rule 2's quantifier: by
    lineage, jointly satisfiable iff _every_ concurrently-serving release of the provider
@@ -302,10 +302,10 @@ as unprovided at provisioning ([`environments.md`](environments.md) §6).
 
 There is deliberately **no uniqueness rule**: two releases of one module serving concurrently
 is the normal state of a rolling deployment. What replaces it is the binding (LIRA §13.7,
-L149): the address disambiguates at run time what uniqueness disambiguated at build time,
+↯/a.1.49): the address disambiguates at run time what uniqueness disambiguated at build time,
 and rule 2's quantifier — during the overlap, every consumer must be satisfied by _both_,
 through one member or, negotiating, through a member each —
-ranges per binding (L150). A consumer is pinned to one candidate binding by a `route` row on
+ranges per binding (↯/a.1.50). A consumer is pinned to one candidate binding by a `route` row on
 its deploy record ([`environments.md`](environments.md) §6): the routing pin is to
 environments what the integration pin is to buildpaths — a consumer preference which the
 _release_ manifests cannot imply, and the _environment_ manifest states.
@@ -320,7 +320,7 @@ A **deploy** is a transition of an environment: any change to its release's `gra
 removing one, replacing one with a successor, or rebinding an address. A release is
 **deployable** iff the posterior state is valid, and — for a
 rolling replacement — the intermediate state, in which predecessor and successor serve
-together, is valid too (**L146**). Deployability is therefore not a new judgement but validity
+together, is valid too (**↯/a.1.46**). Deployability is therefore not a new judgement but validity
 (§6) applied to the states a transition passes through, decidable from manifests before
 anything moves. The three transition shapes:
 
@@ -363,8 +363,8 @@ it to the overlap because it said so.
 
 **A protocol migration, step by step.** Provider `payments` serves surface `A`; consumer
 `orders` requires `A`, statically. The operator wants `payments` serving `B` — a new lineage
-that drops `A` — behind the address `orders` already dials. Every state is judged by L145,
-every overlap by L146, from manifests:
+that drops `A` — behind the address `orders` already dials. Every state is judged by ↯/a.1.45,
+every overlap by ↯/a.1.46, from manifests:
 
 | Step | Transition                                                                    | Judgement                                                                                                                                                       |
 | ---- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -275,7 +275,7 @@ object SelfUpgrade:
         UpgradeManifest.download(executable).let: data =>
           recover:
             case error: Upgrade.Error =>
-              Out.println(t"The upgrade could not be staged: ${error.message}")
+              Out.println(t"The upgrade could not be staged: ${error.labelled}")
               UpgradeFailed
 
           . protect:
