@@ -5,7 +5,7 @@ cross-referenced. "Spec" is [`lira.md`](../spec/lira.md); "builds" is
 [`builds.md`](builds.md).
 
 **assemble** — Build-file keyword naming the buildpath an egress closes over on an
-application module. Compiles to no dependency record (↯/l.1.43): it marks egress input, not
+application module. Compiles to no dependency record (↯/a.1.43): it marks egress input, not
 composition.
 
 **atom** — The hash of one indivisible fragment of public API, produced by a
@@ -54,12 +54,12 @@ consumer. Satisfied when the required snapshot appears in the candidate's lineag
 Contrast **requires**.
 
 **deployable release** — An `app`-realm release: a closed artifact (or artifact pin)
-plus its requires and served surface. Declares no dependencies (↯/l.1.43) — its composition
+plus its requires and served surface. Declares no dependencies (↯/a.1.43) — its composition
 already happened at the egress.
 
 **development release** — A release without a version, identified purely by hashes: the
 currency of the inner build loop. Depending on one exactly (a build pin) makes the
-dependent unpublishable until the pin lifts (↯/l.1.18).
+dependent unpublishable until the pin lifts (↯/a.1.18).
 
 **discipline** — A canonicalization of one carrier into atoms, identified as
 `<name>/<version>` (`tasty/1`, `openapi/1`, `tels/2`). Any change to the
@@ -104,7 +104,7 @@ invocations. Source forms (`scala`, `java`, `dockerfile`), universes, and delive
 are its species. One namespace; source forms avoid universe names.
 
 **grade** — The computed relation between successive releases: *patch* (same atoms),
-*minor* (rigid growth), *major* (anything else; a new lineage, behind ↯/l.1.10's explicit
+*minor* (rigid growth), *major* (anything else; a new lineage, behind ↯/a.1.10's explicit
 gate). Versions are derived from grades, never chosen.
 
 **grant** — An environment record: a platform contract the environment supplies
@@ -135,7 +135,7 @@ siblings. Contrast **snapshot**.
 **increment** — A file carrying one release relative to a *base* release the receiver
 holds: the target's manifest verbatim, then a command stream (`keep`, `skip`, `store`,
 `update`) that rebuilds the target's blob stream from the base's. A transport with no
-identity of its own (spec [`increment.md`](../spec/increment.md), ↯/l.1.51 to ↯/l.1.56).
+identity of its own (spec [`increment.md`](../spec/increment.md), ↯/a.1.51 to ↯/a.1.56).
 
 **include** — Build-file keyword for composition: a dependency on a project-local
 module or an external coordinate with a selector. Compiles to a `dependency` record.

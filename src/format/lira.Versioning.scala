@@ -60,7 +60,7 @@ object Versioning:
   // expressed by the *absence* of a version, not by a suffix.
   def numeric(version: Semver): Boolean = version.prerelease.nil && version.build.nil
 
-  // ↯/l.1.10: a lineage may be extended only by a patch (unchanged) or minor (appended snapshot)
+  // ↯/a.1.10: a lineage may be extended only by a patch (unchanged) or minor (appended snapshot)
   // successor; a major successor begins a fresh lineage, and only on explicit request.
   def extendLineage
     ( lineage: List[Lira.Hash], snapshot: Lira.Hash, grade: Grade, forceMajor: Boolean = false )

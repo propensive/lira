@@ -42,7 +42,7 @@ import vacuous.*
 import Lira.Error.Reason
 
 object TreePath:
-  // The ↯/l.1.6 path rules, shared with the `tree-path` schema validator: relative, `/`-separated,
+  // The ↯/a.1.6 path rules, shared with the `tree-path` schema validator: relative, `/`-separated,
   // no empty, `.` or `..` segments. Returns the failure detail, or `Unset` for a valid path.
   // These rules exclude directory traversal by construction.
   def check(text: Text): Optional[Text] =
@@ -58,7 +58,7 @@ object TreePath:
     check(text).let: detail => abort(Lira.Error(Reason.InvalidTree(detail)))
     new TreePath(text)
 
-  // The derived manifest decoder's codec: the schema's `tree-path` validator (the same ↯/l.1.6
+  // The derived manifest decoder's codec: the schema's `tree-path` validator (the same ↯/a.1.6
   // rules) has already accepted the text, so a rejection here is a malformed scalar.
   given decodable: Tactic[Tel.Error] => TreePath is Tel.Decodable =
     Lira.scalar[TreePath](t"TreePath"): text =>

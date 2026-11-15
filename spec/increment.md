@@ -18,14 +18,14 @@ are kept by run-length, absent ones skipped, new ones stored, and changed ones *
 Brotli continuation that the receiver decodes in the context of the predecessor blob. The
 receiver produces the base's context by an encoder-free construction the RFC fixes completely,
 so nothing about the sender's compressor need be known or matched. What an increment yields is
-exactly the decompressed blob stream of §8.2, verified as such (↯/l.1.2, ↯/l.1.3, ↯/l.1.5); an increment
+exactly the decompressed blob stream of §8.2, verified as such (↯/a.1.2, ↯/a.1.3, ↯/a.1.5); an increment
 is a transport, and confers nothing on its own.
 
 ## 1. Status
 
 This document is a working draft. It is normative for the increment file format, for the
-`lira-increment` schema, and for the application of increments; the labels **↯/l.1.51** through
-**↯/l.1.56** are defined here and referred to from the base specification (LIRA §8.1, §16–§18).
+`lira-increment` schema, and for the application of increments; the labels **↯/a.1.51** through
+**↯/a.1.56** are defined here and referred to from the base specification (LIRA §8.1, §16–§18).
 "LIRA §_n_" refers to [`lira.md`](lira.md). Brotli is RFC 7932 throughout, and section
 references of the form "RFC §_n_" are to it. The `lira` tool calls an increment a **delta
 file**: `lira delta` writes one and `lira add` applies one ([`tool.md`](../design/tool.md)
@@ -90,7 +90,7 @@ increment file are fixed: `B4 B5 BB C4 B2 C4 B5 BB` — `δελτβτελ` under
 does not begin with these eight bytes, whose manifest does not decode as one BinTEL document
 conforming to the `lira` schema, whose header does not decode as one BinTEL document
 conforming to the `lira-increment` schema, or that ends at or before the end of its header,
-is invalid (**↯/l.1.51**). Both documents are self-delimiting on the terms of LIRA §5.1, so no
+is invalid (**↯/a.1.51**). Both documents are self-delimiting on the terms of LIRA §5.1, so no
 length and no separator frames them, and the first byte after the header is the body's. The
 manifest's schema signature is resolved as LIRA §5.2: an increment whose composed schema the
 reader does not hold is unreadable to that reader, not invalid.
@@ -124,7 +124,7 @@ document
 
 The schema is a published constant of this document, held by every conforming reader as the
 four metadata-blob schemas of LIRA §14 are; a header whose schema signature is not its
-signature fails ↯/l.1.51. The scalar validators are those of LIRA §14, and `Identifier` is the
+signature fails ↯/a.1.51. The scalar validators are those of LIRA §14, and `Identifier` is the
 type of the `Payload` record's `compression` field there.
 
 `base` names the base release by its implementation identity: the blob-domain hash of its
@@ -161,7 +161,7 @@ independent of whether it survives into the target: a blob that is edited in one
 retained in another is the ordinary case, not a special one. The priming context is the
 record's bytes alone, without its length prefix.
 
-The command stream is **well-formed** iff (**↯/l.1.53**):
+The command stream is **well-formed** iff (**↯/a.1.53**):
 
 - every tag is one of 0–3, every `n` is at least 1, and the cursor never exceeds the base's
   record count;
@@ -172,7 +172,7 @@ The command stream is **well-formed** iff (**↯/l.1.53**):
 - `base` is not the target's `payload.hash`.
 
 A command stream that is not well-formed renders the increment malformed, on the terms of
-LIRA **↯/l.1.39**. The bound on `clength` is a coarse one, chosen so that no continuation can be
+LIRA **↯/a.1.39**. The bound on `clength` is a coarse one, chosen so that no continuation can be
 worse than a stored encoding by more than a constant: an encoder that cannot do better than
 that has a stored fallback, and a receiver need not read further to know something is wrong.
 
@@ -182,7 +182,7 @@ stream is reproduced in full and in order — unreferenced blobs (LIRA §8.2) in
 and "deletion" is simply a base record the cursor passes with `skip`. Second, the target's
 records are emitted in ascending hash order because the commands are laid out in that order;
 the receiver does not sort, and a `store` or `update` whose hash is out of place, or equal to
-a kept record's, fails ↯/l.1.3 at verification (§7) exactly as a mis-sorted payload would.
+a kept record's, fails ↯/a.1.3 at verification (§7) exactly as a mis-sorted payload would.
 
 ## 6. Priming
 
@@ -191,7 +191,7 @@ follows the encoding of the base record. The receiver supplies the **priming pre
 encoding of the base record that the tail follows, and decodes prefix and tail as one stream.
 
 The prefix `P(base, window, block)` is fixed by RFC 7932 given the header's two parameters
-(**↯/l.1.54**). It consists of:
+(**↯/a.1.54**). It consists of:
 
 1. the stream header, encoding WBITS = `window` by the RFC's variable-length code (RFC
    §9.1): one bit for 16, four bits for 18–24, seven bits for 10–15 and 17;
@@ -220,7 +220,7 @@ exactly at the end of `cbytes` — no byte of `cbytes` unconsumed, none wanting 
 decoded output beyond the base record MUST be exactly `length` bytes, which are the emitted
 record. Backward references may reach into the base record; the static dictionary is
 available as always; and large-window extensions to the RFC are excluded, WBITS being at
-most 24. A continuation violating any of these renders the increment malformed (**↯/l.1.54**).
+most 24. A continuation violating any of these renders the increment malformed (**↯/a.1.54**).
 
 Producers SHOULD emit `window` 24 and `block` 2^24, the greatest the RFC allows, since the
 prefix is never transmitted and a larger window only widens what a continuation may
@@ -243,9 +243,9 @@ decode is the test.
 ## 7. Application and Verification
 
 Application is the receiver's reconstruction of the target's blob stream; verification of
-the result is LIRA's, unchanged. A receiver applying an increment (**↯/l.1.52**):
+the result is LIRA's, unchanged. A receiver applying an increment (**↯/a.1.52**):
 
-1. checks the eight-byte prefix and decodes the manifest and header (↯/l.1.51);
+1. checks the eight-byte prefix and decodes the manifest and header (↯/a.1.51);
 2. verifies the embedded manifest as LIRA §16 step 0 and step 8 verify a file's — schema,
    conformance, and every signature against trusted keys — **before** decoding a byte of
    the body, so that every bound below is taken from a signed value;
@@ -255,16 +255,16 @@ the result is LIRA's, unchanged. A receiver applying an increment (**↯/l.1.52*
    the target's signed `payload.length`: before decoding any bytes for a `store` or an
    `update`, it checks that the command's `length`, added to the lengths already emitted,
    does not exceed `payload.length` — `clength` needs no bound of its own, being bounded by
-   `length` under ↯/l.1.53; a command exceeding the bound ends application with the increment
-   malformed (↯/l.1.53). The header's `length` is checked for equality with the body's actual decompressed
+   `length` under ↯/a.1.53; a command exceeding the bound ends application with the increment
+   malformed (↯/a.1.53). The header's `length` is checked for equality with the body's actual decompressed
    length once the stream ends, and is never itself a bound: the header is unsigned, and a
    tampered value can cost the receiver at most the work of `payload.length`;
 5. emits the target's records — copied from the base, stored, or decoded by §6 — and
    recomputes each record's blob hash as it is emitted.
 
-The result is a blob stream, and it is verified as one (**↯/l.1.55**): its decompressed length
-MUST equal `payload.length` (LIRA **↯/l.1.2**), its records MUST be in ascending hash order and
-unique (**↯/l.1.3**), and its hash MUST equal `payload.hash` (**↯/l.1.5**). Verification then
+The result is a blob stream, and it is verified as one (**↯/a.1.55**): its decompressed length
+MUST equal `payload.length` (LIRA **↯/a.1.2**), its records MUST be in ascending hash order and
+unique (**↯/a.1.3**), and its hash MUST equal `payload.hash` (**↯/a.1.5**). Verification then
 continues from LIRA §16 step 2 exactly as for a downloaded file. An increment that fails at
 any point — framing, well-formedness, a bound, a continuation, or the stream checks — is
 rejected as a whole; nothing it produced is the release. An increment confers nothing on its
@@ -297,7 +297,7 @@ or a new record already so small that the continuation's framing costs more than
 Metadata blobs benefit from `update` as much as content does: a section's tree changes
 whenever an entry does, and the new tree is the old one with a few rows altered.
 
-An increment is a transport artifact and has no identity (**↯/l.1.56**): no hash domain is
+An increment is a transport artifact and has no identity (**↯/a.1.56**): no hash domain is
 defined for it, no signed structure refers to one, and it is designated only by the pair of
 payload hashes it connects — the base's, in its header, and the target's, in the manifest it
 carries. Producers MUST be self-deterministic over increments as LIRA §8.1 requires of
@@ -317,20 +317,20 @@ policy, and belongs to the tool and distribution designs
 ## 9. Security Considerations
 
 - **Decompression bombs**: the body and every continuation are decoded under bounds derived
-  from the signed `payload.length` (↯/l.1.52), checked before decoding, with the body read
+  from the signed `payload.length` (↯/a.1.52), checked before decoding, with the body read
   streaming; an adversary controlling an increment can waste at most work proportional to the
   release's declared size, which is the bound the base specification already accepts (LIRA
   §8.1).
 - **Header tampering**: the header is unsigned. Its `base` misdirected yields a stream that
-  fails ↯/l.1.5; its `window` or `block` altered yields continuations that fail ↯/l.1.54 or a stream
-  that fails ↯/l.1.5; its `length` altered fails the consistency check of §7 and, by ↯/l.1.52,
+  fails ↯/a.1.5; its `window` or `block` altered yields continuations that fail ↯/a.1.54 or a stream
+  that fails ↯/a.1.5; its `length` altered fails the consistency check of §7 and, by ↯/a.1.52,
   bounds nothing. No alteration of the header can produce a stream that verifies as a release
   other than the one whose signed manifest the file carries.
 - **Substitution**: the manifest is verbatim and signed, so an increment cannot present a
   target its publisher did not sign, and the reconstructed stream must hash to the manifest's
   `payload.hash`; the substitution protections of LIRA §18 apply unchanged.
 - **Partial application**: a receiver MUST NOT treat any part of a reconstruction as the
-  release, or as the base for a further increment, until ↯/l.1.55 has passed in full. A store
+  release, or as the base for a further increment, until ↯/a.1.55 has passed in full. A store
   that ingests records as they are emitted (tool.md §2.4) may do so as content-addressed
   objects — each is hashed before it is written, and an object that verifies is an object —
   but MUST NOT record the release, or write its payload object, before the whole stream has

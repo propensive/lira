@@ -44,8 +44,8 @@ The two selector kinds are syntactically disjoint with no further rule: a `semve
 with a digit and a `tag-name` with a letter (spec §14). A selector-form reference
 (`soundness.dev/gossamer-core:0.64.2`, `specification.tel/tels:1.0.0`,
 `adoptium.net/java.base:jdk-19`) names **exactly one published release**, and can only ever
-match a published one: unpublished releases are normatively versionless (spec §12.5, ↯/l.1.17),
-and tags are signed, unique, and immutable within their module (spec §12.6, ↯/l.1.42) — which is
+match a published one: unpublished releases are normatively versionless (spec §12.5, ↯/a.1.17),
+and tags are signed, unique, and immutable within their module (spec §12.6, ↯/a.1.42) — which is
 what makes resolution unambiguous across a local store and the network. A **bare reference**
 (no selector) is a development reference: it resolves against local state only, never
 triggers network resolution, and is deliberately not portable — portability always goes
@@ -109,7 +109,7 @@ spec §7.1, replacing RFC 6962's 0x00/0x01 prefixes).
   the registry obligations of spec §16 — Range-fetch the manifest from the named GitHub
   asset; recompute the manifest hash; verify the ML-DSA signature against an endorsed,
   namespace-bound key; re-verify the TXT record; and check the lineage step's grade against
-  the previous logged release of the module (rigid-monotonicity — the ↯/l.1.10 enforcement point).
+  the previous logged release of the module (rigid-monotonicity — the ↯/a.1.10 enforcement point).
   The log therefore carries not just *what was published* but *evidence it was checked*.
 
 ## 5. Log records
@@ -148,7 +148,7 @@ Operations:
 | ----------------- | -------------------------- | ---------------------------------------------------- |
 | `RESOLVE`         | coordinate                 | latest `Release` record + leaf index + inclusion proof |
 | `RESOLVE-VERSION` | coordinate, version        | the release carrying that derived version + proof (selector form, §2) |
-| `RESOLVE-TAG`     | coordinate, tag name       | the release carrying that tag + proof — unique per ↯/l.1.42 (selector form, §2) |
+| `RESOLVE-TAG`     | coordinate, tag name       | the release carrying that tag + proof — unique per ↯/a.1.42 (selector form, §2) |
 | `RESOLVE-COMPAT`  | coordinate, snapshot hash  | latest release whose lineage contains the snapshot — the buildpath primitive (spec §13.2) |
 | `RESOLVE-EXTENDS` | coordinate, composed schema signature | latest `tels/2` release whose retained expansion has the signature's as a prefix (spec tels.md §11) |
 | `LOOKUP`          | manifest hash or payload hash | `Release` record + proof                          |

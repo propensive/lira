@@ -64,7 +64,7 @@ object Verification:
 
       . let(_(1))
 
-  // ↯/l.1.31 and ↯/l.1.33: the integration declarations must be well-formed — ids unique, every
+  // ↯/a.1.31 and ↯/a.1.33: the integration declarations must be well-formed — ids unique, every
   // section's integration declared, no two sections sharing a (universe, integration) key — and
   // every declared integration must be realized by at least one section. Decidable from the
   // manifest alone, so every consumer checks it, not just a registry.
@@ -97,7 +97,7 @@ object Verification:
 
       if !realized then abort(Lira.Error(Reason.UnrealizedIntegration(id)))
 
-  // ↯/l.1.35 (§9.4, hosts.md §4): a release carrying a `host` section is a host contract, and its
+  // ↯/a.1.35 (§9.4, hosts.md §4): a release carrying a `host` section is a host contract, and its
   // shape is fixed — exactly that one section, no integrations, no dependencies, and no
   // `requires` records on the section. The exclusions are not arbitrary: an integration is an
   // alternative dependency vector and a contract has no dependencies to vary, and a contract
@@ -119,7 +119,7 @@ object Verification:
     ResourceDiscipline.check(manifest.resource)
 
     // Steps 1–2: decompress within the declared length, verify the payload hash, and re-derive
-    // every blob identity while checking stream order (↯/l.1.2 to ↯/l.1.5).
+    // every blob identity while checking stream order (↯/a.1.2 to ↯/a.1.5).
     val stream =
       Lira.Payload.decompress(lira.compressed, manifest.payload.length, manifest.payload.hash)
 
@@ -143,9 +143,9 @@ object Verification:
       val uses: Optional[Lira.Hash] = dependency.uses
       uses.let { hash => resolve(hash.bytes) }
 
-    // Step 3: tree path rules (↯/l.1.6) on every section; every tree blob and content blob must
-    // resolve (↯/l.1.4); overlays of known universes materialize against the root under the
-    // minimality rules (↯/l.1.7). Unknown universes stay opaque (§9.4).
+    // Step 3: tree path rules (↯/a.1.6) on every section; every tree blob and content blob must
+    // resolve (↯/a.1.4); overlays of known universes materialize against the root under the
+    // minimality rules (↯/a.1.7). Unknown universes stay opaque (§9.4).
     val trees = manifest.section.map: section =>
       (section, Lira.Tree.decode(resolve(section.tree.bytes)))
 
@@ -174,11 +174,11 @@ object Verification:
 
   // Step 4 (publish-time): re-atomization of every materialized section under the *declared*
   // disciplines, in the manifest's `api`-record order — so the claiming order is the declared
-  // one (↯/l.1.34), never an accident of the caller's list. A declared discipline with no
-  // implementation fails the release (↯/l.1.40): an unverifiable claim is worse than an absent one,
+  // one (↯/a.1.34), never an accident of the caller's list. A declared discipline with no
+  // implementation fails the release (↯/a.1.40): an unverifiable claim is worse than an absent one,
   // because consumers cannot tell the two apart from the manifest. The recomputed atomization
-  // must equal the declared listings on the root section (↯/l.1.41) and be identical across every
-  // other section (↯/l.1.8), and no declared discipline may be inapplicable (↯/l.1.27).
+  // must equal the declared listings on the root section (↯/a.1.41) and be identical across every
+  // other section (↯/a.1.8), and no declared discipline may be inapplicable (↯/a.1.27).
   def reatomize
     ( manifest:        Lira.Manifest,
       report:          Report,
@@ -237,7 +237,7 @@ object Verification:
 
       case _ => ()
 
-  // Step 4's sibling for profiles (§11.6, ↯/l.1.28 and ↯/l.1.30). `install` stays language-blind,
+  // Step 4's sibling for profiles (§11.6, ↯/a.1.28 and ↯/a.1.30). `install` stays language-blind,
   // exactly as it does for re-atomization and lineage-step grading, and this recovers the
   // per-section content a profile's predicates read — which the report holds only as tree entries
   // and blob hashes. `classpath` supplies the materialized dependency vector per (universe,

@@ -24,7 +24,7 @@ to a predicate defined here is a new profile (`jvm/2`), never a revision of this
 ## 2. Certified Guarantee
 
 The profile certifies **linkage**, for the `jvm` universe. It adds no predicate about
-recompilation: a profile adds guarantees and never subtracts them (↯/l.1.29), and in the motivating
+recompilation: a profile adds guarantees and never subtracts them (↯/a.1.29), and in the motivating
 ecosystem `tasty/2` already certifies recompilation over the same release.
 
 A release declaring this profile is asserting that it satisfies §5 and §6 against its
@@ -116,7 +116,7 @@ did not preserve. The `breaks` list is an authorial claim; checking it is not a 
 computing the list but of confirming that it accounts for what the predicates found:
 
 - a violation at a level this profile certifies that the release does **not** record is
-  **↯/l.1.30**: the step does not preserve the level and says nothing about it;
+  **↯/a.1.30**: the step does not preserve the level and says nothing about it;
 - a violation at a level this profile does **not** certify is outside the profile's authority
   (LIRA §11.6): a profile reporting a finding at a level it does not certify is a broken
   profile, not a broken release.

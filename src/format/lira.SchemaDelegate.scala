@@ -110,7 +110,7 @@ extends Tels.Resolution.Delegate:
 
       case _ =>
         // A version names exactly one published release and tags are
-        // signed, unique and immutable within a module (↯/l.1.17, ↯/l.1.42), so
+        // signed, unique and immutable within a module (↯/a.1.17, ↯/a.1.42), so
         // two matches mean the store's content cannot be trusted.
         abort(ResolutionError(Reason.Unverified(
           t"more than one release matches the selector ${reference.text}")))

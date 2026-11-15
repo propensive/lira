@@ -53,7 +53,7 @@ import rudiments.sortingAlgorithms.timsort
 
 object Lira:
   // The interpreter directive's payload, as the parser stores it (without the `#!`). The full
-  // first line of every `.lira` file is byte-fixed (§5.1, ↯/l.1.15).
+  // first line of every `.lira` file is byte-fixed (§5.1, ↯/a.1.15).
   val directive: Text = t"/usr/bin/env lira"
 
   private val directiveBytes: Data =
@@ -84,7 +84,7 @@ object Lira:
     Array.freeze(buffer)
 
   def read(data: Data): Lira raises Lira.Error =
-    // Step 0 (§16): the directive is checked byte-for-byte before anything is parsed (↯/l.1.15).
+    // Step 0 (§16): the directive is checked byte-for-byte before anything is parsed (↯/a.1.15).
     if data.length < directiveBytes.length then abort(Lira.Error(Reason.BadDirective))
 
     var index = 0
@@ -110,7 +110,7 @@ object Lira:
 
       . protect(manifestData.utf8.load[Tel])
 
-    // ↯/l.1.16: the pragma must not specify a sigil; the separator is therefore always `##`.
+    // ↯/a.1.16: the pragma must not specify a sigil; the separator is therefore always `##`.
     document.metadata.pragma.let: pragma =>
       if pragma.sigil.present then abort(Lira.Error(Reason.SigilSpecified))
 
@@ -275,7 +275,7 @@ object Lira:
 
   // LiraError → Lira.Error
   // The validity rules of the LIRA specification, one `Reason` per rule: a reason numbered `1nn`
-  // is the rule whose bolt code is `↯/l.1.nn`, which the error reports as its own. Warn-only findings
+  // is the rule whose bolt code is `↯/a.1.nn`, which the error reports as its own. Warn-only findings
   // (decorative-version mismatches, unreferenced blobs) are never raised as errors; they are
   // reported as `Lira.Advisory` values instead.
   object Error:
@@ -308,7 +308,7 @@ object Lira:
       case ResourceClash(path: Text)            extends Reason(126)
       case InapplicableDiscipline(id: Text)     extends Reason(127)
       case ProfileViolated(id: Text, detail: Text) extends Reason(128)
-      // ↯/l.1.29 is structural — a profile can only add predicates through the `EcosystemProfile`
+      // ↯/a.1.29 is structural — a profile can only add predicates through the `EcosystemProfile`
       // SPI, never remove a core check — so this reason is reserved for a future profile-loading
       // mechanism that could observe a weakening, and is deliberately never constructed today.
       case ProfileWeakens(id: Text)             extends Reason(129)
@@ -400,8 +400,8 @@ object Lira:
   // The letter by which bolt codes name LIRA. Its codes are numbered by subdivision: 1 is the
   // specification's validity rules, and the modules follow in the order of their dependencies:
   // 2 `format`, 3 `derive`, 4 `bundle`, 5 `classfile`, 6 `foreign`, 7 `tasty`, 8 `core`,
-  // 9 `launcher` and 10 `tool`. The registry of the codes is `l.tel` in propensive/bolt.
-  final val letter = 'l'
+  // 9 `launcher` and 10 `tool`. The registry of the codes is `a.tel` in propensive/bolt.
+  final val letter = 'a'
 
   // LiraHash → Lira.Hash
   // A LIRA hash: `Hash.size` frozen bytes. The class gives the manifest's hash fields a type of
@@ -533,7 +533,7 @@ object Lira:
     // An ecosystem profile this release claims to satisfy (§11.6), with the guarantee levels its
     // lineage step did not preserve (§12.4). `breaks` being empty means the step preserved every
     // level the profile certifies — the whole value of the record is that its absence means
-    // something, so a level not preserved and not listed is invalid (↯/l.1.30).
+    // something, so a level not preserved and not listed is invalid (↯/a.1.30).
     case class Profile(id: Text, breaks: List[Guarantee] = List())
 
     // One alternative dependency vector the release was built against (§9.5). `rank` orders the
@@ -658,7 +658,7 @@ object Lira:
     def development: Boolean = version.absent
 
     // A release carrying a `host` section is a host contract (§9.4, hosts.md §4) — recognizable
-    // from its manifest alone, which is what makes ↯/l.1.37 checkable at resolution time.
+    // from its manifest alone, which is what makes ↯/a.1.37 checkable at resolution time.
     def hostContract: Boolean = section.exists(_.realm == t"host")
 
     // The canonical text of the whole file's manifest part: directive, pragma, one blank line,
@@ -778,8 +778,8 @@ object Lira:
   // The compression envelope (§8.1) around the blob stream. The compressed bytes are not part of
   // any identity: `payload.hash` is the blob-domain hash of the *decompressed* stream (§8.4), so
   // two files differing only in compressor output carry equal implementation identities. The
-  // declared decompressed length is enforced as a hard limit (↯/l.1.2) and the declared hash is
-  // verified (↯/l.1.5).
+  // declared decompressed length is enforced as a hard limit (↯/a.1.2) and the declared hash is
+  // verified (↯/a.1.5).
   //
   // pneumatic's Brotli engine materializes the whole stream to decode it, so the length cap is
   // currently enforced on the materialized result; when a streaming Brotli decoder lands, this is

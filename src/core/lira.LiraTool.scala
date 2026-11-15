@@ -542,7 +542,7 @@ private def assign(file: Path on Local, previous: Optional[Path on Local], force
 // vendor modularizes — the JDK — one contract module per platform module, coordinated across a
 // vendor release by a shared tag (hosts.md §3, "Granularity"); for a flat platform — Android —
 // one contract module. Majors — the removals in a vendor's history — require explicit `+<tag>`
-// sanction (↯/l.1.10), applied per module wherever that vendor release removed surface. Emitted
+// sanction (↯/a.1.10), applied per module wherever that vendor release removed surface. Emitted
 // files carry the executable bit, as §5.1 requires of producers.
 //
 // The `dts` and `wit` kinds harvest declaration carriers (`.d.ts`, `.wit`) rather than stub

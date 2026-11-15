@@ -138,7 +138,7 @@ trait Discipline:
   def claims(path: TreePath, data: Data): Boolean
 
   // The three declarative requirements of §11.2. `domain` scopes the cross-section invariant
-  // (§9.6) and decides ↯/l.1.27; `keying` and `guarantees` are contracts a discipline states and
+  // (§9.6) and decides ↯/a.1.27; `keying` and `guarantees` are contracts a discipline states and
   // this core takes on trust — neither is checkable by machine, and both change what a reader
   // may conclude from a grade (§12.4).
   def domain: Discipline.Domain

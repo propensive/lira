@@ -10,7 +10,7 @@ Fury/Fever design round ([`fury.md`](fury.md) §13).
 Worked proposals whose target is `spec/lira.md` (or distribution):
 
 - **Section-scoped `Tool` records**, with the `Setting` record and LIRA tool identity
-  (coordinate + implementation identity; the toolchain analogue of ↯/l.1.18). Motivated
+  (coordinate + implementation identity; the toolchain analogue of ↯/a.1.18). Motivated
   from four directions: the `scala` integration axis, option-case settings, per-edge
   components, and now the `inputs/1` hash, which needs per-cell tool identity as an
   input. The blocking item for the manifest hand-derivation (§5 below).

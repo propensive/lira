@@ -49,7 +49,7 @@ import anthology.Toolchain.Universe
 // the root section's tree, and files that differ between universes' compilations (the TASTy
 // attributes a universe's flags pickle; never the run itself, since the compiler derives the
 // TASTy UUID from the file's own content) surface as minimal overlays — while the atoms, which
-// are semantic, stay identical (↯/l.1.8).
+// are semantic, stay identical (↯/a.1.8).
 object LiraBundle:
   // Each universe knows its own LIRA section label and the filename suffixes of its stored
   // representations, so one method serves all three.

@@ -60,7 +60,7 @@ object CapabilityDiscipline extends Discipline:
   def claims(path: TreePath, data: Data): Boolean = path.text == t"capabilities"
 
   // The single realm `{host}`: capability listings describe environments, never libraries, and
-  // ↯/l.1.27 rejects a library release that declares this discipline.
+  // ↯/a.1.27 rejects a library release that declares this discipline.
   def domain: Discipline.Domain = Discipline.Domain.Realms(Set(t"host"))
   def keying: Discipline.Keying = Discipline.Keying.Declaration
 
