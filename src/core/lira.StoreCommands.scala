@@ -40,7 +40,7 @@ import codepages.utf8Codepage
 import columnAttenuation.ignoreAttenuation
 import environments.daemonClientEnvironment
 import filesystemBackends.javaBaseFilesystem
-import filesystemOptions.createNonexistentParents
+import filesystemOptions.createParents
 import filesystemOptions.deleteRecursively
 import filesystemOptions.preserveSymlinks
 import filesystemOptions.moveAtomically

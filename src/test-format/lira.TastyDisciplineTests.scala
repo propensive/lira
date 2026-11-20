@@ -124,7 +124,7 @@ object TastyDisciplineTests extends Suite(m"LIRA tasty/2 discipline tests"):
       val (_, _, out) = compileWith(fixture, classpath, libraryPaths, false)
 
       val compilation =
-        Compilation[Universe.Classfile](unsafely(out.s.tt.as[soundness.Path on Linux]), classpath)
+        Compilation[Universe.Classfile](unsafely(out.s.tt.as[soundness.Path on Local]), classpath)
 
       val input = LiraBundle(compilation)
       val registry = Discipline.Registry(List(TastyDiscipline))
@@ -166,10 +166,10 @@ object TastyDisciplineTests extends Suite(m"LIRA tasty/2 discipline tests"):
         val (_, _, sjsOut) = compileWith(fixture, sjsClasspath, sjsLibraryPaths, true)
 
         val jvmInput = LiraBundle(Compilation[Universe.Classfile]
-          (unsafely(jvmOut.s.tt.as[soundness.Path on Linux]), classpath))
+          (unsafely(jvmOut.s.tt.as[soundness.Path on Local]), classpath))
 
         val sjsInput = LiraBundle(Compilation[Universe.Sjsir]
-          (unsafely(sjsOut.s.tt.as[soundness.Path on Linux]), sjsClasspath))
+          (unsafely(sjsOut.s.tt.as[soundness.Path on Local]), sjsClasspath))
 
         val registry = Discipline.Registry(List(TastyDiscipline))
 

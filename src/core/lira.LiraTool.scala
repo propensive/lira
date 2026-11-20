@@ -455,7 +455,7 @@ private def load(file: Path on Local)(using Cli)(using Tactic[Io.Error], Tactic[
 
 private def save(file: Path on Local, data: Data)(using Cli)(using Tactic[Io.Error]): Unit =
   import filesystemBackends.javaBaseFilesystem
-  import filesystemOptions.createNonexistentParents
+  import filesystemOptions.createParents
   import filesystemOptions.overwritePreexisting
 
   file.create[File](CreateFlag.Parents, CreateFlag.Replace): handle ?=>
