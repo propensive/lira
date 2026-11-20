@@ -40,6 +40,7 @@ import gossamer.*
 import degustation.*
 import rudiments.*
 
+import ambience.systems.javaBaseSystem
 import errorDiagnostics.emptyDiagnostics
 import galilei.filesystemBackends.javaBaseFilesystem
 

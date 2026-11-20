@@ -37,7 +37,7 @@ import soundness.*
 import alphabets.hexLowerCase
 import codepages.utf8Codepage
 import filesystemBackends.javaBaseFilesystem
-import filesystemOptions.createNonexistentParents
+import filesystemOptions.createParents
 import filesystemOptions.deleteRecursively
 import filesystemOptions.preserveSymlinks
 import filesystemOptions.moveAtomically
