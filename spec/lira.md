@@ -83,7 +83,8 @@ its companions ([`hosts.md`](hosts.md), [`environments.md`](environments.md),
 [`increment.md`](increment.md) and the others) define together. Each rule is given its code at
 the point where its condition is defined. A code is permanent: a number is never reused for
 another rule, and a rule which is withdrawn keeps its number, as reserved. The record of LIRA's
-codes is `a.tel` in the [bolt](https://github.com/propensive/bolt) registry. An implementation
+codes is [`bolt.tel`](../bolt.tel), which the index of [bolt](https://github.com/propensive/bolt)
+codes names. An implementation
 which rejects a file SHOULD report the code of the rule it found violated; one which reports an
 error of its own on account of a rule MAY carry the rule's code after its own, separated by
 `/`.

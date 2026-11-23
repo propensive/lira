@@ -400,7 +400,7 @@ object Lira:
   // The letter by which bolt codes name LIRA. Its codes are numbered by subdivision: 1 is the
   // specification's validity rules, and the modules follow in the order of their dependencies:
   // 2 `format`, 3 `derive`, 4 `bundle`, 5 `classfile`, 6 `foreign`, 7 `tasty`, 8 `core`,
-  // 9 `launcher` and 10 `tool`. The registry of the codes is `a.tel` in propensive/bolt.
+  // 9 `launcher` and 10 `tool`. The record of the codes is `bolt.tel`, at the root.
   final val letter = 'a'
 
   // LiraHash → Lira.Hash
